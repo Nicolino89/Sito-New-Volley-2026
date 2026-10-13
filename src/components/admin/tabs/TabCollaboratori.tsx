@@ -112,7 +112,7 @@ export default function TabCollaboratori({
                 type="email"
                 required
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-amber-500"
-                placeholder="es. nome@pantere.it"
+                placeholder="es. nome@newvolleyacademy.it"
                 value={collaboratoreForm.email}
                 onChange={e => setCollaboratoreForm({ ...collaboratoreForm, email: e.target.value })}
               />

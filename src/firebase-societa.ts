@@ -2002,20 +2002,7 @@ export interface AdminUser {
   profiloId?: string;
 }
 
-const DEFAULT_ADMIN_USERS: AdminUser[] = isDemoMode ? [
-  {
-    uid: 'mock-uid-superadmin',
-    email: 'admin@pantere.it',
-    ruolo: 'Super Admin',
-    squadre_assegnate: []
-  },
-  {
-    uid: 'mock-uid-coach',
-    email: 'coach@pantere.it',
-    ruolo: 'Collaboratore/Allenatore',
-    squadre_assegnate: ['sq_01', 'sq_02']
-  }
-] : [];
+const DEFAULT_ADMIN_USERS: AdminUser[] = [];
 
 // Inizializza i collaboratori di default solo se esplicitamente in modalità demo
 if (typeof window !== 'undefined' && isDemoMode) {
@@ -2029,11 +2016,7 @@ if (typeof window !== 'undefined' && isDemoMode) {
 let demoAuthListeners: Array<(user: AdminUser | null) => void> = [];
 
 function getLoggedUserDemo(): AdminUser | null {
-  const user = getLocalData<AdminUser | null>('logged_in_user', null);
-  if (user && (user.email?.toLowerCase() === 'admin@pantere.it' || user.email?.toLowerCase() === 'nicolaturchi89@gmail.com')) {
-    user.ruolo = 'Super Admin';
-  }
-  return user;
+  return getLocalData<AdminUser | null>('logged_in_user', null);
 }
 
 function notifyDemoListeners() {
@@ -2091,10 +2074,6 @@ export async function loginUtente(email: string, password: string): Promise<Admi
     const user = list.find(u => u.email.toLowerCase() === email.trim().toLowerCase() && u.password === password);
     if (!user) {
       throw new Error("Credenziali non valide o collaboratore non censito.");
-    }
-    const isSpecialAdmin = user.email?.toLowerCase() === 'nicolaturchi89@gmail.com' || user.email?.toLowerCase() === 'admin@pantere.it';
-    if (isSpecialAdmin) {
-      user.ruolo = 'Super Admin';
     }
     setLocalData('logged_in_user', user);
     notifyDemoListeners();

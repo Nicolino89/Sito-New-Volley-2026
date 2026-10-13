@@ -7,7 +7,7 @@ This document outlines the security architecture, data invariants, and access co
 - **Super Admin**:
   - Full access (read, write, delete) across all collections.
   - Exclusively allowed to create/delete team documents (`rose_squadre`), edit institutional details (`societa_info`), manage templates (`modulistica`), and create/edit admin user accounts (`admin_users`).
-  - Pre-authorized emails: `nicolaturchi89@gmail.com` and `admin@pantere.it`.
+  - Determined solely by the document in `admin_users/$(request.auth.uid)` with `ruolo == "Super Admin"` (no hardcoded emails).
 
 - **Collaboratore/Allenatore**:
   - Can only create and edit articles in `news_blog` that are either unassigned or assigned to a team within their `squadre_assegnate` list.

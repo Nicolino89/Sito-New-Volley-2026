@@ -357,7 +357,7 @@ export default function Home({
     const unsubscribe = ascoltaStatoAutenticazione((user) => {
       setCurrentUser(user);
       setLoadingAuth(false);
-      if (user && (user.email?.toLowerCase() === 'nicolaturchi89@gmail.com' || user.email?.toLowerCase() === 'admin@pantere.it')) {
+      if (user && user.ruolo === 'Super Admin') {
         setIsAdminMode(true);
       } else {
         setIsAdminMode(false);

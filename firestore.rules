@@ -12,10 +12,6 @@ service cloud.firestore {
     // ============================================================================
     // 2. REUSABLE HARDENED GLOBAL HELPERS & AUTH CHECKS
     // ============================================================================
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
     function incoming() {
       return request.resource.data;
     }
@@ -26,10 +22,6 @@ service cloud.firestore {
 
     function isSignedIn() {
       return request.auth != null;
-    }
-
-    function isEmailVerified() {
-      return isSignedIn() && request.auth.token.email_verified == true;
     }
 
     // Super Admin: basato sul ruolo nel documento admin_users
@@ -151,7 +143,7 @@ service cloud.firestore {
 
     // 11. admin_users (Gestione permessi e ruoli utente)
     match /admin_users/{userId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       allow write: if isAdmin();
     }
 
