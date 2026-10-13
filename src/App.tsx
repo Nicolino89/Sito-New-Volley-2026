@@ -13,7 +13,8 @@ import {
   Sparkles,
   Loader2,
   MapPin,
-  Lock
+  Lock,
+  RotateCcw
 } from 'lucide-react';
 
 import { Navbar, NavTabId } from './components/Navbar';
@@ -60,16 +61,107 @@ import {
 import SplashScreen from './components/SplashScreen';
 import CookieBanner from './components/CookieBanner';
 
-// Lazy-loaded secondary pages & CMS tools
-const AlboDOro = lazy(() => import('./pages/AlboDOro'));
-const SquadreArchivio = lazy(() => import('./pages/SquadreArchivio'));
-const CampTornei = lazy(() => import('./pages/CampTornei'));
-const EventoDetail = lazy(() => import('./pages/EventoDetail'));
-const Galleria = lazy(() => import('./components/Galleria'));
-const Privacy = lazy(() => import('./pages/Privacy'));
+// Wrapper for lazy imports with auto-reload on chunk fetch failure
+function lazyWithRetry<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>
+) {
+  return lazy(async () => {
+    const hasReloaded = sessionStorage.getItem('nva_chunk_reload');
+    try {
+      const module = await factory();
+      sessionStorage.removeItem('nva_chunk_reload');
+      return module;
+    } catch (error: any) {
+      const isChunkError =
+        error?.message?.includes('Failed to fetch dynamically imported module') ||
+        error?.message?.includes('Importing a module script failed') ||
+        error?.name === 'ChunkLoadError';
 
-const LoginForm = lazy(() => import('./components/LoginForm'));
-const AdminPanel = lazy(() => import('./components/AdminPanel'));
+      if (isChunkError && !hasReloaded) {
+        sessionStorage.setItem('nva_chunk_reload', 'true');
+        window.location.reload();
+        return new Promise<{ default: T }>(() => {});
+      }
+
+      sessionStorage.removeItem('nva_chunk_reload');
+      throw error;
+    }
+  });
+}
+
+// Error Boundary specific to chunk/lazy Suspense failures
+interface ChunkErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ChunkErrorBoundaryState {
+  hasError: boolean;
+}
+
+class ChunkErrorBoundary extends React.Component<ChunkErrorBoundaryProps, ChunkErrorBoundaryState> {
+  public props: ChunkErrorBoundaryProps;
+  public state: ChunkErrorBoundaryState = {
+    hasError: false
+  };
+
+  constructor(props: ChunkErrorBoundaryProps) {
+    super(props);
+    this.props = props;
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("Chunk loading error in Suspense:", error, errorInfo);
+  }
+
+  handleReload = () => {
+    sessionStorage.removeItem('nva_chunk_reload');
+    window.location.reload();
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center space-y-4">
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
+            <RotateCcw className="w-8 h-8 mx-auto" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold font-sport uppercase text-zinc-900">
+              Aggiornamento disponibile o errore di caricamento
+            </h3>
+            <p className="text-xs text-zinc-500 max-w-sm mx-auto">
+              Una nuova versione della sezione è pronta oppure la connessione è stata interrotta. Clicca sotto per ricaricare.
+            </p>
+          </div>
+          <button
+            onClick={this.handleReload}
+            className="bg-[#FFE600] hover:bg-yellow-400 text-black font-bold py-2.5 px-6 rounded-xl text-xs uppercase font-sport tracking-wider flex items-center gap-2 transition-all shadow-md cursor-pointer"
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span>Ricarica</span>
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// Lazy-loaded secondary pages & CMS tools with chunk retry
+const AlboDOro = lazyWithRetry(() => import('./pages/AlboDOro'));
+const SquadreArchivio = lazyWithRetry(() => import('./pages/SquadreArchivio'));
+const CampTornei = lazyWithRetry(() => import('./pages/CampTornei'));
+const EventoDetail = lazyWithRetry(() => import('./pages/EventoDetail'));
+const Galleria = lazyWithRetry(() => import('./components/Galleria'));
+const Privacy = lazyWithRetry(() => import('./pages/Privacy'));
+
+const LoginForm = lazyWithRetry(() => import('./components/LoginForm'));
+const AdminPanel = lazyWithRetry(() => import('./components/AdminPanel'));
 
 // Local storage snapshot cache key for 0ms instant loading
 const CACHE_KEY = 'nva_platform_cache_v2';
@@ -544,48 +636,52 @@ export default function App() {
           {/* DYNAMIC CONTENT STAGE */}
           <main className={`w-full min-h-screen ${(location.pathname === '/' || location.pathname === '/squadre' || location.pathname.startsWith('/camp-tornei') || location.pathname.startsWith('/societa') || location.pathname.startsWith('/news') || location.pathname.startsWith('/galleria') || location.pathname.startsWith('/albo-d-oro') || location.pathname.startsWith('/hall-of-fame')) ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`} id="content-stage">
             {location.pathname === '/login' ? (
-              <Suspense fallback={<LoadingFallback />}>
-                <LoginForm />
-              </Suspense>
+              <ChunkErrorBoundary>
+                <Suspense fallback={<LoadingFallback />}>
+                  <LoginForm />
+                </Suspense>
+              </ChunkErrorBoundary>
             ) : (!isAdminMode && !location.pathname.startsWith('/admin')) ? (
               /* SITO PUBBLICO (Rendering Immediato a 0ms di latenza) */
               <div className={(location.pathname.startsWith('/albo-d-oro') || location.pathname.startsWith('/hall-of-fame')) ? '' : 'space-y-10'}>
-                <Suspense fallback={<LoadingFallback />}>
-                  {(() => {
-                    const path = location.pathname;
-                    if (path === '/privacy') return <Privacy />;
-                    if (path === '/sponsor') return <SponsorPage />;
-                    if (path === '/') return (
-                      <Home 
-                        societaSettings={societaSettings} 
-                        setSocietaSettings={setSocietaSettings} 
-                        societaInfo={societaInfo}
-                        newsAll={newsAll}
-                        sponsorsAll={sponsorsAll}
-                      />
-                    );
-                    if (path.startsWith('/squadre')) {
-                      if (path === '/squadre/archivio' || path.startsWith('/squadre/archivio')) {
-                        return <SquadreArchivio squadreInCorso={squadreAll} giocatori={giocatoriAll} />;
+                <ChunkErrorBoundary>
+                  <Suspense fallback={<LoadingFallback />}>
+                    {(() => {
+                      const path = location.pathname;
+                      if (path === '/privacy') return <Privacy />;
+                      if (path === '/sponsor') return <SponsorPage />;
+                      if (path === '/') return (
+                        <Home 
+                          societaSettings={societaSettings} 
+                          setSocietaSettings={setSocietaSettings} 
+                          societaInfo={societaInfo}
+                          newsAll={newsAll}
+                          sponsorsAll={sponsorsAll}
+                        />
+                      );
+                      if (path.startsWith('/squadre')) {
+                        if (path === '/squadre/archivio' || path.startsWith('/squadre/archivio')) {
+                          return <SquadreArchivio squadreInCorso={squadreAll} giocatori={giocatoriAll} />;
+                        }
+                        return path === '/squadre' || path === '/squadre/'
+                          ? <Squadre squadre={squadreAll} />
+                          : <SquadraDetail squadre={squadreAll} giocatori={giocatoriAll} />;
                       }
-                      return path === '/squadre' || path === '/squadre/'
-                        ? <Squadre squadre={squadreAll} />
-                        : <SquadraDetail squadre={squadreAll} giocatori={giocatoriAll} />;
-                    }
-                    if (path.startsWith('/news')) return <News newsAll={newsAll} />;
-                    if (path.startsWith('/camp-tornei') || path.startsWith('/eventi')) {
-                      const parts = path.split('/').filter(Boolean);
-                      if (parts.length >= 2 && parts[1] !== '' && !['camp', 'tornei', 'generico', 'archivio'].includes(parts[1])) {
-                        return <EventoDetail societaInfo={societaInfo} eventId={parts[1]} />;
+                      if (path.startsWith('/news')) return <News newsAll={newsAll} />;
+                      if (path.startsWith('/camp-tornei') || path.startsWith('/eventi')) {
+                        const parts = path.split('/').filter(Boolean);
+                        if (parts.length >= 2 && parts[1] !== '' && !['camp', 'tornei', 'generico', 'archivio'].includes(parts[1])) {
+                          return <EventoDetail societaInfo={societaInfo} eventId={parts[1]} />;
+                        }
+                        return <CampTornei />;
                       }
-                      return <CampTornei />;
-                    }
-                    if (path.startsWith('/albo-d-oro') || path.startsWith('/hall-of-fame')) return <AlboDOro />;
-                    if (path.startsWith('/galleria') || path.startsWith('/modulistica')) return <Galleria squadre={squadreAll} />;
-                    if (path.startsWith('/societa')) return <Societa societaInfo={societaInfo} societaConfig={societaConfig} />;
-                    return <NotFound />;
-                  })()}
-                </Suspense>
+                      if (path.startsWith('/albo-d-oro') || path.startsWith('/hall-of-fame')) return <AlboDOro />;
+                      if (path.startsWith('/galleria') || path.startsWith('/modulistica')) return <Galleria squadre={squadreAll} />;
+                      if (path.startsWith('/societa')) return <Societa societaInfo={societaInfo} societaConfig={societaConfig} />;
+                      return <NotFound />;
+                    })()}
+                  </Suspense>
+                </ChunkErrorBoundary>
               </div>
             ) : loadingAuth ? (
               <div className="flex flex-col items-center justify-center py-20 gap-4" id="loading-spinner">
@@ -594,35 +690,39 @@ export default function App() {
               </div>
             ) : !currentUser ? (
               <div className="w-full max-w-md mx-auto py-8">
-                <Suspense fallback={<LoadingFallback />}>
-                  <LoginForm />
-                </Suspense>
+                <ChunkErrorBoundary>
+                  <Suspense fallback={<LoadingFallback />}>
+                    <LoginForm />
+                  </Suspense>
+                </ChunkErrorBoundary>
               </div>
             ) : (
               /* CMS AMMINISTRAZIONE AUTENTICATO */
               <div className="w-full space-y-6" id="cms-dashboard">
-                <Suspense fallback={<LoadingFallback />}>
-                  <AdminPanel
-                    newsAll={newsAll}
-                    squadreAll={squadreAll}
-                    setSquadreAll={setSquadreAllOptimistic}
-                    giocatoriAll={giocatoriAll}
-                    setGiocatoriAll={setGiocatoriAllOptimistic}
-                    sponsorsAll={sponsorsAll}
-                    eventiAll={eventiAll}
-                    societaInfo={societaInfo}
-                    setSocietaInfo={setSocietaInfo}
-                    societaConfig={societaConfig}
-                    setSocietaConfig={setSocietaConfig}
-                    currentUser={currentUser}
-                    onLogout={handleLogout}
-                    caricaFileSuStorage={caricaFileSuStorage}
-                    societaSettings={societaSettings}
-                    setSocietaSettings={setSocietaSettings}
-                    loadAllData={loadAllData}
-                    showToast={showToast}
-                  />
-                </Suspense>
+                <ChunkErrorBoundary>
+                  <Suspense fallback={<LoadingFallback />}>
+                    <AdminPanel
+                      newsAll={newsAll}
+                      squadreAll={squadreAll}
+                      setSquadreAll={setSquadreAllOptimistic}
+                      giocatoriAll={giocatoriAll}
+                      setGiocatoriAll={setGiocatoriAllOptimistic}
+                      sponsorsAll={sponsorsAll}
+                      eventiAll={eventiAll}
+                      societaInfo={societaInfo}
+                      setSocietaInfo={setSocietaInfo}
+                      societaConfig={societaConfig}
+                      setSocietaConfig={setSocietaConfig}
+                      currentUser={currentUser}
+                      onLogout={handleLogout}
+                      caricaFileSuStorage={caricaFileSuStorage}
+                      societaSettings={societaSettings}
+                      setSocietaSettings={setSocietaSettings}
+                      loadAllData={loadAllData}
+                      showToast={showToast}
+                    />
+                  </Suspense>
+                </ChunkErrorBoundary>
               </div>
             )}
           </main>
