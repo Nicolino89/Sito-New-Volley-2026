@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>New Volley Academy Forlì | Le Pantere</title>
+    <meta name="description" content="Sito ufficiale della New Volley Academy Forlì. Segui le Pantere nei campionati di pallavolo, scopri i roster, le classifiche FIPAV, le ultime news e le attività della società." />
+    
+    <!-- Preconnect & Asynchronous Google Fonts (No CSS Render-Blocking) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;0,900;1,600;1,700;1,800;1,900&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <!-- Google Consent Mode v2 (Default Denied prior to user consent) -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+
+      // Check saved user consent in localStorage
+      var analyticsGranted = false;
+      try {
+        var rawConsent = localStorage.getItem('nva_cookie_consent_v1');
+        if (rawConsent) {
+          var parsed = JSON.parse(rawConsent);
+          analyticsGranted = parsed && parsed.analytics === true;
+        }
+      } catch (e) {}
+
+      gtag('consent', 'default', {
+        'ad_storage': 'denied',
+        'ad_user_data': 'denied',
+        'ad_personalization': 'denied',
+        'analytics_storage': analyticsGranted ? 'granted' : 'denied'
+      });
+    </script>
+
+    <!-- Google tag (gtag.js) GA4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-6P73ZYB8BL"></script>
+    <script>
+      gtag('js', new Date());
+      gtag('config', 'G-6P73ZYB8BL', { send_page_view: true });
+    </script>
+
+    <!-- PWA & Mobile Web App Support -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#F5D800" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="NVA Pantere" />
+    <link rel="apple-touch-icon" href="/og-image.jpg" />
+
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="New Volley Academy Forlì | Le Pantere" />
+    <meta property="og:description" content="Sito ufficiale della New Volley Academy Forlì. Roster, classifiche FIPAV, calendari gare, news e settore giovanile." />
+    <meta property="og:image" content="/og-image.jpg" />
+    <meta property="og:locale" content="it_IT" />
+
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="New Volley Academy Forlì | Le Pantere" />
+    <meta name="twitter:description" content="Sito ufficiale della New Volley Academy Forlì. Roster, classifiche FIPAV, calendari gare e news." />
+    <meta name="twitter:image" content="/og-image.jpg" />
+
+    <!-- Schema.org JSON-LD Structured Data for Google -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SportsTeam",
+      "name": "New Volley Academy Forlì",
+      "sport": "Volleyball",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Forlì",
+        "addressRegion": "FC",
+        "postalCode": "47121",
+        "addressCountry": "IT"
+      },
+      "url": "https://new-volley-academy.web.app",
+      "logo": "https://new-volley-academy.web.app/og-image.jpg",
+      "description": "Società di pallavolo femminile e maschile a Forlì: Serie D, settore giovanile e camp estivi.",
+      "memberOf": {
+        "@type": "SportsOrganization",
+        "name": "FIPAV - Federazione Italiana Pallavolo"
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,187 @@
+{
+  "entities": {
+    "SocietaInfo": {
+      "title": "SocietaInfo",
+      "description": "Informazioni generali e organigramma della New Volley Academy",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string", "description": "Nome ufficiale del club" },
+        "anno_fondazione": { "type": "integer", "description": "Anno di fondazione della società" },
+        "sede_legale": { "type": "string", "description": "Indirizzo della sede legale" },
+        "partita_iva": { "type": "string", "description": "Partita IVA societaria" },
+        "contatti": {
+          "type": "object",
+          "description": "Recapiti e canali social"
+        },
+        "organigramma": {
+          "type": "object",
+          "description": "Direttivo e staff tecnico"
+        },
+        "palestre": {
+          "type": "array",
+          "description": "Elenco delle palestre utilizzate per gare e allenamenti"
+        },
+        "orari_generali": {
+          "type": "array",
+          "description": "Orari generali degli allenamenti settimanali"
+        }
+      },
+      "required": ["nome", "anno_fondazione", "sede_legale", "partita_iva", "contatti", "organigramma"]
+    },
+    "Modulistica": {
+      "title": "Modulistica",
+      "description": "Moduli e documenti PDF d'iscrizione per categoria",
+      "type": "object",
+      "properties": {
+        "titolo_modulo": { "type": "string", "description": "Nome del documento" },
+        "categoria_target": { "type": "string", "description": "Categoria a cui è rivolto il modulo" },
+        "file_url_storage": { "type": "string", "description": "URL di download del file PDF" },
+        "descrizione": { "type": "string", "description": "Dettagli o istruzioni sulla compilazione" },
+        "attivo": { "type": "boolean", "description": "Stato di visibilità per il download pubblico" }
+      },
+      "required": ["titolo_modulo", "categoria_target", "file_url_storage", "descrizione", "attivo"]
+    },
+    "EventiTorneo": {
+      "title": "EventiTorneo",
+      "description": "Tornei organizzati ed eventi del club",
+      "type": "object",
+      "properties": {
+        "nome_evento": { "type": "string", "description": "Nome del torneo" },
+        "edizione": { "type": "string", "description": "Anno o numero dell'edizione" },
+        "categoria": { "type": "string", "description": "Fascia d'età o livello del torneo" },
+        "squadre_partecipanti": { "type": "array", "description": "Nomi delle squadre iscritte" },
+        "gironi": { "type": "array", "description": "Gironi con relative classifiche in tempo reale" },
+        "albo_oro": { "type": "array", "description": "Edizioni passate e vincitori storici" },
+        "foto_gallery_urls": { "type": "array", "description": "Galleria immagini dell'evento" },
+        "stato": { "type": "string", "enum": ["programmato", "in_corso", "concluso"] }
+      },
+      "required": ["nome_evento", "edizione", "categoria", "squadre_partecipanti", "stato"]
+    },
+    "Sponsor": {
+      "title": "Sponsor",
+      "description": "Partner commerciali e inserzioni promozionali",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string", "description": "Nome commerciale o ragione sociale" },
+        "livello": { "type": "string", "enum": ["Main", "Gold", "Silver"] },
+        "logo_url": { "type": "string", "description": "URL dell'immagine logo" },
+        "sito_web": { "type": "string", "description": "Link al sito web dello sponsor" },
+        "descrizione": { "type": "string", "description": "Descrizione facoltativa della partnership" },
+        "attivo": { "type": "boolean", "description": "Visualizzazione attiva sul sito" }
+      },
+      "required": ["nome", "livello", "logo_url", "sito_web", "attivo"]
+    },
+    "NewsBlog": {
+      "title": "NewsBlog",
+      "description": "Articoli, resoconti e comunicati societari",
+      "type": "object",
+      "properties": {
+        "titolo": { "type": "string", "description": "Titolo principale dell'articolo" },
+        "data_pubblicazione": { "type": "string", "format": "date-time", "description": "Data di pubblicazione in ISO 8601" },
+        "testo": { "type": "string", "description": "Contenuto testuale formattato in Markdown" },
+        "foto_copertina_url": { "type": "string", "description": "URL dell'immagine di copertina" },
+        "tag_categoria": { "type": "string", "enum": ["Serie D", "Prima Divisione", "Giovanili", "Comunicato Ufficiale", "Eventi"] },
+        "autore": { "type": "string", "description": "Nome dell'autore o addetto stampa" },
+        "social_trigger": { "type": "object", "description": "Metadati per l'integrazione di pubblicazione social" }
+      },
+      "required": ["titolo", "data_pubblicazione", "testo", "foto_copertina_url", "tag_categoria", "autore"]
+    },
+    "Giocatore": {
+      "title": "Giocatore",
+      "description": "Anagrafica atleta tesserato",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string", "description": "Nome di battesimo" },
+        "cognome": { "type": "string", "description": "Cognome" },
+        "data_nascita": { "type": "string", "format": "date", "description": "Data di nascita YYYY-MM-DD" },
+        "ruolo": { "type": "string", "enum": ["Palleggiatore", "Schiacciatore", "Opposto", "Centrale", "Libero", "Universale"] },
+        "altezza": { "type": "integer", "description": "Altezza dell'atleta in centimetri" },
+        "foto_url": { "type": "string", "description": "Foto ritratto atleta" },
+        "numero_maglia": { "type": "integer", "description": "Numero di maglia preferito" },
+        "attivo": { "type": "boolean", "description": "Stato del tesseramento attivo" }
+      },
+      "required": ["nome", "cognome", "data_nascita", "ruolo", "altezza", "numero_maglia", "attivo"]
+    },
+    "RosaSquadra": {
+      "title": "RosaSquadra",
+      "description": "Squadra e atleti convocati per una specifica stagione agonistica",
+      "type": "object",
+      "properties": {
+        "nome_squadra": { "type": "string", "description": "Nome della squadra, es. Serie D Femminile" },
+        "stagione": { "type": "string", "description": "Stagione agonistica di riferimento, es. 2025/2026" },
+        "campionato": { "type": "string", "description": "Denominazione del campionato d'iscrizione" },
+        "allenatori": { "type": "object", "description": "Staff tecnico della squadra" },
+        "id_atleti": { "type": "array", "description": "Array di riferimenti (ID) ai giocatori" },
+        "sponsor_abbinato_id": { "type": "string", "description": "ID dello sponsor abbinato alla squadra" },
+        "cronologia_gare": { "type": "array", "description": "Partite e risultati nel campionato" }
+      },
+      "required": ["nome_squadra", "stagione", "campionato", "allenatori", "id_atleti"]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Utenti amministratori con ruoli e permessi per l'area CMS",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "description": "Email dell'utente" },
+        "ruolo": { "type": "string", "enum": ["Super Admin", "Collaboratore/Allenatore"], "description": "Ruolo dell'utente amministratore" },
+        "squadre_assegnate": { "type": "array", "description": "ID delle rose_squadre assegnate a questo Collaboratore/Allenatore" }
+      },
+      "required": ["email", "ruolo"]
+    },
+    "EventoSocietario": {
+      "title": "EventoSocietario",
+      "description": "Moduli d'iscrizione e configurazione eventi societari",
+      "type": "object",
+      "properties": {
+        "titolo": { "type": "string", "description": "Titolo dell'evento" },
+        "descrizione": { "type": "string", "description": "Descrizione dell'evento o modulo" },
+        "dataInizio": { "type": "string", "description": "Data di inizio dell'evento" },
+        "idFoglioGoogle": { "type": "string", "description": "ID del foglio Google associato" },
+        "moduliAttivi": { "type": "object", "description": "Abilitazione campi opzionali" },
+        "jolly1": { "type": "object", "description": "Configurazione campo Jolly 1" },
+        "jolly2": { "type": "object", "description": "Configurazione campo Jolly 2" },
+        "jolly3": { "type": "object", "description": "Configurazione campo Jolly 3" },
+        "attivo": { "type": "boolean", "description": "Visibilità sul sito" }
+      },
+      "required": ["titolo", "idFoglioGoogle", "moduliAttivi", "jolly1", "jolly2", "jolly3", "attivo"]
+    }
+  },
+  "firestore": {
+    "/admin_users/{userId}": {
+      "schema": "AdminUser",
+      "description": "Gestione ruoli e permessi granulari degli utenti"
+    },
+    "/societa_info/generale": {
+      "schema": "SocietaInfo",
+      "description": "Informazioni istituzionali della New Volley Academy"
+    },
+    "/modulistica/{moduloId}": {
+      "schema": "Modulistica",
+      "description": "PDF e moduli di iscrizione scaricabili"
+    },
+    "/eventi_tornei/{eventoId}": {
+      "schema": "EventiTorneo",
+      "description": "Tornei ed eventi organizzati"
+    },
+    "/sponsor/{sponsorId}": {
+      "schema": "Sponsor",
+      "description": "Loghi e siti dei partner commerciali"
+    },
+    "/news_blog/{newsId}": {
+      "schema": "NewsBlog",
+      "description": "Notizie, articoli e comunicati stampa"
+    },
+    "/giocatori/{giocatoreId}": {
+      "schema": "Giocatore",
+      "description": "Anagrafica atleti"
+    },
+    "/rose_squadre/{squadraId}": {
+      "schema": "RosaSquadra",
+      "description": "Squadre d'annata e associazione atleti"
+    },
+    "/moduli_eventi/{eventoId}": {
+      "schema": "EventoSocietario",
+      "description": "Moduli d'iscrizione e configurazione eventi societari"
+    }
+  }
+}

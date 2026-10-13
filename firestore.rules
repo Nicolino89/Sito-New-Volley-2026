@@ -1,0 +1,215 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================================
+    // 1. GLOBAL SAFETY NET (DEFAULT DENY ALL)
+    // ============================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ============================================================================
+    // 2. REUSABLE HARDENED GLOBAL HELPERS & AUTH CHECKS
+    // ============================================================================
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    // Super Admin: nicolaturchi89@gmail.com, admin@pantere.it o con ruolo Super Admin in admin_users / admins
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'nicolaturchi89@gmail.com' ||
+        request.auth.token.email == 'admin@pantere.it' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (exists(/databases/$(database)/documents/admin_users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.ruolo == 'Super Admin')
+      );
+    }
+
+    function isCollaboratore() {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/admin_users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.ruolo == 'Collaboratore/Allenatore';
+    }
+
+    function isAuthorizedCoachForTeam(squadraId) {
+      return isCollaboratore() && 
+        (squadraId in get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.squadre_assegnate);
+    }
+
+    // ============================================================================
+    // 3. REGOLE DI ACCESSO PER LE COLLEZIONI
+    // ============================================================================
+
+    // 1. societa_info & societa_settings & societa_config & config_home
+    match /societa_info/{infoId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /societa_settings/{settingsId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /societa_config/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /config_home/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 2. modulistica
+    match /modulistica/{moduloId} {
+      allow get, list: if existing().attivo == true || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // 3. eventi_camp_tornei & eventi_tornei & camp_config
+    match /eventi_camp_tornei/{eventoId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /eventi_tornei/{eventoId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /camp_config/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 4. sponsors & sponsor
+    match /sponsors/{sponsorId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /sponsor/{sponsorId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 5. news_blog
+    match /news_blog/{newsId} {
+      allow read: if true;
+      allow create, update: if isAdmin() || (isCollaboratore() && (!incoming().keys().hasAll(['squadra_associata_id']) || incoming().squadra_associata_id in get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.squadre_assegnate));
+      allow delete: if isAdmin();
+    }
+
+    // 6. giocatori
+    match /giocatori/{giocatoreId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || isCollaboratore();
+    }
+
+    // 7. rose_squadre
+    match /rose_squadre/{squadraId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || isAuthorizedCoachForTeam(squadraId);
+    }
+
+    // 8. staff_profili
+    match /staff_profili/{profiloId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 9. galleria_foto (Include supporto ai like pubblici)
+    match /galleria_foto/{fotoId} {
+      allow read: if true;
+      allow create, delete: if isAdmin() || isCollaboratore();
+      allow update: if isAdmin() || isCollaboratore() || 
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'fotos']);
+    }
+
+    // 10. admins (Collezione di sola lettura per admin autenticati)
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // 11. admin_users (Gestione permessi e ruoli utente)
+    match /admin_users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // 12. prossima_gara
+    match /prossima_gara/{garaId} {
+      allow read: if true;
+      allow write: if isAdmin() || isCollaboratore();
+    }
+
+    // 13. statistiche_visite (Tracciamento visite pubblico e lettura dashboard)
+    match /statistiche_visite/{statId} {
+      allow read, write: if true;
+    }
+
+    // 14. content (Impostazioni generali e testi)
+    match /content/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 15. matches & config
+    match /matches/{docId} {
+      allow read: if true;
+      allow write: if isAdmin() || isCollaboratore();
+    }
+
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 16. hall_of_fame (Albo d'Oro e Quadri d'Onore)
+    match /hall_of_fame/{atletaId} {
+      allow read: if true;
+      allow write: if isAdmin() || isCollaboratore();
+    }
+
+    // 17. ospiti_illustri (Ospiti Illustri e Leggende)
+    match /ospiti_illustri/{ospiteId} {
+      allow read: if true;
+      allow write: if isAdmin() || isCollaboratore();
+    }
+
+    // 18. storico_squadre (Archivio Storico Annate Squadre)
+    match /storico_squadre/{storicoId} {
+      allow read: if true;
+      allow write: if isAdmin() || isCollaboratore();
+    }
+
+    // 19. instagram_posts (Feed Live Instagram NVA da Make.com / Admin)
+    match /instagram_posts/{postId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+  }
+}
+

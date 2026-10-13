@@ -1,0 +1,103 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "galleria_foto",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "tagMood",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dataCreazione",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "galleria_foto",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "squadra",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dataCreazione",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "news_blog",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "stato_pubblicazione",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "data_pubblicazione",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "news_blog",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "tag_categoria",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "data_pubblicazione",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "eventi_tornei",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "stato",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "ordine",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "eventi_tornei",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "tipo",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "data_inizio",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "sponsors",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "tipologia",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "ordine",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
