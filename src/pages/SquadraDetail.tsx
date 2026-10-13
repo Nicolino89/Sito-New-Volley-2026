@@ -212,6 +212,8 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
             <img 
               src={parsed.fotoUrl} 
               alt={parsed.nome}
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
               style={{
                 objectPosition: `center ${parsed.fotoPositionY ?? 15}%`
@@ -1108,6 +1110,8 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                       <img 
                         src={selectedStaffProfilo.foto?.url ?? selectedStaffProfilo.fotoUrl} 
                         alt={selectedStaffProfilo.nomeCognome} 
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover object-top"
                         style={{
                           objectPosition: `center ${selectedStaffProfilo.foto?.positionY ?? selectedStaffProfilo.fotoPositionY ?? 15}%`

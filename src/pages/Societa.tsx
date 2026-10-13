@@ -422,6 +422,8 @@ export default function Societa({ societaInfo, societaConfig }: SocietaProps) {
                                 <img 
                                   src={photoToShow} 
                                   alt={nameToShow} 
+                                  loading="lazy"
+                                  decoding="async"
                                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                   style={{
                                     objectPosition: `${positionXToShow}% ${positionYToShow}%`
@@ -662,6 +664,8 @@ export default function Societa({ societaInfo, societaConfig }: SocietaProps) {
                       <img 
                         src={selectedProfilo.foto?.url ?? selectedProfilo.fotoUrl} 
                         alt={selectedProfilo.nomeCognome} 
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover"
                         style={{
                           objectPosition: `${selectedProfilo.foto?.positionX ?? selectedProfilo.fotoPositionX ?? 50}% ${selectedProfilo.foto?.positionY ?? selectedProfilo.fotoPositionY ?? 50}%`

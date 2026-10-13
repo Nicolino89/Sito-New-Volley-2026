@@ -169,6 +169,8 @@ export default function News({ newsAll }: NewsProps) {
                   <img
                     src={singleArticle.foto_copertina_url}
                     alt={singleArticle.titolo}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
                   />
@@ -300,6 +302,8 @@ export default function News({ newsAll }: NewsProps) {
                       <img
                         src={news.foto_copertina_url || 'https://images.unsplash.com/photo-1592656094267-764a45157575?w=600&q=80'}
                         alt={news.titolo}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         referrerPolicy="no-referrer"
                       />

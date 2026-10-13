@@ -196,6 +196,8 @@ export default function SponsorPage() {
             <img
               src={sponsor.logo.url}
               alt={`Logo ${sponsor.nomeSponsor}`}
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
               style={{ objectPosition: `center ${sponsor.logo?.positionY ?? 50}%` }}
               onError={(e) => {

@@ -402,6 +402,8 @@ export default function GestioneSponsor() {
                           <img
                             src={sponsor.logo.url}
                             alt={sponsor.nomeSponsor}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-contain"
                             style={{ objectPosition: `center ${sponsor.logo.positionY}%` }}
                             onError={(e) => {

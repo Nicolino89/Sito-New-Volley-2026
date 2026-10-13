@@ -91,6 +91,8 @@ export default function Squadre({ squadre }: SquadreProps) {
           <img 
             src={hasImage ? imageUrl : "https://images.unsplash.com/photo-1571008887538-b36bb32f4571?w=800&auto=format&fit=crop&q=80"} 
             alt={team?.nome_squadra || label}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover opacity-50 group-hover:opacity-75 group-hover:scale-105 transition-all duration-500"
             referrerPolicy="no-referrer"
           />

@@ -403,6 +403,8 @@ export default function Galleria({ squadre = [] }: GalleriaProps) {
                 <img 
                   src={scattoDelMese.url} 
                   alt={scattoDelMese.titolo} 
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                   style={{ objectPosition: `50% ${scattoDelMese.fotoPositionY ?? 50}%` }}
                 />
@@ -502,6 +504,7 @@ export default function Galleria({ squadre = [] }: GalleriaProps) {
                           src={album.url} 
                           alt={album.titolo} 
                           loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                           style={{ objectPosition: `50% ${album.fotoPositionY ?? 50}%` }}
                         />
@@ -587,6 +590,7 @@ export default function Galleria({ squadre = [] }: GalleriaProps) {
                           src={album.url}
                           alt={album.titolo}
                           loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                           style={{ objectPosition: `50% ${album.fotoPositionY ?? 50}%` }}
                         />
@@ -692,6 +696,8 @@ export default function Galleria({ squadre = [] }: GalleriaProps) {
               <img
                 src={currentPhoto.url}
                 alt={currentAlbum.titolo}
+                loading="lazy"
+                decoding="async"
                 className="max-w-full max-h-[50vh] md:max-h-[72vh] object-contain rounded-2xl"
                 style={{ objectPosition: `50% ${currentPhoto.focalPoint ?? 50}%` }}
               />
@@ -714,6 +720,8 @@ export default function Galleria({ squadre = [] }: GalleriaProps) {
                         <img
                           src={f.url}
                           alt={`Miniatura ${fIdx + 1}`}
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover"
                           style={{ objectPosition: `50% ${f.focalPoint ?? 50}%` }}
                         />
