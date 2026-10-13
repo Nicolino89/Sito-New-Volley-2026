@@ -23,21 +23,15 @@ import LoadingFallback from './components/LoadingFallback';
 import WhatsAppFloatingButton from './components/WhatsAppFloatingButton';
 import VoltexCampPill from './components/VoltexCampPill';
 
-// Public pages are eagerly loaded for instantaneous 0ms tab switching
+// Public pages eagerly loaded for instant tab switching
 import Home from './pages/Home';
 import Squadre from './pages/Squadre';
 import SquadraDetail from './pages/SquadraDetail';
 import News from './pages/News';
-import CampTornei from './pages/CampTornei';
-import Galleria from './components/Galleria';
 import Societa from './pages/Societa';
 import SponsorPage from './pages/Sponsor';
-import Privacy from './pages/Privacy';
 import NotFound from './pages/NotFound';
 import Maintenance from './pages/Maintenance';
-import EventoDetail from './pages/EventoDetail';
-import AlboDOro from './pages/AlboDOro';
-import SquadreArchivio from './pages/SquadreArchivio';
 
 import {
   ascoltaStatoAutenticazione,
@@ -66,7 +60,14 @@ import {
 import SplashScreen from './components/SplashScreen';
 import CookieBanner from './components/CookieBanner';
 
-// Heavy administrative CMS tools remain lazy-loaded
+// Lazy-loaded secondary pages & CMS tools
+const AlboDOro = lazy(() => import('./pages/AlboDOro'));
+const SquadreArchivio = lazy(() => import('./pages/SquadreArchivio'));
+const CampTornei = lazy(() => import('./pages/CampTornei'));
+const EventoDetail = lazy(() => import('./pages/EventoDetail'));
+const Galleria = lazy(() => import('./components/Galleria'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+
 const LoginForm = lazy(() => import('./components/LoginForm'));
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 
@@ -549,40 +550,42 @@ export default function App() {
             ) : (!isAdminMode && !location.pathname.startsWith('/admin')) ? (
               /* SITO PUBBLICO (Rendering Immediato a 0ms di latenza) */
               <div className={(location.pathname.startsWith('/albo-d-oro') || location.pathname.startsWith('/hall-of-fame')) ? '' : 'space-y-10'}>
-                {(() => {
-                  const path = location.pathname;
-                  if (path === '/privacy') return <Privacy />;
-                  if (path === '/sponsor') return <SponsorPage />;
-                  if (path === '/') return (
-                    <Home 
-                      societaSettings={societaSettings} 
-                      setSocietaSettings={setSocietaSettings} 
-                      societaInfo={societaInfo}
-                      newsAll={newsAll}
-                      sponsorsAll={sponsorsAll}
-                    />
-                  );
-                  if (path.startsWith('/squadre')) {
-                    if (path === '/squadre/archivio' || path.startsWith('/squadre/archivio')) {
-                      return <SquadreArchivio squadreInCorso={squadreAll} giocatori={giocatoriAll} />;
+                <Suspense fallback={<LoadingFallback />}>
+                  {(() => {
+                    const path = location.pathname;
+                    if (path === '/privacy') return <Privacy />;
+                    if (path === '/sponsor') return <SponsorPage />;
+                    if (path === '/') return (
+                      <Home 
+                        societaSettings={societaSettings} 
+                        setSocietaSettings={setSocietaSettings} 
+                        societaInfo={societaInfo}
+                        newsAll={newsAll}
+                        sponsorsAll={sponsorsAll}
+                      />
+                    );
+                    if (path.startsWith('/squadre')) {
+                      if (path === '/squadre/archivio' || path.startsWith('/squadre/archivio')) {
+                        return <SquadreArchivio squadreInCorso={squadreAll} giocatori={giocatoriAll} />;
+                      }
+                      return path === '/squadre' || path === '/squadre/'
+                        ? <Squadre squadre={squadreAll} />
+                        : <SquadraDetail squadre={squadreAll} giocatori={giocatoriAll} />;
                     }
-                    return path === '/squadre' || path === '/squadre/'
-                      ? <Squadre squadre={squadreAll} />
-                      : <SquadraDetail squadre={squadreAll} giocatori={giocatoriAll} />;
-                  }
-                  if (path.startsWith('/news')) return <News newsAll={newsAll} />;
-                  if (path.startsWith('/camp-tornei') || path.startsWith('/eventi')) {
-                    const parts = path.split('/').filter(Boolean);
-                    if (parts.length >= 2 && parts[1] !== '' && !['camp', 'tornei', 'generico', 'archivio'].includes(parts[1])) {
-                      return <EventoDetail societaInfo={societaInfo} eventId={parts[1]} />;
+                    if (path.startsWith('/news')) return <News newsAll={newsAll} />;
+                    if (path.startsWith('/camp-tornei') || path.startsWith('/eventi')) {
+                      const parts = path.split('/').filter(Boolean);
+                      if (parts.length >= 2 && parts[1] !== '' && !['camp', 'tornei', 'generico', 'archivio'].includes(parts[1])) {
+                        return <EventoDetail societaInfo={societaInfo} eventId={parts[1]} />;
+                      }
+                      return <CampTornei />;
                     }
-                    return <CampTornei />;
-                  }
-                  if (path.startsWith('/albo-d-oro') || path.startsWith('/hall-of-fame')) return <AlboDOro />;
-                  if (path.startsWith('/galleria') || path.startsWith('/modulistica')) return <Galleria squadre={squadreAll} />;
-                  if (path.startsWith('/societa')) return <Societa societaInfo={societaInfo} societaConfig={societaConfig} />;
-                  return <NotFound />;
-                })()}
+                    if (path.startsWith('/albo-d-oro') || path.startsWith('/hall-of-fame')) return <AlboDOro />;
+                    if (path.startsWith('/galleria') || path.startsWith('/modulistica')) return <Galleria squadre={squadreAll} />;
+                    if (path.startsWith('/societa')) return <Societa societaInfo={societaInfo} societaConfig={societaConfig} />;
+                    return <NotFound />;
+                  })()}
+                </Suspense>
               </div>
             ) : loadingAuth ? (
               <div className="flex flex-col items-center justify-center py-20 gap-4" id="loading-spinner">
