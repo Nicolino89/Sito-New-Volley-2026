@@ -32,15 +32,11 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.email_verified == true;
     }
 
-    // Super Admin: nicolaturchi89@gmail.com, admin@pantere.it o con ruolo Super Admin in admin_users / admins
+    // Super Admin: basato sul ruolo nel documento admin_users
     function isAdmin() {
-      return isSignedIn() && (
-        request.auth.token.email == 'nicolaturchi89@gmail.com' ||
-        request.auth.token.email == 'admin@pantere.it' ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        (exists(/databases/$(database)/documents/admin_users/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.ruolo == 'Super Admin')
-      );
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/admin_users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.ruolo == 'Super Admin';
     }
 
     function isCollaboratore() {
@@ -167,7 +163,13 @@ service cloud.firestore {
 
     // 13. statistiche_visite (Tracciamento visite pubblico e lettura dashboard)
     match /statistiche_visite/{statId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
+      allow create: if statId == 'panoramica'
+        && request.resource.data.totaleVisite == 1;
+      allow update: if statId == 'panoramica'
+        && request.resource.data.totaleVisite == resource.data.totaleVisite + 1
+        && request.resource.data.diff(resource.data).affectedKeys().size() <= 4;
     }
 
     // 14. content (Impostazioni generali e testi)
@@ -208,7 +210,7 @@ service cloud.firestore {
     // 19. instagram_posts (Feed Live Instagram NVA da Make.com / Admin)
     match /instagram_posts/{postId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isAdmin();
     }
   }
 }
