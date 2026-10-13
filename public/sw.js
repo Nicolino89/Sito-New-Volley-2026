@@ -1,18 +1,21 @@
-const CACHE_NAME = 'nva-cache-v1';
+const CACHE_NAME = 'nva-cache-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/manifest.webmanifest',
-  '/og-image.jpg'
+  '/manifest.webmanifest'
 ];
 
-// Install Event: cache static shell
+// Install Event: cache static shell with robust per-URL handling
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS).catch((err) => {
-        console.warn('PWA Cache addAll non-fatal error:', err);
-      });
+      return Promise.all(
+        STATIC_ASSETS.map((url) =>
+          cache.add(url).catch((err) => {
+            console.warn(`PWA Cache add non-fatal error for ${url}:`, err);
+          })
+        )
+      );
     })
   );
   self.skipWaiting();
@@ -43,12 +46,29 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  const url = new URL(request.url);
+  const isHtmlPage = request.mode === 'navigate' || 
+                     url.pathname === '/' || 
+                     url.pathname === '/index.html';
+
   // For HTML navigation requests: Network First with Cache Fallback
-  if (request.mode === 'navigate') {
+  if (isHtmlPage) {
     event.respondWith(
-      fetch(request).catch(() => {
-        return caches.match('/index.html') || caches.match('/');
-      })
+      fetch(request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match('/index.html').then((fallback) => {
+            return fallback || caches.match('/');
+          });
+        })
     );
     return;
   }
