@@ -2063,47 +2063,24 @@ export function ascoltaStatoAutenticazione(callback: (user: AdminUser | null) =>
       const userDocRef = doc(db, 'admin_users', fbUser.uid);
       const userDocSnap = await getDoc(userDocRef);
 
-      const isSpecialAdmin = fbUser.email?.toLowerCase() === 'nicolaturchi89@gmail.com' || fbUser.email?.toLowerCase() === 'admin@pantere.it';
-
       if (userDocSnap.exists()) {
         const data = userDocSnap.data() || {};
         callback({
           uid: fbUser.uid,
           ...data,
-          ruolo: isSpecialAdmin ? 'Super Admin' : (data.ruolo || 'Collaboratore/Allenatore')
+          ruolo: data.ruolo || 'Collaboratore/Allenatore'
         } as AdminUser);
       } else {
-        // Se è l'admin pre-autorizzato primario e non ha ancora un record Firestore, crealo
-        if (isSpecialAdmin) {
-          const autoAdmin: AdminUser = {
-            uid: fbUser.uid,
-            email: fbUser.email || fbUser.providerData?.[0]?.email || 'admin@pantere.it',
-            ruolo: 'Super Admin',
-            squadre_assegnate: []
-          };
-          await setDoc(userDocRef, autoAdmin);
-          callback(autoAdmin);
-        } else {
-          // Altrimenti default a Collaboratore non assegnato
-          const defaultCollab: AdminUser = {
-            uid: fbUser.uid,
-            email: fbUser.email || '',
-            ruolo: 'Collaboratore/Allenatore',
-            squadre_assegnate: []
-          };
-          await setDoc(userDocRef, defaultCollab);
-          callback(defaultCollab);
-        }
+        // Se il documento non esiste: NON fare setDoc, NON creare utenti fittizi, esegui signOut e callback(null).
+        console.warn("Account presente in Authentication ma non censito in admin_users. Accesso negato.");
+        await fbSignOut(auth).catch(() => {});
+        callback(null);
       }
     } catch (err) {
       console.error("Errore durante il recupero dei permessi dell'utente:", err);
-      const isSpecialAdmin = fbUser.email?.toLowerCase() === 'nicolaturchi89@gmail.com' || fbUser.email?.toLowerCase() === 'admin@pantere.it';
-      callback({
-        uid: fbUser.uid,
-        email: fbUser.email || 'admin@pantere.it',
-        ruolo: isSpecialAdmin ? 'Super Admin' : 'Collaboratore/Allenatore',
-        squadre_assegnate: []
-      });
+      // Se la lettura fallisce (rete o permessi): signOut e callback(null).
+      await fbSignOut(auth).catch(() => {});
+      callback(null);
     }
   });
 }
@@ -2132,25 +2109,16 @@ export async function loginUtente(email: string, password: string): Promise<Admi
     const userDocRef = doc(db, 'admin_users', fbUser.uid);
     const userDocSnap = await getDoc(userDocRef);
 
-    const isSpecialAdmin = fbUser.email?.toLowerCase() === 'nicolaturchi89@gmail.com' || fbUser.email?.toLowerCase() === 'admin@pantere.it' || email.trim().toLowerCase() === 'admin@pantere.it';
-
     if (userDocSnap.exists()) {
       const data = userDocSnap.data() || {};
       return {
         uid: fbUser.uid,
         ...data,
-        ruolo: isSpecialAdmin ? 'Super Admin' : (data.ruolo || 'Collaboratore/Allenatore')
+        ruolo: data.ruolo || 'Collaboratore/Allenatore'
       } as AdminUser;
     } else {
-      const ruolo = isSpecialAdmin ? 'Super Admin' : 'Collaboratore/Allenatore';
-      const autoUser: AdminUser = {
-        uid: fbUser.uid,
-        email: fbUser.email || email.trim(),
-        ruolo: ruolo as any,
-        squadre_assegnate: []
-      };
-      await setDoc(userDocRef, autoUser);
-      return autoUser;
+      await fbSignOut(auth).catch(() => {});
+      throw new Error("Account non censito come amministratore o collaboratore.");
     }
   } catch (error) {
     throw new Error(error instanceof Error ? error.message : "Errore durante l'accesso.");
