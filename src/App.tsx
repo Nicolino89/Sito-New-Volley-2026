@@ -92,6 +92,7 @@ function lazyWithRetry<T extends React.ComponentType<any>>(
 // Error Boundary specific to chunk/lazy Suspense failures
 interface ChunkErrorBoundaryProps {
   children: React.ReactNode;
+  key?: any;
 }
 
 interface ChunkErrorBoundaryState {
@@ -636,7 +637,7 @@ export default function App() {
           {/* DYNAMIC CONTENT STAGE */}
           <main className={`w-full min-h-screen ${(location.pathname === '/' || location.pathname === '/squadre' || location.pathname.startsWith('/camp-tornei') || location.pathname.startsWith('/societa') || location.pathname.startsWith('/news') || location.pathname.startsWith('/galleria') || location.pathname.startsWith('/albo-d-oro') || location.pathname.startsWith('/hall-of-fame')) ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`} id="content-stage">
             {location.pathname === '/login' ? (
-              <ChunkErrorBoundary>
+              <ChunkErrorBoundary key={location.pathname}>
                 <Suspense fallback={<LoadingFallback />}>
                   <LoginForm />
                 </Suspense>
@@ -644,7 +645,7 @@ export default function App() {
             ) : (!isAdminMode && !location.pathname.startsWith('/admin')) ? (
               /* SITO PUBBLICO (Rendering Immediato a 0ms di latenza) */
               <div className={(location.pathname.startsWith('/albo-d-oro') || location.pathname.startsWith('/hall-of-fame')) ? '' : 'space-y-10'}>
-                <ChunkErrorBoundary>
+                <ChunkErrorBoundary key={location.pathname}>
                   <Suspense fallback={<LoadingFallback />}>
                     {(() => {
                       const path = location.pathname;
@@ -690,7 +691,7 @@ export default function App() {
               </div>
             ) : !currentUser ? (
               <div className="w-full max-w-md mx-auto py-8">
-                <ChunkErrorBoundary>
+                <ChunkErrorBoundary key={location.pathname}>
                   <Suspense fallback={<LoadingFallback />}>
                     <LoginForm />
                   </Suspense>
@@ -699,7 +700,7 @@ export default function App() {
             ) : (
               /* CMS AMMINISTRAZIONE AUTENTICATO */
               <div className="w-full space-y-6" id="cms-dashboard">
-                <ChunkErrorBoundary>
+                <ChunkErrorBoundary key={location.pathname}>
                   <Suspense fallback={<LoadingFallback />}>
                     <AdminPanel
                       newsAll={newsAll}
