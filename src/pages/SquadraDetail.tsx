@@ -488,14 +488,21 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                         />
                       )}
                       
-                      {/* Shirt Number Badge */}
-                      <div className="absolute top-4 left-4 bg-brand-yellow text-black font-bebas text-2xl tracking-wider px-3 py-1.5 rounded-lg shadow-md">
-                        #{player.numero_maglia}
-                      </div>
+                      {/* Shirt Number Badge / NVA Panther Badge */}
+                      {player.numero_maglia && player.numero_maglia !== 0 && String(player.numero_maglia).trim() !== '0' ? (
+                        <div className="absolute top-4 left-4 bg-brand-yellow text-black font-bebas text-2xl tracking-wider px-3 py-1.5 rounded-lg shadow-md z-10">
+                          #{player.numero_maglia}
+                        </div>
+                      ) : (
+                        <div className="absolute top-3.5 left-3.5 bg-black/85 backdrop-blur-md border border-brand-yellow/50 text-brand-yellow font-barlow font-black text-xs tracking-wider px-2.5 py-1.5 rounded-lg shadow-md flex items-center gap-1.5 z-10">
+                          <img src="/images/pantera-hero.png" alt="NVA" className="w-4 h-4 object-contain" />
+                          <span>PANTERE</span>
+                        </div>
+                      )}
 
                       {/* Captain Badge */}
                       {team.capitano_id === player.id && (
-                        <div className="absolute top-16 left-4 bg-amber-500 text-black font-barlow font-semibold text-xs px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1">
+                        <div className="absolute top-16 left-4 bg-amber-500 text-black font-barlow font-semibold text-xs px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1 z-10">
                           <Trophy className="w-3.5 h-3.5 shrink-0" /> CAPITANO
                         </div>
                       )}
@@ -860,9 +867,16 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
               {/* Header */}
               <div className="p-6 border-b border-zinc-200 flex justify-between items-center bg-zinc-50 shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="bg-brand-yellow text-black font-bebas text-3xl tracking-wider px-3.5 py-1.5 rounded-xl shadow-sm">
-                    #{selectedPlayer.numero_maglia}
-                  </div>
+                  {selectedPlayer.numero_maglia && selectedPlayer.numero_maglia !== 0 && String(selectedPlayer.numero_maglia).trim() !== '0' ? (
+                    <div className="bg-brand-yellow text-black font-bebas text-3xl tracking-wider px-3.5 py-1.5 rounded-xl shadow-sm">
+                      #{selectedPlayer.numero_maglia}
+                    </div>
+                  ) : (
+                    <div className="bg-black text-brand-yellow border border-brand-yellow/40 font-barlow font-black text-sm tracking-wider px-3 py-2 rounded-xl shadow-sm flex items-center gap-1.5">
+                      <img src="/images/pantera-hero.png" alt="NVA" className="w-5 h-5 object-contain" />
+                      <span>PANTERE</span>
+                    </div>
+                  )}
                   <div>
                     <span className="text-[10px] font-inter font-semibold text-zinc-400 block uppercase tracking-widest">SCHEDA ATLETA</span>
                     <h3 className="text-xl font-inter font-semibold tracking-wide text-zinc-900 uppercase">

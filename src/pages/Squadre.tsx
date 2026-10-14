@@ -9,7 +9,7 @@ interface SquadreProps {
 
 export default function Squadre({ squadre }: SquadreProps) {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'GIOVANILI' | 'SENIOR'>('GIOVANILI');
+  const [filterCategory, setFilterCategory] = useState<'TUTTE' | 'SENIOR' | 'GIOVANILI'>('TUTTE');
 
   useEffect(() => {
     document.title = "Le Squadre | New Volley Academy Forlì";
@@ -197,52 +197,142 @@ export default function Squadre({ squadre }: SquadreProps) {
         </div>
       </section>
 
-      {/* ================= CONTENUTO GIOVANILI CON TRANSIZIONE SFUMATA ================= */}
+      {/* ================= CONTENUTO CATEGORIE & GIOVANILI DIVISE MA INSIEME ================= */}
       <div className="w-full bg-gradient-to-b from-zinc-950 via-slate-900/10 to-slate-100/95 py-12 transition-all relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           
-          {/* Header Sezione Categorie & Pulsanti Tab */}
+          {/* Header Sezione Categorie & Filtri Rapidi */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-4">
             <div className="flex items-center gap-2.5">
               <span className="w-2.5 h-6 bg-[#FFE600] rounded-sm inline-block shadow-sm" />
               <Users className="w-5 h-5 text-[#FFE600]" />
               <h2 className="text-2xl font-barlow font-extrabold uppercase tracking-wide text-white drop-shadow-sm">
-                TUTTE LE CATEGORIE
+                TUTTE LE NOSTRE SQUADRE
               </h2>
             </div>
 
-            {/* Pill Tabs Selector */}
-            <div className="inline-flex bg-black/90 p-1.5 rounded-2xl border border-zinc-800 shadow-xl self-start sm:self-auto">
+            {/* Pill Filter Buttons */}
+            <div className="inline-flex bg-black/90 p-1.5 rounded-2xl border border-zinc-800 shadow-xl self-start sm:self-auto flex-wrap gap-1">
               <button
-                onClick={() => setActiveTab('GIOVANILI')}
-                className={`px-5 py-2 rounded-xl text-xs font-bold font-barlow uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-                  activeTab === 'GIOVANILI'
+                onClick={() => setFilterCategory('TUTTE')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold font-barlow uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                  filterCategory === 'TUTTE'
                     ? 'bg-[#FFE600] text-zinc-950 shadow-md'
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
-                Settore Giovanile ({giovaniliTeams.length})
+                Tutte ({seniorTeams.length + giovaniliTeams.length})
               </button>
               <button
-                onClick={() => setActiveTab('SENIOR')}
-                className={`px-5 py-2 rounded-xl text-xs font-bold font-barlow uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-                  activeTab === 'SENIOR'
+                onClick={() => setFilterCategory('SENIOR')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold font-barlow uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                  filterCategory === 'SENIOR'
                     ? 'bg-[#FFE600] text-zinc-950 shadow-md'
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 Campionati & Divisioni ({seniorTeams.length})
               </button>
+              <button
+                onClick={() => setFilterCategory('GIOVANILI')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold font-barlow uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                  filterCategory === 'GIOVANILI'
+                    ? 'bg-[#FFE600] text-zinc-950 shadow-md'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Settore Giovanile ({giovaniliTeams.length})
+              </button>
             </div>
           </div>
 
-          {/* Tab Contents Grid */}
-          <div>
-            {activeTab === 'GIOVANILI' ? (
-              giovaniliTeams.length === 0 ? (
-                <div className="text-center py-16 bg-white/95 backdrop-blur-sm border border-slate-200/90 rounded-3xl shadow-sm">
-                  <Shield className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                  <p className="text-slate-700 font-bold font-barlow uppercase text-base">Nessuna squadra giovanile configurata</p>
+          {/* SEZIONE 1: CAMPIONATI & DIVISIONI */}
+          {(filterCategory === 'TUTTE' || filterCategory === 'SENIOR') && (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-300/60 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <Shield className="w-5 h-5 text-amber-500" />
+                  <h3 className="text-xl sm:text-2xl font-barlow font-bold uppercase tracking-wide text-zinc-900">
+                    Campionati & Divisioni
+                  </h3>
+                  <span className="bg-amber-100 text-amber-900 border border-amber-200 text-xs font-mono font-bold px-2.5 py-0.5 rounded-full">
+                    {seniorTeams.length} {seniorTeams.length === 1 ? 'Squadra' : 'Squadre'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-500 font-inter">
+                  Formazioni impegnate nei campionati territoriali e interprovinciali
+                </p>
+              </div>
+
+              {seniorTeams.length === 0 ? (
+                <div className="text-center py-12 bg-white/95 backdrop-blur-sm border border-slate-200/90 rounded-3xl shadow-sm">
+                  <Shield className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                  <p className="text-slate-700 font-bold font-barlow uppercase text-sm">Nessuna squadra in questa categoria</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {seniorTeams.map(team => {
+                    const playersCount = team.id_atleti?.length || 0;
+                    const genderLetter = isFemminile(team) ? 'F' : 'M';
+                    return (
+                      <div
+                        key={team.id}
+                        onClick={() => navigate(`/squadre/${team.id}`)}
+                        className="bg-white/95 backdrop-blur-sm border border-slate-200/90 hover:border-[#FFE600] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] rounded-3xl p-6 shadow-sm transition-all duration-300 cursor-pointer group flex flex-col justify-between h-52 relative overflow-hidden"
+                      >
+                        <div className="space-y-2.5">
+                          <div className="flex justify-between items-center">
+                            <span className={`inline-block text-[10px] font-bold font-inter px-2.5 py-0.5 rounded-md uppercase border ${
+                              genderLetter === 'F' 
+                                ? 'bg-pink-50 border-pink-200 text-pink-700' 
+                                : 'bg-blue-50 border-blue-200 text-blue-700'
+                            }`}>
+                              {genderLetter === 'F' ? '♀ Femminile' : '♂ Maschile'}
+                            </span>
+                            <span className="text-[11px] font-mono font-semibold text-slate-400">{team?.stagione || '2026/2027'}</span>
+                          </div>
+                          <h3 className="text-xl font-barlow font-bold text-slate-950 uppercase tracking-wide group-hover:text-amber-600 transition-colors leading-snug">
+                            {team?.nome_squadra || 'Squadra'}
+                          </h3>
+                          <p className="text-slate-500 text-xs font-mono line-clamp-1">{team?.campionato || 'Campionato Territoriale FIPAV'}</p>
+                        </div>
+
+                        <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs mt-4">
+                          <span className="text-slate-600 font-mono"><strong>{playersCount}</strong> Atleti in Rosa</span>
+                          <span className="text-amber-600 font-mono text-xs font-extrabold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                            Vedi scheda <ChevronRight className="w-3.5 h-3.5" />
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SEZIONE 2: SETTORE GIOVANILE & MINIVOLLEY */}
+          {(filterCategory === 'TUTTE' || filterCategory === 'GIOVANILI') && (
+            <div className="space-y-4 pt-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-300/60 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <Sparkles className="w-5 h-5 text-emerald-500" />
+                  <h3 className="text-xl sm:text-2xl font-barlow font-bold uppercase tracking-wide text-zinc-900">
+                    Settore Giovanile & Minivolley S3
+                  </h3>
+                  <span className="bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-mono font-bold px-2.5 py-0.5 rounded-full">
+                    {giovaniliTeams.length} {giovaniliTeams.length === 1 ? 'Squadra' : 'Squadre'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-500 font-inter">
+                  Il vivaio NVA: avviamento allo sport, Under agonistiche e Minivolley S3
+                </p>
+              </div>
+
+              {giovaniliTeams.length === 0 ? (
+                <div className="text-center py-12 bg-white/95 backdrop-blur-sm border border-slate-200/90 rounded-3xl shadow-sm">
+                  <Shield className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                  <p className="text-slate-700 font-bold font-barlow uppercase text-sm">Nessuna squadra giovanile configurata</p>
                   <p className="text-slate-500 text-xs mt-1 font-inter">Le squadre giovanili (Under 18, 16, 14, 13, S3) verranno pubblicate a breve.</p>
                 </div>
               ) : (
@@ -283,55 +373,9 @@ export default function Squadre({ squadre }: SquadreProps) {
                     );
                   })}
                 </div>
-              )
-            ) : (
-              seniorTeams.length === 0 ? (
-                <div className="text-center py-16 bg-white/95 backdrop-blur-sm border border-slate-200/90 rounded-3xl shadow-sm">
-                  <Shield className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                  <p className="text-slate-700 font-bold font-barlow uppercase text-base">Nessuna squadra in questa categoria</p>
-                  <p className="text-slate-500 text-xs mt-1 font-inter">Le squadre di questa categoria verranno pubblicate a breve.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {seniorTeams.map(team => {
-                    const playersCount = team.id_atleti?.length || 0;
-                    const genderLetter = isFemminile(team) ? 'F' : 'M';
-                    return (
-                      <div
-                        key={team.id}
-                        onClick={() => navigate(`/squadre/${team.id}`)}
-                        className="bg-white/95 backdrop-blur-sm border border-slate-200/90 hover:border-[#FFE600] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] rounded-3xl p-6 shadow-sm transition-all duration-300 cursor-pointer group flex flex-col justify-between h-52 relative overflow-hidden"
-                      >
-                        <div className="space-y-2.5">
-                          <div className="flex justify-between items-center">
-                            <span className={`inline-block text-[10px] font-bold font-inter px-2.5 py-0.5 rounded-md uppercase border ${
-                              genderLetter === 'F' 
-                                ? 'bg-pink-50 border-pink-200 text-pink-700' 
-                                : 'bg-blue-50 border-blue-200 text-blue-700'
-                            }`}>
-                              {genderLetter === 'F' ? '♀ Femminile' : '♂ Maschile'}
-                            </span>
-                            <span className="text-[11px] font-mono font-semibold text-slate-400">{team?.stagione || '2026/2027'}</span>
-                          </div>
-                          <h3 className="text-xl font-barlow font-bold text-slate-950 uppercase tracking-wide group-hover:text-amber-600 transition-colors leading-snug">
-                            {team?.nome_squadra || 'Squadra'}
-                          </h3>
-                          <p className="text-slate-500 text-xs font-mono line-clamp-1">{team?.campionato || ''}</p>
-                        </div>
-
-                        <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs mt-4">
-                          <span className="text-slate-600 font-mono"><strong>{playersCount}</strong> Atleti in Rosa</span>
-                          <span className="text-amber-600 font-mono text-xs font-extrabold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                            Vedi scheda <ChevronRight className="w-3.5 h-3.5" />
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
         </div>
       </div>
