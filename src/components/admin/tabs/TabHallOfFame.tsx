@@ -37,6 +37,8 @@ import {
   getSquadreAll,
   caricaBlobSuStorage,
   OspiteIllustre,
+  EventoOspite,
+  getEventiOspite,
   getOspitiIllustriAll,
   addOspiteIllustre,
   updateOspiteIllustre,
@@ -105,8 +107,11 @@ export default function TabHallOfFame({
   const [formOspite, setFormOspite] = useState<Omit<OspiteIllustre, 'id'>>({
     nome: '',
     ruoloTitolo: '',
-    anno: '2024/2025',
+    anno: '2024',
     occasione: 'Summer Camp 2024',
+    eventiPartecipazione: [{ anno: '2024', evento: 'Summer Camp 2024' }],
+    testoPassaggio: '',
+    testoIspirazione: '',
     fotoUrl: '',
     fotoPositionY: 30,
     fotoPositionX: 50,
@@ -526,8 +531,11 @@ export default function TabHallOfFame({
     setFormOspite({
       nome: '',
       ruoloTitolo: '',
-      anno: '2024/2025',
-      occasione: 'Summer Camp 2024',
+      anno: '2026',
+      occasione: '',
+      eventiPartecipazione: [{ anno: '2026', evento: '' }],
+      testoPassaggio: '',
+      testoIspirazione: '',
       fotoUrl: '',
       fotoPositionY: 30,
       fotoPositionX: 50,
@@ -542,11 +550,15 @@ export default function TabHallOfFame({
 
   const handleOpenEditOspite = (item: OspiteIllustre) => {
     setEditingOspiteId(item.id);
+    const parsedEventi = getEventiOspite(item);
     setFormOspite({
       nome: item.nome || '',
       ruoloTitolo: item.ruoloTitolo || '',
-      anno: item.anno || '2024/2025',
+      anno: item.anno || '2024',
       occasione: item.occasione || '',
+      eventiPartecipazione: parsedEventi.length > 0 ? parsedEventi : [{ anno: item.anno || '', evento: item.occasione || '' }],
+      testoPassaggio: item.testoPassaggio || '',
+      testoIspirazione: item.testoIspirazione || '',
       fotoUrl: item.fotoUrl || '',
       fotoPositionY: item.fotoPositionY ?? 30,
       fotoPositionX: item.fotoPositionX ?? 50,
@@ -662,8 +674,15 @@ export default function TabHallOfFame({
       } catch (e) {}
     }
 
-    const payload = {
+    const eventiValidi = (formOspite.eventiPartecipazione || []).filter(e => e.anno?.trim() || e.evento?.trim());
+    const fallbackAnno = eventiValidi.map(e => e.anno?.trim()).filter(Boolean).join(' - ') || formOspite.anno || '2024';
+    const fallbackOccasione = eventiValidi.map(e => e.evento?.trim()).filter(Boolean).join(' - ') || formOspite.occasione || 'Ospite NVA';
+
+    const payload: Omit<OspiteIllustre, 'id'> = {
       ...formOspite,
+      eventiPartecipazione: eventiValidi,
+      anno: fallbackAnno,
+      occasione: fallbackOccasione,
       fotoUrl: finalFotoUrl
     };
 
@@ -1811,28 +1830,90 @@ export default function TabHallOfFame({
                 </div>
               </div>
 
-              {/* Riga 2: Anno e Occasione */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-mono font-bold uppercase text-zinc-700">Anno o Stagione</label>
-                  <input 
-                    type="text" 
-                    value={formOspite.anno}
-                    onChange={e => setFormOspite({ ...formOspite, anno: e.target.value })}
-                    placeholder="es. 2024 o 2024/2025"
-                    className="w-full bg-zinc-50 border border-zinc-300 rounded-xl p-3 text-sm focus:border-amber-400 focus:outline-hidden"
-                  />
+              {/* Eventi & Partecipazioni Distinte per Anno */}
+              <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-2xl space-y-3">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                  <div>
+                    <label className="text-xs font-mono font-bold uppercase text-zinc-900 flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Partecipazioni & Eventi NVA (Divisi per Anno)</span>
+                    </label>
+                    <p className="text-[11px] text-zinc-500">
+                      Aggiungi ciascun evento e anno separatamente per impaginarli in modo chiaro.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const current = formOspite.eventiPartecipazione && formOspite.eventiPartecipazione.length > 0
+                        ? formOspite.eventiPartecipazione
+                        : [{ anno: formOspite.anno || '2024', evento: formOspite.occasione || '' }];
+                      const lastYear = current[current.length - 1]?.anno || '2026';
+                      setFormOspite({
+                        ...formOspite,
+                        eventiPartecipazione: [...current, { anno: lastYear, evento: '' }]
+                      });
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-500 text-black text-xs font-bold uppercase flex items-center gap-1 cursor-pointer transition-all shadow-xs shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Aggiungi Partecipazione
+                  </button>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-mono font-bold uppercase text-zinc-700">Occasione del Passaggio</label>
-                  <input 
-                    type="text" 
-                    value={formOspite.occasione}
-                    onChange={e => setFormOspite({ ...formOspite, occasione: e.target.value })}
-                    placeholder="es. Ospite Speciale Summer Camp 2024"
-                    className="w-full bg-zinc-50 border border-zinc-300 rounded-xl p-3 text-sm focus:border-amber-400 focus:outline-hidden"
-                  />
+                <div className="space-y-2">
+                  {(formOspite.eventiPartecipazione && formOspite.eventiPartecipazione.length > 0 
+                    ? formOspite.eventiPartecipazione 
+                    : [{ anno: formOspite.anno || '2024', evento: formOspite.occasione || '' }]
+                  ).map((ev, idx) => (
+                    <div key={idx} className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-zinc-200 shadow-2xs">
+                      <div className="w-28 sm:w-32 shrink-0">
+                        <label className="text-[10px] font-mono text-zinc-400 uppercase block">Anno</label>
+                        <input
+                          type="text"
+                          value={ev.anno}
+                          placeholder="es. 2024"
+                          onChange={e => {
+                            const updated = [...(formOspite.eventiPartecipazione || [{ anno: '', evento: '' }])];
+                            updated[idx] = { ...updated[idx], anno: e.target.value };
+                            setFormOspite({ ...formOspite, eventiPartecipazione: updated });
+                          }}
+                          className="w-full text-xs font-mono font-bold p-2 rounded-lg border border-zinc-300 focus:border-amber-400 focus:outline-hidden"
+                        />
+                      </div>
+
+                      <div className="flex-1">
+                        <label className="text-[10px] font-mono text-zinc-400 uppercase block">Nome Evento / Camp / Occasione</label>
+                        <input
+                          type="text"
+                          value={ev.evento}
+                          placeholder="es. Salfep Summer Camp 2024"
+                          onChange={e => {
+                            const updated = [...(formOspite.eventiPartecipazione || [{ anno: '', evento: '' }])];
+                            updated[idx] = { ...updated[idx], evento: e.target.value };
+                            setFormOspite({ ...formOspite, eventiPartecipazione: updated });
+                          }}
+                          className="w-full text-xs p-2 rounded-lg border border-zinc-300 focus:border-amber-400 focus:outline-hidden font-medium"
+                        />
+                      </div>
+
+                      {(formOspite.eventiPartecipazione || []).length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = [...(formOspite.eventiPartecipazione || [])];
+                            updated.splice(idx, 1);
+                            setFormOspite({ ...formOspite, eventiPartecipazione: updated });
+                          }}
+                          className="p-2 text-zinc-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors mt-3 cursor-pointer"
+                          title="Rimuovi questo evento"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -1934,6 +2015,69 @@ export default function TabHallOfFame({
                   placeholder="es. Presente come testimonial d'eccezione, ha condotto una sessione tecnica speciale di attacco e motivato le nostre giovani atlete con il suo percorso in Superlega..."
                   className="w-full bg-zinc-50 border border-zinc-300 rounded-xl p-3 text-sm focus:border-amber-400 focus:outline-hidden leading-relaxed"
                 />
+              </div>
+
+              {/* Frasi Ufficiali della Scheda Personaggio (Modificabili) */}
+              <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-2xl space-y-4">
+                <div>
+                  <h4 className="text-xs font-mono font-bold uppercase text-zinc-900 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Dediche & Frasi della Scheda (Personalizzabili)</span>
+                  </h4>
+                  <p className="text-[11px] text-zinc-500">
+                    Se lasci vuoto, vengono utilizzate le frasi celebrative predefinite. Puoi personalizzarle per scrivere testi specifici.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-mono font-bold uppercase text-zinc-700">
+                      Frase 1 • L'Occasione del Passaggio
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setFormOspite({
+                        ...formOspite,
+                        testoPassaggio: `La New Volley Academy ha avuto l'onore di ospitare ${formOspite.nome || "l'ospite"} per condividere con atlete, atleti e staff tecnico l'esperienza, la dedizione e la mentalità che contraddistinguono i vertici della pallavolo italiana ed internazionale.`
+                      })}
+                      className="text-[10px] text-amber-600 hover:underline cursor-pointer"
+                    >
+                      Inserisci testo predefinito
+                    </button>
+                  </div>
+                  <textarea
+                    rows={2}
+                    value={formOspite.testoPassaggio || ''}
+                    onChange={e => setFormOspite({ ...formOspite, testoPassaggio: e.target.value })}
+                    placeholder={`La New Volley Academy ha avuto l'onore di ospitare ${formOspite.nome || "l'ospite"} per condividere con atlete, atleti e staff tecnico l'esperienza, la dedizione e la mentalità... (lascia vuoto per testo standard)`}
+                    className="w-full bg-white border border-zinc-300 rounded-xl p-2.5 text-xs focus:border-amber-400 focus:outline-hidden leading-relaxed"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-mono font-bold uppercase text-zinc-700">
+                      Frase 2 • Ispirazione Continua per la Società
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setFormOspite({
+                        ...formOspite,
+                        testoIspirazione: `La presenza di campioni del calibro di ${formOspite.nome || "questo atleta"} testimonia l'impegno costante della New Volley Academy nella crescita sportiva, etica ed umana del nostro settore giovanile.`
+                      })}
+                      className="text-[10px] text-amber-600 hover:underline cursor-pointer"
+                    >
+                      Inserisci testo predefinito
+                    </button>
+                  </div>
+                  <textarea
+                    rows={2}
+                    value={formOspite.testoIspirazione || ''}
+                    onChange={e => setFormOspite({ ...formOspite, testoIspirazione: e.target.value })}
+                    placeholder={`La presenza di campioni del calibro di ${formOspite.nome || "questo atleta"} testimonia l'impegno costante della New Volley Academy nella crescita sportiva... (lascia vuoto per testo standard)`}
+                    className="w-full bg-white border border-zinc-300 rounded-xl p-2.5 text-xs focus:border-amber-400 focus:outline-hidden leading-relaxed"
+                  />
+                </div>
               </div>
 
               {/* Opzioni: Ordine e In Evidenza */}

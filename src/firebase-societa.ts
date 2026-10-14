@@ -3056,14 +3056,26 @@ export async function deleteAtletaPremiato(id: string): Promise<void> {
 }
 
 /**
+ * Partecipazione a evento/camp di un Ospite Illustre
+ */
+export interface EventoOspite {
+  anno: string; // es. "2023", "2024", "2025"
+  evento: string; // es. "Summer Camp 2023", "Salfep Summer Camp 2024"
+  dettaglio?: string; // dettaglio opzionale
+}
+
+/**
  * Ospiti Illustri & Leggende passati dalla New Volley Academy
  */
 export interface OspiteIllustre {
   id: string;
   nome: string;
   ruoloTitolo: string; // es. "Campione Olimpico", "Campionessa Mondiale", "Giocatore Superlega"
-  anno: string; // es. "2024/2025" o "2024"
-  occasione: string; // es. "Summer Camp 2024", "Masterclass Palleggio", "Visita Ufficiale"
+  anno: string; // es. "2024/2025" o "2024" (mantenuto per compatibilità)
+  occasione: string; // es. "Summer Camp 2024" (mantenuto per compatibilità)
+  eventiPartecipazione?: EventoOspite[]; // Eventi e partecipazioni distinti anno per anno
+  testoPassaggio?: string; // Frase 1 personalizzabile (Occasione del passaggio)
+  testoIspirazione?: string; // Frase 2 personalizzabile (Ispirazione per la società)
   fotoUrl: string;
   fotoPositionY?: number;
   fotoPositionX?: number;
@@ -3074,6 +3086,41 @@ export interface OspiteIllustre {
   ordine?: number;
   createdAt?: string;
   updatedAt?: string;
+}
+
+/**
+ * Utility per estrarre le partecipazioni di un Ospite Illustre,
+ * supportando sia il nuovo array strutturato sia il parsing retrocompatibile di stringhe multiple.
+ */
+export function getEventiOspite(ospite: Partial<OspiteIllustre>): EventoOspite[] {
+  if (ospite.eventiPartecipazione && Array.isArray(ospite.eventiPartecipazione) && ospite.eventiPartecipazione.length > 0) {
+    return ospite.eventiPartecipazione.filter(e => e.anno?.trim() || e.evento?.trim());
+  }
+
+  // Parsing intelligente di fallback da stringhe storiche divise con " - "
+  const rawOccasione = ospite.occasione || '';
+  const rawAnno = ospite.anno || '';
+
+  if (rawOccasione.includes(' - ') || rawAnno.includes(' - ')) {
+    const eventiList = rawOccasione.split(' - ').map(s => s.trim()).filter(Boolean);
+    const anniList = rawAnno.split(' - ').map(s => s.trim()).filter(Boolean);
+
+    if (eventiList.length > 0) {
+      return eventiList.map((ev, idx) => ({
+        anno: anniList[idx] || anniList[anniList.length - 1] || '',
+        evento: ev
+      }));
+    }
+  }
+
+  if (rawOccasione || rawAnno) {
+    return [{
+      anno: rawAnno,
+      evento: rawOccasione || 'Ospite Speciale NVA'
+    }];
+  }
+
+  return [];
 }
 
 export async function getOspitiIllustriAll(): Promise<OspiteIllustre[]> {

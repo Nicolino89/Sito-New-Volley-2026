@@ -33,6 +33,8 @@ import {
   getGiocatoriAll,
   getSquadreAll,
   OspiteIllustre,
+  EventoOspite,
+  getEventiOspite,
   getOspitiIllustriAll
 } from '../firebase-societa';
 import { updatePageMeta } from '../utils/seoHelper';
@@ -1213,11 +1215,27 @@ function TotemOspiteArena({ ospite, onClick }: TotemOspiteArenaProps) {
             </h2>
 
             {/* OCCASIONE DEL PASSAGGIO */}
-            <div className="flex items-center gap-2 text-xs font-mono text-zinc-300">
-              <Calendar className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="text-zinc-400">Passaggio:</span>
-              <span className="font-bold text-white truncate">{ospite.occasione}</span>
-            </div>
+            {(() => {
+              const eventiCard = getEventiOspite(ospite);
+              if (eventiCard.length > 1) {
+                return (
+                  <div className="flex items-center gap-2 text-xs font-mono text-zinc-300">
+                    <Calendar className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span className="text-zinc-400">Presenze:</span>
+                    <span className="font-bold text-amber-300 truncate">
+                      {eventiCard.length} Edizioni ({eventiCard.map(e => e.anno).filter(Boolean).join(', ')})
+                    </span>
+                  </div>
+                );
+              }
+              return (
+                <div className="flex items-center gap-2 text-xs font-mono text-zinc-300">
+                  <Calendar className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span className="text-zinc-400">Passaggio:</span>
+                  <span className="font-bold text-white truncate">{ospite.occasione || ospite.anno}</span>
+                </div>
+              );
+            })()}
 
             {/* ANEDDOTO O CITAZIONE (SE PRESENTE) */}
             {ospite.descrizione && (
@@ -1398,27 +1416,40 @@ function ModalDettaglioOspite({ ospite, onClose }: ModalDettaglioOspiteProps) {
             </div>
 
             {/* Scheda Tecnica a Tessere Sportive Scure */}
-            <div className="grid grid-cols-2 gap-3 shrink-0 sm:min-w-[280px]">
-              <div className="bg-black/60 border border-zinc-800 p-3.5 rounded-2xl shadow-inner space-y-1">
-                <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 uppercase tracking-widest font-bold">
-                  <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Anno Visita</span>
-                </div>
-                <p className="text-lg font-mono font-black text-white">
-                  {ospite.anno}
-                </p>
-              </div>
+            {(() => {
+              const eventiOspite = getEventiOspite(ospite);
+              return (
+                <div className="flex flex-wrap items-center gap-3 shrink-0">
+                  <div className="bg-black/60 border border-zinc-800 p-3.5 rounded-2xl shadow-inner space-y-1.5 min-w-[140px]">
+                    <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 uppercase tracking-widest font-bold">
+                      <Calendar className="w-3.5 h-3.5 text-amber-400" />
+                      <span>{eventiOspite.length > 1 ? 'Anni Presenza' : 'Anno Visita'}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {eventiOspite.length > 0 ? (
+                        eventiOspite.map((ev, i) => (
+                          <span key={i} className="px-2 py-0.5 rounded-md bg-zinc-900 border border-amber-400/40 text-xs font-mono font-bold text-amber-300">
+                            {ev.anno || ospite.anno}
+                          </span>
+                        ))
+                      ) : (
+                        <p className="text-base font-mono font-black text-white">{ospite.anno}</p>
+                      )}
+                    </div>
+                  </div>
 
-              <div className="bg-black/60 border border-amber-400/30 p-3.5 rounded-2xl shadow-inner space-y-1">
-                <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 uppercase tracking-widest font-bold">
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Accredito NVA</span>
+                  <div className="bg-black/60 border border-amber-400/30 p-3.5 rounded-2xl shadow-inner space-y-1 min-w-[130px]">
+                    <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 uppercase tracking-widest font-bold">
+                      <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Accredito NVA</span>
+                    </div>
+                    <p className="text-xs font-mono font-black text-amber-400 truncate">
+                      {eventiOspite.length > 1 ? `${eventiOspite.length} EVENTI UFFICIALI` : 'REGISTRATO'}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs font-mono font-black text-amber-400 truncate">
-                  REGISTRATO
-                </p>
-              </div>
-            </div>
+              );
+            })()}
           </div>
         </div>
 
@@ -1485,21 +1516,64 @@ function ModalDettaglioOspite({ ospite, onClose }: ModalDettaglioOspiteProps) {
           {/* ======================================================================= */}
           <div className="lg:col-span-7 space-y-6">
             
-            {/* SCHEDA 1: OCCASIONE DEL PASSAGGIO (Courtside Event) */}
-            <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-br from-[#141622] via-[#0e1017] to-black border border-zinc-800 hover:border-amber-400/40 shadow-[0_15px_40px_rgba(0,0,0,0.2)] space-y-3.5 relative overflow-hidden text-white transition-colors">
-              <div className="flex items-center gap-2 border-b border-white/10 pb-3">
-                <Sparkles className="w-4 h-4 text-amber-400" />
-                <span className="text-xs font-mono uppercase tracking-widest text-amber-400 font-black">
-                  L'Occasione del Passaggio alle Pantere
-                </span>
-              </div>
-              <h3 className="text-2xl sm:text-3xl font-black font-barlow uppercase text-white leading-snug">
-                {ospite.occasione}
-              </h3>
-              <p className="text-sm font-inter text-zinc-300 leading-relaxed">
-                La New Volley Academy ha avuto l'onore di ospitare {ospite.nome} per condividere con atlete, atleti e staff tecnico l'esperienza, la dedizione e la mentalità che contraddistinguono i vertici della pallavolo italiana ed internazionale.
-              </p>
-            </div>
+            {/* SCHEDA 1: OCCASIONE DEL PASSAGGIO / PARTECIPAZIONI AGLI EVENTI */}
+            {(() => {
+              const eventi = getEventiOspite(ospite);
+              const frasePassaggio = ospite.testoPassaggio || 
+                `La New Volley Academy ha avuto l'onore di ospitare ${ospite.nome} per condividere con atlete, atleti e staff tecnico l'esperienza, la dedizione e la mentalità che contraddistinguono i vertici della pallavolo italiana ed internazionale.`;
+
+              return (
+                <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-br from-[#141622] via-[#0e1017] to-black border border-zinc-800 hover:border-amber-400/40 shadow-[0_15px_40px_rgba(0,0,0,0.2)] space-y-4 relative overflow-hidden text-white transition-colors">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      <span className="text-xs font-mono uppercase tracking-widest text-amber-400 font-black">
+                        {eventi.length > 1 ? "Le Partecipazioni con le Pantere" : "L'Occasione del Passaggio alle Pantere"}
+                      </span>
+                    </div>
+                    {eventi.length > 1 && (
+                      <span className="text-[10px] font-mono font-bold bg-amber-400/15 border border-amber-400/40 text-amber-300 px-2.5 py-0.5 rounded-full">
+                        {eventi.length} EDIZIONI
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Se ci sono più eventi, mostriamo la lista distinta con badge anno ben spaziati */}
+                  {eventi.length > 1 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      {eventi.map((ev, idx) => (
+                        <div 
+                          key={idx}
+                          className="p-3.5 rounded-2xl bg-zinc-950/80 border border-zinc-800/90 hover:border-amber-400/50 transition-colors flex items-start gap-3 shadow-inner"
+                        >
+                          <div className="px-2.5 py-1 rounded-xl bg-amber-400 text-black font-mono font-black text-xs shrink-0 shadow-sm mt-0.5">
+                            {ev.anno || 'NVA'}
+                          </div>
+                          <div className="space-y-0.5 min-w-0">
+                            <p className="text-sm font-black font-barlow uppercase text-white leading-tight">
+                              {ev.evento}
+                            </p>
+                            {ev.dettaglio && (
+                              <p className="text-[11px] font-inter text-zinc-400">
+                                {ev.dettaglio}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <h3 className="text-2xl sm:text-3xl font-black font-barlow uppercase text-white leading-snug">
+                      {eventi[0]?.evento || ospite.occasione || 'Ospite Speciale NVA'}
+                    </h3>
+                  )}
+
+                  <p className="text-sm font-inter text-zinc-300 leading-relaxed pt-1 border-t border-white/5">
+                    {frasePassaggio}
+                  </p>
+                </div>
+              );
+            })()}
 
             {/* SCHEDA 2: CITAZIONE & MESSAGGIO AI RAGAZZI (Se presente descrizione) */}
             {ospite.descrizione && (
@@ -1528,7 +1602,7 @@ function ModalDettaglioOspite({ ospite, onClose }: ModalDettaglioOspiteProps) {
             )}
 
             {/* SCHEDA 3: MOMENTO SUL CAMPO CON LE PANTERE (Foto con i ragazzi se presente) */}
-            {ospite.fotoMomentoUrl ? (
+            {ospite.fotoMomentoUrl && (
               <div className="p-6 rounded-3xl bg-[#12141c] border border-zinc-800 shadow-[0_15px_40px_rgba(0,0,0,0.2)] space-y-4 text-white">
                 <div className="flex items-center justify-between border-b border-white/10 pb-3">
                   <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-zinc-300 font-black">
@@ -1565,18 +1639,22 @@ function ModalDettaglioOspite({ ospite, onClose }: ModalDettaglioOspiteProps) {
                   </div>
                 </div>
               </div>
-            ) : (
-              /* Se non c'è foto specifica del momento sul campo, mostra la targa dei valori NVA */
-              <div className="p-6 rounded-3xl bg-[#12141c] border border-zinc-800 shadow-[0_15px_40px_rgba(0,0,0,0.15)] space-y-3 text-white">
-                <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-zinc-400 font-black">
-                  <Medal className="w-4 h-4 text-amber-400" />
-                  <span>Ispirazione Continua per la Società</span>
-                </div>
-                <p className="text-sm font-inter text-zinc-300 leading-relaxed">
-                  La presenza di campioni del calibro di <strong className="text-white">{ospite.nome}</strong> testimonia l'impegno costante della New Volley Academy nella crescita sportiva, etica ed umana del nostro settore giovanile.
-                </p>
-              </div>
             )}
+
+            {/* SCHEDA 4: VALORI SOCIETARI & ISPIRAZIONE (Frase 2 Personalizzabile) */}
+            <div className="p-6 rounded-3xl bg-[#12141c] border border-zinc-800 shadow-[0_15px_40px_rgba(0,0,0,0.15)] space-y-3 text-white">
+              <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-zinc-400 font-black">
+                <Medal className="w-4 h-4 text-amber-400" />
+                <span>Ispirazione Continua per la Società</span>
+              </div>
+              <p className="text-sm font-inter text-zinc-300 leading-relaxed">
+                {ospite.testoIspirazione || (
+                  <>
+                    La presenza di campioni del calibro di <strong className="text-white">{ospite.nome}</strong> testimonia l'impegno costante della New Volley Academy nella crescita sportiva, etica ed umana del nostro settore giovanile.
+                  </>
+                )}
+              </p>
+            </div>
 
             {/* SCHEDA 4: TIMBRO UFFICIALE & CODICE PASS ARENA */}
             <div className="p-4 sm:p-5 rounded-2xl bg-[#0c0d12] border border-amber-400/40 shadow-[0_10px_30px_rgba(0,0,0,0.2)] flex flex-col sm:flex-row items-center justify-between gap-4 text-white">
