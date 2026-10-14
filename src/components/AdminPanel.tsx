@@ -11,7 +11,8 @@ import {
   LogOut,
   Shield,
   ShieldCheck,
-  Database
+  Database,
+  Flame
 } from 'lucide-react';
 
 import { 
@@ -32,6 +33,7 @@ import TabGareFipav from './admin/tabs/TabGareFipav';
 import TabPagine from './admin/tabs/TabPagine';
 import TabGalleria from './admin/tabs/TabGalleria';
 import TabCampTornei from './admin/tabs/TabCampTornei';
+import TabVoltexCamp from './admin/tabs/TabVoltexCamp';
 import TabCollaboratori from './admin/tabs/TabCollaboratori';
 import TabStaff from './admin/tabs/TabStaff';
 import TabSponsor from './admin/tabs/TabSponsor';
@@ -109,13 +111,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 }) => {
   const defaultTab = currentUser?.ruolo === 'Super Admin' ? 'news' : 'squadre';
   const [adminTab, setAdminTabState] = useState<
-    'news' | 'squadre' | 'gare_fipav' | 'pagine' | 'galleria' | 'camp_tornei' | 'hall_of_fame' | 'collaboratori' | 'staff' | 'sponsor' | 'statistiche' | 'backup'
+    'news' | 'squadre' | 'gare_fipav' | 'pagine' | 'galleria' | 'camp_tornei' | 'voltex' | 'hall_of_fame' | 'collaboratori' | 'staff' | 'sponsor' | 'statistiche' | 'backup'
   >(() => {
     try {
       const saved = localStorage.getItem('nva_admin_active_tab');
-      const valid = ['news', 'squadre', 'gare_fipav', 'pagine', 'galleria', 'camp_tornei', 'hall_of_fame', 'collaboratori', 'staff', 'sponsor', 'statistiche', 'backup'];
+      const valid = ['news', 'squadre', 'gare_fipav', 'pagine', 'galleria', 'camp_tornei', 'voltex', 'hall_of_fame', 'collaboratori', 'staff', 'sponsor', 'statistiche', 'backup'];
       if (saved && valid.includes(saved)) {
-        if (currentUser?.ruolo !== 'Super Admin' && ['news', 'pagine', 'galleria', 'camp_tornei', 'hall_of_fame', 'collaboratori', 'staff', 'sponsor', 'statistiche', 'backup'].includes(saved)) {
+        if (currentUser?.ruolo !== 'Super Admin' && ['news', 'pagine', 'galleria', 'camp_tornei', 'voltex', 'hall_of_fame', 'collaboratori', 'staff', 'sponsor', 'statistiche', 'backup'].includes(saved)) {
           return 'squadre';
         }
         return saved as any;
@@ -124,7 +126,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     return defaultTab;
   });
 
-  const setAdminTab = (tab: 'news' | 'squadre' | 'gare_fipav' | 'pagine' | 'galleria' | 'camp_tornei' | 'hall_of_fame' | 'collaboratori' | 'staff' | 'sponsor' | 'statistiche' | 'backup') => {
+  const setAdminTab = (tab: 'news' | 'squadre' | 'gare_fipav' | 'pagine' | 'galleria' | 'camp_tornei' | 'voltex' | 'hall_of_fame' | 'collaboratori' | 'staff' | 'sponsor' | 'statistiche' | 'backup') => {
     setAdminTabState(tab);
     try {
       localStorage.setItem('nva_admin_active_tab', tab);
@@ -216,6 +218,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               >
                 <Calendar className="w-4 h-4 shrink-0" />
                 <span className="not-italic text-sm">CAMP & TORNEI</span>
+              </button>
+
+              <button
+                onClick={() => setAdminTab('voltex')}
+                className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold uppercase transition-all font-sport italic skew-x-[-6deg] flex items-center gap-3 cursor-pointer ${
+                  adminTab === 'voltex'
+                    ? 'bg-gradient-to-r from-red-600 to-[#C0392B] text-white shadow font-black ring-1 ring-red-400'
+                    : 'bg-red-50/50 text-red-950 hover:text-red-600 hover:bg-red-100/60 border border-red-200/60'
+                }`}
+              >
+                <Flame className="w-4 h-4 shrink-0 text-red-600" />
+                <span className="not-italic text-sm">CAMP VOLTEX</span>
               </button>
 
               <button
@@ -375,6 +389,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <TabCampTornei
             showToast={showToast}
             caricaFileSuStorage={caricaFileSuStorage}
+          />
+        )}
+
+        {adminTab === 'voltex' && (
+          <TabVoltexCamp
+            showToast={showToast}
           />
         )}
 

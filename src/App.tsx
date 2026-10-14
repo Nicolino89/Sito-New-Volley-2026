@@ -160,6 +160,7 @@ const CampTornei = lazyWithRetry(() => import('./pages/CampTornei'));
 const EventoDetail = lazyWithRetry(() => import('./pages/EventoDetail'));
 const Galleria = lazyWithRetry(() => import('./components/Galleria'));
 const Privacy = lazyWithRetry(() => import('./pages/Privacy'));
+const VoltexCampPage = lazyWithRetry(() => import('./pages/VoltexCamp'));
 
 const LoginForm = lazyWithRetry(() => import('./components/LoginForm'));
 const AdminPanel = lazyWithRetry(() => import('./components/AdminPanel'));
@@ -635,7 +636,7 @@ export default function App() {
           </div>
 
           {/* DYNAMIC CONTENT STAGE */}
-          <main className={`w-full min-h-screen ${(location.pathname === '/' || location.pathname === '/squadre' || location.pathname.startsWith('/camp-tornei') || location.pathname.startsWith('/societa') || location.pathname.startsWith('/news') || location.pathname.startsWith('/galleria') || location.pathname.startsWith('/albo-d-oro') || location.pathname.startsWith('/hall-of-fame')) ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`} id="content-stage">
+          <main className={`w-full min-h-screen ${(location.pathname === '/' || location.pathname === '/squadre' || location.pathname.startsWith('/camp-tornei') || location.pathname.startsWith('/voltex') || location.pathname.startsWith('/societa') || location.pathname.startsWith('/news') || location.pathname.startsWith('/galleria') || location.pathname.startsWith('/albo-d-oro') || location.pathname.startsWith('/hall-of-fame')) ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`} id="content-stage">
             {location.pathname === '/login' ? (
               <ChunkErrorBoundary key={location.pathname}>
                 <Suspense fallback={<LoadingFallback />}>
@@ -651,6 +652,7 @@ export default function App() {
                       const path = location.pathname;
                       if (path === '/privacy') return <Privacy />;
                       if (path === '/sponsor') return <SponsorPage />;
+                      if (path === '/voltex' || path.startsWith('/voltex')) return <VoltexCampPage societaInfo={societaInfo} />;
                       if (path === '/') return (
                         <Home 
                           societaSettings={societaSettings} 

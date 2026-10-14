@@ -1990,6 +1990,217 @@ export async function updateCampTexts(texts: CampTexts): Promise<void> {
 }
 
 // ============================================================================
+// 3.1 VOLTEX CAMP CONFIGURATION & REGISTRATIONS (camp_config/voltex_camp)
+// ============================================================================
+
+export interface VoltexCampDate {
+  id: string;
+  titolo: string;
+  localita: string;
+  periodo: string;
+  struttura: string;
+  destinatari: string;
+  posti_totali: number;
+  posti_occupati: number;
+  quota: string;
+  stato: 'aperte' | 'in_esaurimento' | 'chiuse' | 'prossimamente';
+  note?: string;
+  attivo: boolean;
+}
+
+export interface VoltexIscrizione {
+  id: string;
+  data_richiesta: string;
+  nome_atleta: string;
+  cognome_atleta: string;
+  data_nascita: string;
+  sesso: 'M' | 'F';
+  ruolo: string;
+  livello_squadra: string;
+  tappa_selezionata_id: string;
+  tappa_nome: string;
+  nome_genitore?: string;
+  telefono: string;
+  email: string;
+  taglia_kit: string;
+  note?: string;
+  stato: 'nuova' | 'contattato' | 'confermata' | 'annullata';
+}
+
+export interface VoltexCampConfig {
+  titolo_hero: string;
+  sottotitolo_hero: string;
+  descrizione_breve: string;
+  descrizione_completa: string;
+  quote_info: string;
+  testimonial_nome: string;
+  testimonial_ruolo: string;
+  testimonial_bio: string;
+  punti_forza: {
+    titolo: string;
+    valore: string;
+    descrizione: string;
+  }[];
+  programma_tecnico: string[];
+  mental_coaching_info: string;
+  date_camp: VoltexCampDate[];
+  iscrizioni_ricevute: VoltexIscrizione[];
+  contatti_whatsapp: string;
+  instagram_username: string;
+  banner_attivo: boolean;
+  testo_annuncio: string;
+}
+
+export const DEFAULT_VOLTEX_CAMP_CONFIG: VoltexCampConfig = {
+  titolo_hero: "VOLTEX ACADEMY",
+  sottotitolo_hero: "Il Primo Camp di Alta Specializzazione by Valentina Diouf",
+  descrizione_breve: "Un percorso intensivo di perfezionamento tecnico, fisico e mentale ideato da Valentina Diouf per giovani atleti e atlete che puntano all'eccellenza sul campo.",
+  descrizione_completa: "Voltex Academy nasce con l'obiettivo di offrire un'esperienza di formazione di livello professionistico. Attraverso sessioni ad alta intensità, analisi video, lavoro sui dettagli biomeccanici e moduli guidati da Mental Coach, ogni partecipante sperimenta l'approccio dei massimi campionati italiani e internazionali.",
+  quote_info: "Formule Day Camp & Residenziale all-inclusive con kit tecnico ufficiale Voltex compreso",
+  testimonial_nome: "Valentina Diouf",
+  testimonial_ruolo: "Opposto Azzurro & Head Coach Voltex",
+  testimonial_bio: "Stella della pallavolo internazionale, già opposto della Nazionale Italiana, MVP europea e protagonista nei principali campionati mondiali. Valentina guida gli allenamenti in prima persona per trasferire grinta, metodo e visione.",
+  punti_forza: [
+    {
+      titolo: "Alta Intensità",
+      valore: "26H",
+      descrizione: "Pallavolo di alta specializzazione sul campo con feedback correttivo istantaneo"
+    },
+    {
+      titolo: "Mental Coaching",
+      valore: "10H",
+      descrizione: "Sessioni dedicate con Mental Coach su gestione dell'errore, focus e self-talk"
+    },
+    {
+      titolo: "Full Immersion",
+      valore: "1 SETTIMANA",
+      descrizione: "Crescita tecnica, atletica e umana a stretto contatto con campioni e tecnici federali"
+    },
+    {
+      titolo: "Gruppi Chiusi",
+      valore: "1:8",
+      descrizione: "Rapporto atleti per coach per garantire attenzione continua ad ogni singolo movimento"
+    }
+  ],
+  programma_tecnico: [
+    "Biomeccanica del salto e rincorsa per schiacciatori e opposti",
+    "Analisi e pulizia della traiettoria nel palleggio moderno",
+    "Piani di rimbalzo, lettura traiettoria e difesa acrobatica per liberi e ricettori",
+    "Tempismo di muro, lettura dell'attaccante e tattica di squadra",
+    "Preparazione atletica mirata alla prevenzione infortuni e reattività esplosiva"
+  ],
+  mental_coaching_info: "Nella pallavolo moderna la mente fa la differenza tra un punto vinto e un punto perso. I nostri moduli con Mental Coach aiutano atleti e atlete a gestire l'ansia da prestazione, rimanere lucidi nei momenti caldi del set e costruire una fiducia incrollabile.",
+  date_camp: [
+    {
+      id: "voltex-riccione-2026",
+      titolo: "Riccione Summer Masterclass",
+      localita: "Riccione (RN)",
+      periodo: "05 - 11 Luglio 2026",
+      struttura: "Beach Arena & Palasport di Riccione",
+      destinatari: "Ragazze e Ragazzi dai 10 ai 18 anni",
+      posti_totali: 36,
+      posti_occupati: 29,
+      quota: "Formula Day Camp o Residenziale",
+      stato: "aperte",
+      note: "Pernottamento in hotel 3* con trattamento pensione completa per la formula residenziale.",
+      attivo: true
+    },
+    {
+      id: "voltex-sassari-2026",
+      titolo: "Sassari Specialist Clinic",
+      localita: "Sassari (SS)",
+      periodo: "28 - 30 Giugno 2026",
+      struttura: "Palestra Comunale Sassari",
+      destinatari: "Atleti e Atlete Under 14 / Under 16 / Under 18",
+      posti_totali: 28,
+      posti_occupati: 25,
+      quota: "Formula Clinic Intensivo 3 Giorni",
+      stato: "in_esaurimento",
+      note: "Ultime disponibilità rimaste. Kit tecnico ufficiale Voltex incluso all'accredito.",
+      attivo: true
+    }
+  ],
+  iscrizioni_ricevute: [],
+  contatti_whatsapp: "393400000000",
+  instagram_username: "voltexcamp",
+  banner_attivo: true,
+  testo_annuncio: "Iscrizioni ancora aperte! Posti limitati per garantire la massima qualità tecnica."
+};
+
+export async function getVoltexCampConfig(): Promise<VoltexCampConfig> {
+  if (isDemoMode) {
+    return getLocalData<VoltexCampConfig>('voltex_camp_config', DEFAULT_VOLTEX_CAMP_CONFIG);
+  }
+  try {
+    const docRef = doc(db, 'camp_config', 'voltex_camp');
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      const data = snap.data() as VoltexCampConfig;
+      return {
+        ...DEFAULT_VOLTEX_CAMP_CONFIG,
+        ...data,
+        date_camp: data.date_camp || DEFAULT_VOLTEX_CAMP_CONFIG.date_camp,
+        iscrizioni_ricevute: data.iscrizioni_ricevute || []
+      };
+    }
+    try {
+      await setDoc(docRef, DEFAULT_VOLTEX_CAMP_CONFIG);
+    } catch {}
+    return DEFAULT_VOLTEX_CAMP_CONFIG;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, 'camp_config/voltex_camp');
+    return DEFAULT_VOLTEX_CAMP_CONFIG;
+  }
+}
+
+export async function updateVoltexCampConfig(config: VoltexCampConfig): Promise<void> {
+  if (isDemoMode) {
+    setLocalData('voltex_camp_config', config);
+    return;
+  }
+  try {
+    const docRef = doc(db, 'camp_config', 'voltex_camp');
+    await setDoc(docRef, config);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'camp_config/voltex_camp');
+    throw error;
+  }
+}
+
+export async function salvaIscrizioneVoltex(iscrizione: VoltexIscrizione): Promise<void> {
+  try {
+    const currentConfig = await getVoltexCampConfig();
+    const iscrizioniEsistenti = currentConfig.iscrizioni_ricevute || [];
+    const updatedIscrizioni = [iscrizione, ...iscrizioniEsistenti];
+    
+    const updatedDate = (currentConfig.date_camp || []).map(d => {
+      if (d.id === iscrizione.tappa_selezionata_id) {
+        const occupati = (d.posti_occupati || 0) + 1;
+        const totali = d.posti_totali || 30;
+        return {
+          ...d,
+          posti_occupati: occupati,
+          stato: (occupati >= totali ? 'chiuse' : occupati >= totali - 5 ? 'in_esaurimento' : d.stato) as any
+        };
+      }
+      return d;
+    });
+
+    await updateVoltexCampConfig({
+      ...currentConfig,
+      date_camp: updatedDate,
+      iscrizioni_ricevute: updatedIscrizioni
+    });
+  } catch (error) {
+    console.error("Errore salvataggio iscrizione Voltex:", error);
+    try {
+      const local = getLocalData<VoltexIscrizione[]>('voltex_iscrizioni_pending', []);
+      setLocalData('voltex_iscrizioni_pending', [iscrizione, ...local]);
+    } catch {}
+  }
+}
+
+// ============================================================================
 // 4. SISTEMA DI AUTENTICAZIONE & PERMESSI GRANULARI (Firebase Auth + Roles)
 // ============================================================================
 
