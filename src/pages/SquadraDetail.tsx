@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { downloadIcsCalendar, getGoogleCalendarLink } from '../utils/calendarExport';
 import { updatePageMeta } from '../utils/seoHelper';
+import PlayerJerseyPlaceholder from '../components/PlayerJerseyPlaceholder';
 
 interface StaffProfilo {
   id: string;
@@ -479,10 +480,12 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                           }}
                         />
                       ) : (
-                        <div className="text-center text-zinc-600 select-none">
-                          <User className="w-20 h-20 mx-auto text-zinc-800 animate-pulse" />
-                          <span className="text-[10px] font-mono uppercase tracking-widest mt-2 block">NVA PLAYER</span>
-                        </div>
+                        <PlayerJerseyPlaceholder
+                          numeroMaglia={player.numero_maglia}
+                          cognome={player.cognome}
+                          isCapitano={team.capitano_id === player.id}
+                          ruolo={player.ruolo}
+                        />
                       )}
                       
                       {/* Shirt Number Badge */}
@@ -908,10 +911,12 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                             }}
                           />
                         ) : (
-                          <div className="text-center text-zinc-500 select-none">
-                            <User className="w-20 h-20 mx-auto text-zinc-700 animate-pulse mb-2" />
-                            <span className="text-[10px] font-inter uppercase tracking-widest block text-zinc-500">NEW VOLLEY ACADEMY</span>
-                          </div>
+                          <PlayerJerseyPlaceholder
+                            numeroMaglia={selectedPlayer.numero_maglia}
+                            cognome={selectedPlayer.cognome}
+                            isCapitano={team.capitano_id === selectedPlayer.id}
+                            ruolo={selectedPlayer.ruolo}
+                          />
                         )}
 
                         {/* Sfumatura leggera alla base per risaltare i badge */}
