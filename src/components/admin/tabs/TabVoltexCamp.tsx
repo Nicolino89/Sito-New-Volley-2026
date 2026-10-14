@@ -16,7 +16,12 @@ import {
   Loader2, 
   RefreshCw,
   Eye,
-  Sliders
+  Sliders,
+  Camera,
+  Upload,
+  Image as ImageIcon,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { 
   getVoltexCampConfig, 
@@ -24,8 +29,10 @@ import {
   VoltexCampConfig, 
   VoltexCampDate, 
   VoltexIscrizione,
-  DEFAULT_VOLTEX_CAMP_CONFIG 
+  DEFAULT_VOLTEX_CAMP_CONFIG,
+  caricaBlobSuStorage
 } from '../../../firebase-societa';
+import { compressImage, IMAGE_PRESETS } from '../../../utils/imageCompressor';
 
 interface TabVoltexCampProps {
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
@@ -35,7 +42,9 @@ export default function TabVoltexCamp({ showToast }: TabVoltexCampProps) {
   const [config, setConfig] = useState<VoltexCampConfig>(DEFAULT_VOLTEX_CAMP_CONFIG);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [subTab, setSubTab] = useState<'date' | 'iscrizioni' | 'testi'>('date');
+  const [uploadingHero, setUploadingHero] = useState(false);
+  const [uploadingGalleria, setUploadingGalleria] = useState(false);
+  const [subTab, setSubTab] = useState<'date' | 'iscrizioni' | 'testi' | 'foto'>('date');
 
   // Stato per nuova/modifica tappa
   const [editingTappa, setEditingTappa] = useState<VoltexCampDate | null>(null);
@@ -136,6 +145,98 @@ export default function TabVoltexCamp({ showToast }: TabVoltexCampProps) {
     document.body.removeChild(link);
   };
 
+  // Upload Foto Principale Hero con compressione WebP automatica
+  const handleUploadHeroImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingHero(true);
+    try {
+      showToast("Compressione WebP dell'immagine in corso...", "info");
+      const compResult = await compressImage(file, IMAGE_PRESETS.EVENTO_COVER);
+      const url = await caricaBlobSuStorage(compResult.blob, `voltex/hero_${Date.now()}.webp`);
+      
+      const newConfig = { ...config, hero_image_url: url };
+      await handleSaveConfig(newConfig);
+      showToast(`Locandina Hero aggiornata! Ottimizzazione: -${compResult.reductionPercent}%`, "success");
+    } catch (err) {
+      console.error(err);
+      showToast("Errore durante il caricamento dell'immagine Hero", "error");
+    } finally {
+      setUploadingHero(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleResetHeroImage = async () => {
+    if (!window.confirm("Ripristinare la locandina originale di default?")) return;
+    const newConfig = { ...config, hero_image_url: "/images/voltex/voltex-riccione-cover.jpg" };
+    await handleSaveConfig(newConfig);
+    showToast("Locandina originale ripristinata", "info");
+  };
+
+  // Upload Foto Galleria Camp con compressione WebP automatica
+  const handleUploadGalleria = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingGalleria(true);
+    try {
+      showToast(`Elaborazione e compressione di ${files.length} foto in corso...`, "info");
+      const nuoveFoto: Array<{ url: string; caption?: string }> = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const compResult = await compressImage(file, IMAGE_PRESETS.EVENTO_COVER);
+        const url = await caricaBlobSuStorage(compResult.blob, `voltex/galleria_${Date.now()}_${i}.webp`);
+        nuoveFoto.push({
+          url,
+          caption: file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, ' ')
+        });
+      }
+
+      const currentGalleria = config.galleria_foto || [];
+      const newConfig = {
+        ...config,
+        galleria_foto: [...currentGalleria, ...nuoveFoto]
+      };
+      await handleSaveConfig(newConfig);
+      showToast(`${nuoveFoto.length} foto caricate e ottimizzate con successo!`, "success");
+    } catch (err) {
+      console.error(err);
+      showToast("Errore durante il caricamento delle foto per la galleria", "error");
+    } finally {
+      setUploadingGalleria(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDeleteGalleriaFoto = (index: number) => {
+    if (!window.confirm("Rimuovere questa foto dalla galleria del camp?")) return;
+    const currentGalleria = [...(config.galleria_foto || [])];
+    currentGalleria.splice(index, 1);
+    handleSaveConfig({ ...config, galleria_foto: currentGalleria });
+  };
+
+  const handleMoveGalleriaFoto = (index: number, direction: 'up' | 'down') => {
+    const currentGalleria = [...(config.galleria_foto || [])];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= currentGalleria.length) return;
+
+    const temp = currentGalleria[index];
+    currentGalleria[index] = currentGalleria[targetIndex];
+    currentGalleria[targetIndex] = temp;
+    handleSaveConfig({ ...config, galleria_foto: currentGalleria });
+  };
+
+  const handleUpdateGalleriaCaption = (index: number, caption: string) => {
+    const currentGalleria = [...(config.galleria_foto || [])];
+    if (currentGalleria[index]) {
+      currentGalleria[index] = { ...currentGalleria[index], caption };
+      setConfig({ ...config, galleria_foto: currentGalleria });
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-12 flex flex-col items-center justify-center gap-3">
@@ -231,6 +332,18 @@ export default function TabVoltexCamp({ showToast }: TabVoltexCampProps) {
         >
           <Sliders className="w-4 h-4" />
           Testi & Informazioni
+        </button>
+
+        <button
+          onClick={() => setSubTab('foto')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+            subTab === 'foto'
+              ? 'bg-amber-400 text-slate-950 shadow'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <Camera className="w-4 h-4" />
+          Foto & Grafiche
         </button>
       </div>
 
@@ -680,6 +793,214 @@ export default function TabVoltexCamp({ showToast }: TabVoltexCampProps) {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 4. SOTTO-TAB: FOTO & GRAFICHE (CON OTTIMIZZAZIONE WEBP AUTOMATICA) */}
+      {subTab === 'foto' && (
+        <div className="space-y-6">
+          
+          {/* Sezione 1: Locandina / Foto Principale Hero */}
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Camera className="w-4 h-4 text-red-600" />
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+                    Locandina / Foto Principale Hero
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  L'immagine in evidenza mostrata in cima alla landing page del Camp.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-sm transition-all">
+                  {uploadingHero ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Ottimizzazione in corso...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      Cambia Locandina Hero
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={uploadingHero}
+                    onChange={handleUploadHeroImage}
+                    className="hidden"
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={handleResetHeroImage}
+                  className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-all cursor-pointer"
+                  title="Ripristina locandina iniziale"
+                >
+                  Ripristina Default
+                </button>
+              </div>
+            </div>
+
+            {/* Anteprima Foto Hero Attuale */}
+            <div className="flex flex-col md:flex-row items-center gap-6 p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div className="w-48 h-64 rounded-xl overflow-hidden bg-slate-900 border border-slate-300 shadow-inner shrink-0 flex items-center justify-center">
+                <img
+                  src={config.hero_image_url || "/images/voltex/voltex-riccione-cover.jpg"}
+                  alt="Anteprima Hero Voltex"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+
+              <div className="space-y-3 text-xs text-slate-600 max-w-xl">
+                <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 space-y-1">
+                  <p className="font-bold flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    Compressione Automatica Attiva
+                  </p>
+                  <p className="text-[11px] leading-relaxed text-emerald-700">
+                    Ogni file caricato viene ridimensionato proporzionalmente e convertito in formato WebP ad alta efficienza. Viene preservata la nitidezza riducendo il peso fino al 75%, garantendo tempi di rendering istantanei (LCP ultra-veloce).
+                  </p>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  <strong>URL Attuale:</strong> <span className="font-mono text-[10px] break-all">{config.hero_image_url || "/images/voltex/voltex-riccione-cover.jpg"}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Sezione 2: Galleria Foto & Highlights del Camp */}
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4 text-red-600" />
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+                    Galleria Foto & Highlights del Camp ({(config.galleria_foto || []).length})
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Gli scatti mostrati nella sezione programma e backstage del camp.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-sm transition-all">
+                  {uploadingGalleria ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Caricamento in corso...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      Aggiungi Foto (anche multiple)
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    disabled={uploadingGalleria}
+                    onChange={handleUploadGalleria}
+                    className="hidden"
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => handleSaveConfig(config)}
+                  disabled={saving}
+                  className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  Salva Didascalie
+                </button>
+              </div>
+            </div>
+
+            {/* Griglia Foto Galleria */}
+            {(config.galleria_foto || []).length === 0 ? (
+              <div className="p-8 text-center rounded-xl bg-slate-50 border border-slate-200 text-slate-400">
+                <ImageIcon className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                <p className="text-xs font-medium">Nessuna foto in galleria. Clicca su "Aggiungi Foto" per caricarne.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {(config.galleria_foto || []).map((foto, idx) => (
+                  <div 
+                    key={idx}
+                    className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2 hover:border-slate-300 transition-all flex flex-col justify-between"
+                  >
+                    <div className="space-y-2">
+                      <div className="w-full h-36 rounded-lg overflow-hidden bg-slate-900 border border-slate-200 relative group">
+                        <img
+                          src={foto.url}
+                          alt={foto.caption || `Foto ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                        <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/70 text-[9px] font-mono text-white">
+                          #{idx + 1}
+                        </span>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-0.5">Didascalia</label>
+                        <input
+                          type="text"
+                          value={foto.caption || ''}
+                          onChange={(e) => handleUpdateGalleriaCaption(idx, e.target.value)}
+                          placeholder="es. Valentina Diouf in allenamento"
+                          className="w-full text-xs p-1.5 rounded border border-slate-300 bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t pt-2 mt-2">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={idx === 0}
+                          onClick={() => handleMoveGalleriaFoto(idx, 'up')}
+                          className="p-1 rounded bg-white hover:bg-slate-200 text-slate-600 disabled:opacity-30 border cursor-pointer"
+                          title="Sposta prima"
+                        >
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={idx === (config.galleria_foto?.length || 1) - 1}
+                          onClick={() => handleMoveGalleriaFoto(idx, 'down')}
+                          className="p-1 rounded bg-white hover:bg-slate-200 text-slate-600 disabled:opacity-30 border cursor-pointer"
+                          title="Sposta dopo"
+                        >
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteGalleriaFoto(idx)}
+                        className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                        title="Elimina foto"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span className="text-[10px]">Rimuovi</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
         </div>
       )}
 

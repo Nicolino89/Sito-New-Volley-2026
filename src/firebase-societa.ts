@@ -2049,6 +2049,8 @@ export interface VoltexCampConfig {
   instagram_username: string;
   banner_attivo: boolean;
   testo_annuncio: string;
+  hero_image_url?: string;
+  galleria_foto?: Array<{ url: string; caption?: string }>;
 }
 
 export const DEFAULT_VOLTEX_CAMP_CONFIG: VoltexCampConfig = {
@@ -2060,6 +2062,14 @@ export const DEFAULT_VOLTEX_CAMP_CONFIG: VoltexCampConfig = {
   testimonial_nome: "Valentina Diouf",
   testimonial_ruolo: "Opposto Azzurro & Head Coach Voltex",
   testimonial_bio: "Stella della pallavolo internazionale, già opposto della Nazionale Italiana, MVP europea e protagonista nei principali campionati mondiali. Valentina guida gli allenamenti in prima persona per trasferire grinta, metodo e visione.",
+  hero_image_url: "/images/voltex/voltex-riccione-cover.jpg",
+  galleria_foto: [
+    { url: "/images/voltex/voltex-recap-stats.jpg", caption: "Recap Numeri & Risultati" },
+    { url: "/images/voltex/voltex-team-group.jpg", caption: "Gruppo Atleti & Coach" },
+    { url: "/images/voltex/voltex-sassari-locandina.jpg", caption: "Tappa Sassari 2026" },
+    { url: "/images/voltex/voltex-training-diouf.jpg", caption: "Valentina Diouf in Campo" },
+    { url: "/images/voltex/voltex-ready-diouf.jpg", caption: "Sessione di Allenamento" }
+  ],
   punti_forza: [
     {
       titolo: "Alta Intensità",
@@ -2140,7 +2150,9 @@ export async function getVoltexCampConfig(): Promise<VoltexCampConfig> {
         ...DEFAULT_VOLTEX_CAMP_CONFIG,
         ...data,
         date_camp: data.date_camp || DEFAULT_VOLTEX_CAMP_CONFIG.date_camp,
-        iscrizioni_ricevute: data.iscrizioni_ricevute || []
+        iscrizioni_ricevute: data.iscrizioni_ricevute || [],
+        hero_image_url: data.hero_image_url || DEFAULT_VOLTEX_CAMP_CONFIG.hero_image_url,
+        galleria_foto: data.galleria_foto || DEFAULT_VOLTEX_CAMP_CONFIG.galleria_foto
       };
     }
     try {

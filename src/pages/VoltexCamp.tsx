@@ -218,29 +218,37 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
               className="lg:col-span-5 relative"
             >
               <div className="relative mx-auto max-w-sm sm:max-w-md">
-                <div className="relative rounded-3xl overflow-hidden border-2 border-red-500/40 shadow-2xl shadow-red-950/60 bg-gradient-to-tr from-red-950 to-slate-900">
-                  <img 
-                    src="/images/voltex/voltex-riccione-cover.jpg" 
-                    alt="Voltex Academy Camp - Valentina Diouf" 
-                    className="w-full h-auto object-cover max-h-[460px] mx-auto"
-                    loading="eager"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0b1320] via-transparent to-transparent opacity-80" />
-                  <div className="absolute bottom-4 left-4 right-4 p-4 rounded-2xl bg-slate-950/80 backdrop-blur-md border border-slate-800">
-                    <p className="text-xs font-mono uppercase tracking-widest text-red-400">Head Coach & Founder</p>
-                    <p className="text-base font-bold text-white font-sport">{config.testimonial_nome}</p>
-                    <p className="text-xs text-slate-300">{config.testimonial_ruolo}</p>
+                <div className="rounded-3xl overflow-hidden border-2 border-red-500/30 shadow-2xl shadow-red-950/60 bg-slate-900 flex flex-col">
+                  {/* Foto Principale senza coperture */}
+                  <div className="relative w-full bg-slate-950 overflow-hidden flex items-center justify-center min-h-[380px]">
+                    <img 
+                      src={config.hero_image_url || "/images/voltex/voltex-riccione-cover.jpg"} 
+                      alt="Voltex Academy Camp - Valentina Diouf" 
+                      className="w-full h-auto max-h-[480px] object-contain mx-auto block"
+                      loading="eager"
+                      fetchPriority="high"
+                      decoding="async"
+                    />
                   </div>
-                </div>
+                  
+                  {/* Didascalia e crediti sotto la foto, pulito ed elegante */}
+                  <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-t border-red-950/60 flex items-center justify-between gap-3">
+                    <div className="space-y-0.5">
+                      <p className="text-[10px] font-mono uppercase tracking-widest text-red-400 font-bold">
+                        Head Coach & Founder
+                      </p>
+                      <p className="text-base font-bold text-white font-sport">
+                        {config.testimonial_nome}
+                      </p>
+                      <p className="text-xs text-slate-300">
+                        {config.testimonial_ruolo}
+                      </p>
+                    </div>
 
-                {/* Badge Fluttuante */}
-                <div className="absolute -bottom-5 -left-4 sm:-left-6 bg-slate-900/95 border border-red-500/50 rounded-2xl p-3.5 shadow-xl flex items-center gap-3 backdrop-blur-md">
-                  <div className="w-10 h-10 rounded-xl bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-400">
-                    <Trophy className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Formula</span>
-                    <span className="text-xs font-black text-white uppercase">Alta Specializzazione</span>
+                    <div className="px-3 py-1.5 rounded-xl bg-red-600/20 border border-red-500/30 text-right shrink-0">
+                      <span className="text-[9px] uppercase tracking-wider text-amber-300 block font-bold">Formula</span>
+                      <span className="text-[11px] font-black uppercase text-white font-sport">Specialist</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -321,16 +329,39 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
                 </p>
               </div>
 
-              {/* Galleria Highlights */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-2xl overflow-hidden border border-slate-800 bg-slate-900">
-                  <img src="/images/voltex/voltex-recap-stats.jpg" alt="Recap Voltex" className="w-full h-28 sm:h-36 object-cover" />
+              {/* Galleria Highlights Dinamica */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
+                    Scatti & Momenti dal Camp
+                  </span>
+                  <span className="text-[11px] text-red-400 font-bold">
+                    {(config.galleria_foto || []).length} foto
+                  </span>
                 </div>
-                <div className="rounded-2xl overflow-hidden border border-slate-800 bg-slate-900">
-                  <img src="/images/voltex/voltex-team-group.jpg" alt="Gruppo Voltex" className="w-full h-28 sm:h-36 object-cover" />
-                </div>
-                <div className="rounded-2xl overflow-hidden border border-slate-800 bg-slate-900">
-                  <img src="/images/voltex/voltex-sassari-locandina.jpg" alt="Sassari Camp" className="w-full h-28 sm:h-36 object-cover" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {(config.galleria_foto && config.galleria_foto.length > 0 ? config.galleria_foto : [
+                    { url: "/images/voltex/voltex-recap-stats.jpg", caption: "Recap Numeri" },
+                    { url: "/images/voltex/voltex-team-group.jpg", caption: "Gruppo Atleti" },
+                    { url: "/images/voltex/voltex-sassari-locandina.jpg", caption: "Sassari Camp" },
+                    { url: "/images/voltex/voltex-training-diouf.jpg", caption: "Valentina Diouf" },
+                    { url: "/images/voltex/voltex-ready-diouf.jpg", caption: "Allenamento" }
+                  ]).map((foto, idx) => (
+                    <div key={idx} className="group relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 aspect-[4/3] shadow-sm">
+                      <img 
+                        src={foto.url} 
+                        alt={foto.caption || `Voltex Camp Highlight ${idx + 1}`} 
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
+                        loading="lazy"
+                        decoding="async"
+                      />
+                      {foto.caption && (
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2.5">
+                          <p className="text-[10px] text-white font-medium truncate">{foto.caption}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

@@ -5,6 +5,10 @@ export const VoltexCampPill: React.FC = () => {
   const location = useLocation();
   const isVoltexPage = location.pathname.startsWith('/voltex');
 
+  if (isVoltexPage) {
+    return null;
+  }
+
   return (
     <Link
       to="/voltex"
