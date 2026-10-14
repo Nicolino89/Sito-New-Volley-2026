@@ -24,11 +24,9 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
   // Colori divisa: Maglia classica (Nera con dettagli Giallo Brand) vs Maglia Libero (Giallo Brand con dettagli Neri)
   const jerseyBg = isLibero ? '#fcfe00' : '#141416';
   const jerseyAccent = isLibero ? '#09090b' : '#fcfe00';
-  const numberFill = isLibero ? '#09090b' : '#ffffff';
-  const numberStroke = isLibero ? '#ffffff' : '#fcfe00';
   const textFill = isLibero ? '#09090b' : '#e4e4e7';
 
-  // Identificativo univoco per pattern SVG
+  // Identificativo univoco per pattern e maschere SVG
   const uid = `${displayNum || 'pantera'}-${displayCognome.replace(/[^a-zA-Z0-9]/g, '')}`;
 
   return (
@@ -44,7 +42,7 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
         <circle cx="50%" cy="50%" r="65" fill="none" stroke="#ffffff" strokeWidth="1" />
       </svg>
 
-      {/* SVG Maglia Ufficiale NVA - Proporzioni ampliate per valorizzare la divisa */}
+      {/* SVG Maglia Ufficiale NVA */}
       <svg
         viewBox="25 8 150 216"
         className="w-[92%] max-w-[275px] max-h-[305px] h-auto drop-shadow-[0_16px_32px_rgba(0,0,0,0.85)] transition-transform duration-300 group-hover:scale-105"
@@ -69,11 +67,18 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
             <stop offset="100%" stopColor={isLibero ? '#18181b' : '#f59e0b'} />
           </linearGradient>
 
-          {/* Glow dorato pantera centrale */}
-          <radialGradient id={`pantherGlow-${uid}`} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor={jerseyAccent} stopOpacity="0.4" />
-            <stop offset="100%" stopColor={jerseyAccent} stopOpacity="0" />
-          </radialGradient>
+          {/* MASCHERA DI SFUMATURA AVANZATA: sfuma delicatamente tutti i 4 bordi del rettangolo della Pantera */}
+          <mask id={`pantherMask-${uid}`} maskUnits="userSpaceOnUse" x="50" y="80" width="100" height="116">
+            {/* Gradiente Radiale che dissolve i bordi a 0 opacità su tutti i lati */}
+            <radialGradient id={`pantherRadial-${uid}`} cx="50%" cy="48%" r="48%" fx="50%" fy="48%">
+              <stop offset="25%" stopColor="#ffffff" stopOpacity="1" />
+              <stop offset="55%" stopColor="#ffffff" stopOpacity="0.85" />
+              <stop offset="72%" stopColor="#ffffff" stopOpacity="0.4" />
+              <stop offset="88%" stopColor="#ffffff" stopOpacity="0.1" />
+              <stop offset="100%" stopColor="#000000" stopOpacity="0" />
+            </radialGradient>
+            <rect x="50" y="80" width="100" height="116" fill={`url(#pantherRadial-${uid})`} />
+          </mask>
         </defs>
 
         {/* Appendino / Colletto Superiore */}
@@ -145,34 +150,66 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
           strokeWidth="2.5"
         />
 
-        {/* Stemma Ufficiale Pantera NVA sul Petto */}
-        <g transform="translate(67, 43)">
-          <circle cx="8" cy="8" r="8" fill={isLibero ? '#09090b' : '#18181b'} stroke={jerseyAccent} strokeWidth="1" />
-          <image
-            href="/images/pantera-hero.png"
-            x="1.5"
-            y="1"
-            width="13"
-            height="14"
-            preserveAspectRatio="xMidYMid meet"
-          />
-        </g>
-        <text
-          x="87"
-          y="54"
-          fill={textFill}
-          fontSize="6.5"
-          fontFamily="system-ui, sans-serif"
-          fontWeight="900"
-          letterSpacing="0.8"
-        >
-          NVA
-        </text>
+        {/* SPALLA SINISTRA (angolo sinistro sopra al cognome): NUMERO DI MAGLIA ATLETICO */}
+        {hasValidNumber && (
+          <g transform="translate(63, 44)">
+            <rect
+              x="-10"
+              y="-10"
+              width="20"
+              height="20"
+              rx="4.5"
+              fill={jerseyAccent}
+              stroke={isLibero ? '#09090b' : '#000000'}
+              strokeWidth="0.8"
+              style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.85))' }}
+            />
+            <text
+              x="0"
+              y="1"
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill={isLibero ? '#fcfe00' : '#09090b'}
+              fontSize={displayNum.length > 2 ? "10" : displayNum.length === 2 ? "12" : "13.5"}
+              fontFamily="Barlow Condensed, Bebas Neue, Impact, sans-serif"
+              fontWeight="900"
+              letterSpacing="-0.5"
+            >
+              {displayNum}
+            </text>
+          </g>
+        )}
 
-        {/* Dicitura Cognome o NVA sopra al numero */}
+        {/* SPALLA DESTRA (sopra al cognome): STEMMA UFFICIALE NVA */}
+        <g transform="translate(137, 44)">
+          <circle
+            cx="0"
+            cy="0"
+            r="7.5"
+            fill={isLibero ? '#09090b' : '#18181b'}
+            stroke={jerseyAccent}
+            strokeWidth="1"
+            style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.8))' }}
+          />
+          <text
+            x="0"
+            y="0.5"
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill={jerseyAccent}
+            fontSize="6"
+            fontFamily="system-ui, sans-serif"
+            fontWeight="900"
+            letterSpacing="0.5"
+          >
+            NVA
+          </text>
+        </g>
+
+        {/* Dicitura Cognome Atleta sopra al petto */}
         <text
           x="100"
-          y="80"
+          y="74"
           textAnchor="middle"
           fill={textFill}
           fontSize={displayCognome.length > 12 ? "7" : displayCognome.length > 8 ? "8" : "9.5"}
@@ -183,80 +220,66 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
           {displayCognome}
         </text>
 
-        {/* ZONA CENTRALE: NUMERO UFFICIALE o PANTERA ICONICA (per atleti senza numero / minivolley) */}
-        {hasValidNumber ? (
-          <>
-            {/* Filigrana Pantera sfumata nel tessuto */}
-            <image
-              href="/images/pantera-hero.png"
-              x="65"
-              y="98"
-              width="70"
-              height="70"
-              opacity={isLibero ? "0.07" : "0.14"}
-              preserveAspectRatio="xMidYMid meet"
-              className="pointer-events-none"
-            />
-
-            {/* NUMERO DI MAGLIA CENTRALE (Monumentale) */}
-            <text
-              x="100"
-              y="150"
-              textAnchor="middle"
-              dominantBaseline="central"
-              fill={numberFill}
-              stroke={numberStroke}
-              strokeWidth={displayNum.length > 1 ? "1.5" : "2"}
-              fontSize={displayNum.length > 2 ? "58" : displayNum.length === 2 ? "72" : "82"}
-              fontFamily="Barlow Condensed, Bebas Neue, Impact, sans-serif"
-              fontWeight="900"
-              letterSpacing="-1"
-              style={{
-                filter: 'drop-shadow(0px 4px 6px rgba(0,0,0,0.85))'
-              }}
-            >
-              {displayNum}
-            </text>
-          </>
-        ) : (
-          /* Atleti senza numero (Minivolley, S3 o giovanili senza numero assegnato): Pantera Ufficiale in grande */
-          <g transform="translate(63, 90)">
-            {/* Aureola dorata soffusa */}
-            <circle cx="37" cy="42" r="36" fill={`url(#pantherGlow-${uid})`} />
-            <image
-              href="/images/pantera-hero.png"
-              x="2"
-              y="4"
-              width="70"
-              height="76"
-              preserveAspectRatio="xMidYMid meet"
-              style={{
-                filter: 'drop-shadow(0px 6px 14px rgba(0,0,0,0.95))'
-              }}
-            />
-            {/* Scritta PANTERE sotto alla figura */}
-            <text
-              x="37"
-              y="96"
-              textAnchor="middle"
-              fill={jerseyAccent}
-              fontSize="8"
-              fontFamily="system-ui, sans-serif"
-              fontWeight="900"
-              letterSpacing="2.5"
-            >
-              PANTERE
-            </text>
+        {/* Barra del Capitano sotto al cognome se designato capitano */}
+        {isCapitano && (
+          <g transform="translate(82, 80)">
+            <rect x="0" y="0" width="36" height="3" rx="1" fill="#fcfe00" />
+            <rect x="0.5" y="0.5" width="35" height="2" rx="0.5" fill="#eab308" />
           </g>
         )}
 
-        {/* Barra del Capitano sotto al numero */}
-        {isCapitano && hasValidNumber && (
-          <g transform="translate(80, 192)">
-            <rect x="0" y="0" width="40" height="4.5" rx="1" fill="#fcfe00" />
-            <rect x="1" y="1" width="38" height="2.5" rx="0.5" fill="#eab308" />
-          </g>
-        )}
+        {/* ZONA CENTRALE: LA PANTERA NVA IN TUTTE LE MAGLIE (completamente integrata e sfumata) */}
+        <g>
+          {/* Aureola dorata soffusa dietro alla pantera */}
+          <circle
+            cx="100"
+            cy="138"
+            r="42"
+            fill={jerseyAccent}
+            opacity={isLibero ? "0.08" : "0.15"}
+            className="pointer-events-none"
+          />
+
+          {/* Immagine Pantera con maschera radiale: elimina qualsiasi bordo rettangolare */}
+          <image
+            href="/images/pantera-hero.png"
+            x="52"
+            y="84"
+            width="96"
+            height="112"
+            preserveAspectRatio="xMidYMid meet"
+            mask={`url(#pantherMask-${uid})`}
+            style={{
+              mixBlendMode: isLibero ? 'multiply' : 'normal',
+              filter: isLibero ? 'contrast(1.15) brightness(0.9)' : 'contrast(1.1) brightness(1.05)'
+            }}
+          />
+
+          {/* Gradiente protettivo supplementare per fondere la base e il top nel colore esatto della maglia */}
+          <rect
+            x="56"
+            y="84"
+            width="88"
+            height="112"
+            fill={`url(#jerseyGrad-${uid})`}
+            opacity="0.12"
+            pointerEvents="none"
+          />
+        </g>
+
+        {/* Scritta PANTERE sotto alla figura */}
+        <text
+          x="100"
+          y="196"
+          textAnchor="middle"
+          fill={jerseyAccent}
+          fontSize="7.5"
+          fontFamily="system-ui, sans-serif"
+          fontWeight="900"
+          letterSpacing="2.5"
+        >
+          PANTERE
+        </text>
 
         {/* Dicitura New Volley Academy sul fondo */}
         <text
