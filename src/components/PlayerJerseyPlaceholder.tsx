@@ -26,7 +26,7 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
   const jerseyAccent = isLibero ? '#09090b' : '#fcfe00';
   const textFill = isLibero ? '#09090b' : '#e4e4e7';
 
-  // Identificativo univoco per pattern e maschere SVG
+  // Identificativo univoco per pattern e gradienti SVG
   const uid = `${displayNum || 'pantera'}-${displayCognome.replace(/[^a-zA-Z0-9]/g, '')}`;
 
   return (
@@ -67,18 +67,25 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
             <stop offset="100%" stopColor={isLibero ? '#18181b' : '#f59e0b'} />
           </linearGradient>
 
-          {/* MASCHERA DI SFUMATURA AVANZATA: sfuma delicatamente tutti i 4 bordi del rettangolo della Pantera */}
-          <mask id={`pantherMask-${uid}`} maskUnits="userSpaceOnUse" x="50" y="80" width="100" height="116">
-            {/* Gradiente Radiale che dissolve i bordi a 0 opacità su tutti i lati */}
-            <radialGradient id={`pantherRadial-${uid}`} cx="50%" cy="48%" r="48%" fx="50%" fy="48%">
-              <stop offset="25%" stopColor="#ffffff" stopOpacity="1" />
-              <stop offset="55%" stopColor="#ffffff" stopOpacity="0.85" />
-              <stop offset="72%" stopColor="#ffffff" stopOpacity="0.4" />
-              <stop offset="88%" stopColor="#ffffff" stopOpacity="0.1" />
-              <stop offset="100%" stopColor="#000000" stopOpacity="0" />
-            </radialGradient>
-            <rect x="50" y="80" width="100" height="116" fill={`url(#pantherRadial-${uid})`} />
-          </mask>
+          {/* Sfumatura orizzontale: il nero puro della maglia sui lati dissolve i bordi della pantera */}
+          <linearGradient id={`pantherFadeX-${uid}`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor={jerseyBg} stopOpacity="1" />
+            <stop offset="12%" stopColor={jerseyBg} stopOpacity="0.85" />
+            <stop offset="28%" stopColor={jerseyBg} stopOpacity="0" />
+            <stop offset="72%" stopColor={jerseyBg} stopOpacity="0" />
+            <stop offset="88%" stopColor={jerseyBg} stopOpacity="0.85" />
+            <stop offset="100%" stopColor={jerseyBg} stopOpacity="1" />
+          </linearGradient>
+
+          {/* Sfumatura verticale: il nero puro della maglia in alto e in basso dissolve i bordi della pantera */}
+          <linearGradient id={`pantherFadeY-${uid}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={jerseyBg} stopOpacity="1" />
+            <stop offset="10%" stopColor={jerseyBg} stopOpacity="0.85" />
+            <stop offset="26%" stopColor={jerseyBg} stopOpacity="0" />
+            <stop offset="74%" stopColor={jerseyBg} stopOpacity="0" />
+            <stop offset="90%" stopColor={jerseyBg} stopOpacity="0.85" />
+            <stop offset="100%" stopColor={jerseyBg} stopOpacity="1" />
+          </linearGradient>
         </defs>
 
         {/* Appendino / Colletto Superiore */}
@@ -228,41 +235,39 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
           </g>
         )}
 
-        {/* ZONA CENTRALE: LA PANTERA NVA IN TUTTE LE MAGLIE (completamente integrata e sfumata) */}
+        {/* ZONA CENTRALE: LA PANTERA NVA IN TUTTE LE MAGLIE (sfumata direttamente sul nero della maglia, senza cerchi o aloni gialli) */}
         <g>
-          {/* Aureola dorata soffusa dietro alla pantera */}
-          <circle
-            cx="100"
-            cy="138"
-            r="42"
-            fill={jerseyAccent}
-            opacity={isLibero ? "0.08" : "0.15"}
-            className="pointer-events-none"
-          />
-
-          {/* Immagine Pantera con maschera radiale: elimina qualsiasi bordo rettangolare */}
+          {/* Immagine Pantera */}
           <image
             href="/images/pantera-hero.png"
-            x="52"
-            y="84"
-            width="96"
-            height="112"
+            x="54"
+            y="79"
+            width="92"
+            height="116"
             preserveAspectRatio="xMidYMid meet"
-            mask={`url(#pantherMask-${uid})`}
             style={{
               mixBlendMode: isLibero ? 'multiply' : 'normal',
-              filter: isLibero ? 'contrast(1.15) brightness(0.9)' : 'contrast(1.1) brightness(1.05)'
+              filter: isLibero ? 'contrast(1.15) brightness(0.9)' : 'contrast(1.08) brightness(1.02)'
             }}
           />
 
-          {/* Gradiente protettivo supplementare per fondere la base e il top nel colore esatto della maglia */}
+          {/* Sfumatura orizzontale: fonde dolcemente i lati nel nero della maglia */}
           <rect
-            x="56"
-            y="84"
-            width="88"
-            height="112"
-            fill={`url(#jerseyGrad-${uid})`}
-            opacity="0.12"
+            x="53"
+            y="78"
+            width="94"
+            height="118"
+            fill={`url(#pantherFadeX-${uid})`}
+            pointerEvents="none"
+          />
+
+          {/* Sfumatura verticale: fonde dolcemente top e bottom nel nero della maglia */}
+          <rect
+            x="53"
+            y="78"
+            width="94"
+            height="118"
+            fill={`url(#pantherFadeY-${uid})`}
             pointerEvents="none"
           />
         </g>
