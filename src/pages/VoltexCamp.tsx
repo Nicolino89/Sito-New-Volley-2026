@@ -25,6 +25,7 @@ import {
   VoltexIscrizione,
   SocietaInfo
 } from '../firebase-societa';
+import { updatePageMeta } from '../utils/seoHelper';
 
 interface VoltexCampPageProps {
   societaInfo?: SocietaInfo;
@@ -53,6 +54,13 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
   const [whatsappLink, setWhatsappLink] = useState('');
 
   useEffect(() => {
+    updatePageMeta({
+      title: 'Voltex Academy Summer Camp - Alta Specializzazione Volley by Valentina Diouf',
+      description: 'Scopri il Voltex Academy Summer Camp con Valentina Diouf: camp estivo di alta specializzazione tecnica e mental coaching per giovani atleti. Iscrizioni aperte!',
+      image: 'https://new-volley-academy.web.app/images/voltex/voltex-riccione-cover.jpg',
+      url: 'https://newvolleyacademy.it/voltex'
+    });
+
     let mounted = true;
     getVoltexCampConfig().then((data) => {
       if (mounted) {
