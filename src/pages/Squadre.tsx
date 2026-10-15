@@ -148,19 +148,6 @@ export default function Squadre({ squadre }: SquadreProps) {
 
   return (
     <div className="w-full">
-      {/* Banner Informativo: Rosa Squadre in Aggiornamento */}
-      <div className="w-full bg-gradient-to-r from-amber-500/15 via-amber-400/25 to-amber-500/15 border-b border-amber-400/30 py-2.5 px-4 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto flex items-center justify-center gap-2.5 text-center">
-          <span className="flex h-2 w-2 relative shrink-0">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FFE600] opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FFE600]"></span>
-          </span>
-          <span className="text-xs sm:text-sm font-barlow font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-            <span>🏐 Rose squadre in aggiornamento per la nuova stagione sportiva 2026/2027</span>
-          </span>
-        </div>
-      </div>
-
       {/* ================= HERO SPOTLIGHT PRIME SQUADRE FULL-BLEED ================= */}
       <section className="relative w-full bg-zinc-950 border-b border-zinc-850 overflow-hidden pt-8 pb-12 sm:pt-10 sm:pb-14">
         <div className="absolute inset-0 z-0">
@@ -257,6 +244,32 @@ export default function Squadre({ squadre }: SquadreProps) {
                 Settore Giovanile ({giovaniliTeams.length})
               </button>
             </div>
+          </div>
+
+          {/* Banner Informativo ad Alta Leggibilità: Rosa Squadre in Aggiornamento */}
+          <div className="bg-zinc-900/95 border-2 border-amber-400/60 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-amber-400/20 border border-amber-400/50 flex items-center justify-center shrink-0">
+                <span className="text-xl">🏐</span>
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="bg-[#FFE600] text-black text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded shadow-sm">
+                    STAGIONE 2026/2027
+                  </span>
+                  <span className="text-xs font-mono text-amber-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" />
+                    In allestimento
+                  </span>
+                </div>
+                <h3 className="text-base sm:text-lg font-barlow font-black text-white uppercase tracking-wide leading-tight">
+                  ROSE SQUADRE IN FASE DI AGGIORNAMENTO
+                </h3>
+              </div>
+            </div>
+            <p className="text-xs sm:text-sm text-zinc-300 font-inter max-w-md sm:text-right leading-relaxed">
+              Gli organici degli atleti, i numeri di maglia e gli staff tecnici sono in fase di completamento e rifinitura per l'avvio della nuova stagione.
+            </p>
           </div>
 
           {/* SEZIONE 1: CAMPIONATI & DIVISIONI */}
