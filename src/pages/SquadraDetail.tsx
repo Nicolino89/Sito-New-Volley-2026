@@ -405,6 +405,19 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
         </div>
       </div>
 
+      {/* Banner Informativo Rosa in Aggiornamento */}
+      <div className="bg-amber-500/10 border border-amber-400/30 rounded-2xl py-3 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          <span className="flex h-2.5 w-2.5 relative shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+          </span>
+          <span className="font-semibold uppercase tracking-wider text-zinc-800 text-xs sm:text-sm font-barlow">
+            🏐 <strong className="text-amber-700">ROSA SQUADRA IN AGGIORNAMENTO:</strong> L'organico e lo staff tecnico per la stagione 2026/2027 sono in fase di completamento e rifinitura.
+          </span>
+        </div>
+      </div>
+
       {/* SUB TAB NAVIGATION */}
       <div className="flex justify-start border-b border-zinc-200 pb-px">
         <div className="flex gap-2 bg-zinc-100 p-1 rounded-xl border border-zinc-250">

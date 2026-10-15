@@ -148,6 +148,19 @@ export default function Squadre({ squadre }: SquadreProps) {
 
   return (
     <div className="w-full">
+      {/* Banner Informativo: Rosa Squadre in Aggiornamento */}
+      <div className="w-full bg-gradient-to-r from-amber-500/15 via-amber-400/25 to-amber-500/15 border-b border-amber-400/30 py-2.5 px-4 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto flex items-center justify-center gap-2.5 text-center">
+          <span className="flex h-2 w-2 relative shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FFE600] opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FFE600]"></span>
+          </span>
+          <span className="text-xs sm:text-sm font-barlow font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+            <span>🏐 Rose squadre in aggiornamento per la nuova stagione sportiva 2026/2027</span>
+          </span>
+        </div>
+      </div>
+
       {/* ================= HERO SPOTLIGHT PRIME SQUADRE FULL-BLEED ================= */}
       <section className="relative w-full bg-zinc-950 border-b border-zinc-850 overflow-hidden pt-8 pb-12 sm:pt-10 sm:pb-14">
         <div className="absolute inset-0 z-0">
