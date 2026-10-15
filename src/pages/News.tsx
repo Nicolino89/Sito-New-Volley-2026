@@ -44,9 +44,19 @@ export default function News({ newsAll, squadreAll = [] }: NewsProps) {
   const [newsSearch, setNewsSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Tutte');
 
+  // Normalizzazione flessibile per garantire match sia con trattini che senza punteggiatura
+  const normalizeForMatch = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
   // Find article if on detail route
   const singleArticle = currentSlug 
-    ? newsAll.find(n => n.id === currentSlug || slugify(n.titolo) === currentSlug)
+    ? newsAll.find(n => {
+        if (!n) return false;
+        if (n.id === currentSlug) return true;
+        const slugT = slugify(n.titolo || '');
+        if (slugT === currentSlug) return true;
+        return normalizeForMatch(slugT) === normalizeForMatch(currentSlug) ||
+               normalizeForMatch(n.titolo || '') === normalizeForMatch(currentSlug);
+      })
     : null;
 
   // Dynamic SEO meta tags
@@ -105,6 +115,14 @@ export default function News({ newsAll, squadreAll = [] }: NewsProps) {
   // =========================================================================
   if (currentSlug) {
     if (!singleArticle) {
+      if (newsAll.length === 0) {
+        return (
+          <div className="w-full min-h-[50vh] py-28 text-center flex flex-col items-center justify-center space-y-4 bg-zinc-950">
+            <div className="w-10 h-10 border-4 border-[#FFE600] border-t-transparent rounded-full animate-spin" />
+            <p className="text-zinc-400 font-mono text-xs uppercase tracking-widest">Caricamento articolo...</p>
+          </div>
+        );
+      }
       return (
         <div className="w-full">
           <section className="relative w-full bg-zinc-950 border-b border-zinc-850 py-16 text-center">
