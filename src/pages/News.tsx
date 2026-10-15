@@ -12,7 +12,10 @@ import {
   Tag,
   ArrowRight,
   User,
-  Calendar
+  Calendar,
+  Maximize2,
+  X,
+  ZoomIn
 } from 'lucide-react';
 import { NewsBlog, RosaSquadra } from '../firebase-societa';
 import { updatePageMeta } from '../utils/seoHelper';
@@ -43,6 +46,28 @@ export default function News({ newsAll, squadreAll = [] }: NewsProps) {
 
   const [newsSearch, setNewsSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Tutte');
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+
+  // Scroll to top when opening an article or changing slug
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    setIsImageModalOpen(false);
+  }, [currentSlug]);
+
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsImageModalOpen(false);
+      }
+    };
+    if (isImageModalOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isImageModalOpen]);
 
   // Normalizzazione flessibile per garantire match sia con trattini che senza punteggiatura
   const normalizeForMatch = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -200,17 +225,27 @@ export default function News({ newsAll, squadreAll = [] }: NewsProps) {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
             
             <article className="bg-white/95 backdrop-blur-sm border border-slate-200/90 rounded-3xl p-6 sm:p-10 shadow-sm space-y-8">
-              {/* Cover Photo */}
+              {/* Cover Photo con click per ingrandimento */}
               {singleArticle.foto_copertina_url && (
-                <div className="aspect-video w-full overflow-hidden rounded-2xl bg-zinc-950 border border-slate-200 shadow-md">
+                <div 
+                  onClick={() => setIsImageModalOpen(true)}
+                  className="w-full max-h-[560px] overflow-hidden rounded-2xl bg-zinc-950 border border-slate-200 shadow-md relative group cursor-zoom-in flex items-center justify-center transition-all hover:border-[#FFE600]/80"
+                  title="Clicca per visualizzare la foto a schermo intero"
+                >
                   <img
                     src={singleArticle.foto_copertina_url}
                     alt={singleArticle.titolo}
                     loading="lazy"
                     decoding="async"
-                    className="w-full h-full object-cover"
+                    className="w-full max-h-[560px] object-contain transition-transform duration-300 group-hover:scale-[1.01]"
                     referrerPolicy="no-referrer"
                   />
+                  
+                  {/* Badge Ingrandisci */}
+                  <div className="absolute bottom-3 right-3 bg-zinc-950/85 group-hover:bg-[#FFE600] group-hover:text-zinc-950 backdrop-blur-md text-white text-xs font-mono font-medium px-3 py-1.5 rounded-xl flex items-center gap-1.5 border border-white/20 group-hover:border-[#FFE600] shadow-lg transition-all pointer-events-none">
+                    <ZoomIn className="w-4 h-4 text-[#FFE600] group-hover:text-zinc-950" />
+                    <span className="font-sans font-semibold">Clicca per foto intera</span>
+                  </div>
                 </div>
               )}
 
@@ -227,6 +262,39 @@ export default function News({ newsAll, squadreAll = [] }: NewsProps) {
 
           </div>
         </div>
+
+        {/* Lightbox Modal per immagine a schermo intero */}
+        {isImageModalOpen && singleArticle.foto_copertina_url && (
+          <div 
+            className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200"
+            onClick={() => setIsImageModalOpen(false)}
+          >
+            {/* Bottone Chiudi */}
+            <button
+              onClick={() => setIsImageModalOpen(false)}
+              className="absolute top-4 right-4 sm:top-6 sm:right-6 z-50 p-3 rounded-full bg-zinc-900/90 border border-zinc-700 text-white hover:text-[#FFE600] hover:border-[#FFE600] hover:bg-zinc-800 transition-all cursor-pointer shadow-2xl"
+              title="Chiudi (ESC)"
+              aria-label="Chiudi visualizzatore immagine"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Immagine a schermo intero */}
+            <div 
+              className="relative max-w-full max-h-[90vh] flex flex-col items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={singleArticle.foto_copertina_url}
+                alt={singleArticle.titolo}
+                className="max-w-full max-h-[82vh] object-contain rounded-xl shadow-2xl border border-zinc-800 select-none"
+              />
+              <div className="mt-3 flex items-center gap-2 text-zinc-400 text-xs font-mono bg-zinc-900/80 px-4 py-1.5 rounded-full border border-zinc-800 shadow-md">
+                <span>Tocca o clicca fuori per chiudere (ESC)</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

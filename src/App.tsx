@@ -346,6 +346,11 @@ export default function App() {
     }
   }, [location.pathname]);
 
+  // Scroll automatico in cima allo schermo ad ogni cambio rotta o navigazione
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [location.pathname, location.search]);
+
   const handleToggleAdmin = () => {
     if (isAdminMode || location.pathname.startsWith('/admin')) {
       setIsAdminMode(false);

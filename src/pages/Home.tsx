@@ -840,7 +840,7 @@ export default function Home({
                        className="bg-white/95 backdrop-blur-sm border border-slate-200/90 rounded-2xl overflow-hidden hover:border-[#FFE600] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-300 flex flex-col md:flex-row shadow-sm group cursor-pointer"
                     >
                     {/* News Image */}
-                    <div className="md:w-2/5 h-48 md:h-auto overflow-hidden relative shrink-0 bg-zinc-100">
+                    <div className="md:w-2/5 min-h-[220px] max-h-[280px] md:max-h-none overflow-hidden relative shrink-0 bg-zinc-950">
                       <img 
                         src={news.foto_copertina_url} 
                         alt={news.titolo} 
@@ -855,8 +855,8 @@ export default function Home({
                     </div>
 
                     {/* News Content */}
-                    <div className="p-6 flex flex-col justify-between flex-1 space-y-4">
-                      <div className="space-y-2">
+                    <div className="p-5 sm:p-6 flex flex-col justify-between flex-1 gap-4">
+                      <div className="space-y-2.5">
                         <div className="flex items-center gap-3 text-xs text-zinc-500 font-inter font-medium uppercase tracking-wider">
                           <span className="flex items-center gap-1">
                             <Clock className="w-3.5 h-3.5 text-zinc-600" />
@@ -866,15 +866,22 @@ export default function Home({
                           <span>Autore: {news.autore}</span>
                         </div>
 
-                        <h3 className="text-lg md:text-xl font-barlow font-semibold leading-snug text-zinc-950 group-hover:text-amber-600 transition-colors uppercase tracking-wide">
+                        <h3 className="text-lg md:text-xl font-barlow font-bold leading-snug text-zinc-950 group-hover:text-amber-600 transition-colors uppercase tracking-wide">
                           {news.titolo}
                         </h3>
-                        <p className="font-inter font-normal text-sm leading-relaxed text-slate-600 line-clamp-3">
+                        <p className="font-inter font-normal text-sm leading-relaxed text-slate-600 line-clamp-5 md:line-clamp-6">
                           {news.testo}
                         </p>
                       </div>
 
-
+                      {/* Footer Card: Link all'articolo completo */}
+                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-barlow font-bold uppercase text-amber-600 group-hover:text-amber-700">
+                        <span className="flex items-center gap-1.5 group-hover:translate-x-1 transition-transform">
+                          <span>Leggi l'articolo completo</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </span>
+                        <span className="text-[11px] font-mono text-slate-400">Clicca per visualizzare</span>
+                      </div>
                     </div>
                   </div>
                 ))}
