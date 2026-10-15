@@ -352,22 +352,22 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* ========================================================================= */}
       {/* MOBILE HEADER (Blocco Compatto + Hamburger Menu Senza Overflow)           */}
       {/* ========================================================================= */}
-      <div className="flex lg:hidden items-center justify-between w-full h-[66px] sm:h-[72px] bg-[#0A0B0E] relative z-40">
+      <div className="flex lg:hidden items-center justify-between w-full max-w-full h-[66px] sm:h-[72px] bg-[#0A0B0E] relative z-40 overflow-hidden">
         
         {/* Blocco Brand Giallo Compatto Mobile */}
         <div 
-          className="relative flex items-center cursor-pointer select-none h-full pl-3 sm:pl-4 pr-6 sm:pr-8 flex-1 max-w-[calc(100%-80px)] sm:max-w-[calc(100%-90px)]"
+          className="relative flex items-center cursor-pointer select-none h-full pl-2.5 sm:pl-4 pr-5 sm:pr-8 flex-1 min-w-0 max-w-[calc(100%-85px)] overflow-hidden"
           onClick={() => handleNavClick('home')}
         >
           {/* Sfondo trapezoidale */}
           <div 
             className="absolute inset-0 bg-[#FFE600] z-0 pointer-events-none"
             style={{
-              clipPath: 'polygon(0 0, calc(100% - 18px) 0, 100% 100%, 0 100%)'
+              clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 100%, 0 100%)'
             }}
           />
 
-          <div className="relative z-10 flex items-center gap-2 sm:gap-3 h-full truncate">
+          <div className="relative z-10 flex items-center gap-2 sm:gap-3 h-full min-w-0 overflow-hidden pr-2">
             {/* Logo Mobile */}
             <div className="flex items-center justify-center shrink-0">
               {logoUrl && logoUrl.trim() !== "" ? (
@@ -385,7 +385,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             {/* Testo Brand Mobile */}
-            <div className="flex flex-col justify-center min-w-0 pr-2">
+            <div className="flex flex-col justify-center min-w-0 overflow-hidden pr-1">
               <span className="font-black font-barlow text-sm sm:text-base uppercase tracking-tight text-black leading-tight truncate">
                 {navbarTitle}
               </span>
@@ -399,7 +399,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Tasti Destra Mobile (Admin + Hamburger) */}
-        <div className="flex items-center gap-2 pr-3 sm:pr-4 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 pr-2.5 sm:pr-4 shrink-0">
           {onToggleAdmin && (
             <button
               onClick={onToggleAdmin}

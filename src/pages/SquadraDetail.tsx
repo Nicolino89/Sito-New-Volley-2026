@@ -27,6 +27,7 @@ import {
 import { downloadIcsCalendar, getGoogleCalendarLink } from '../utils/calendarExport';
 import { updatePageMeta } from '../utils/seoHelper';
 import PlayerJerseyPlaceholder from '../components/PlayerJerseyPlaceholder';
+import { sanitizeLuogoDisplay } from '../utils/fipavScraper';
 
 interface StaffProfilo {
   id: string;
@@ -335,6 +336,20 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
   };
   const genderLetter = isFemminile(team) ? 'F' : 'M';
 
+  // Identifica se la squadra è Minivolley / Volley S3 (per nascondere altezza e numero di maglia)
+  const isMinivolley = Boolean(
+    team && (
+      team.nome_squadra?.toLowerCase().includes('minivolley') ||
+      team.nome_squadra?.toLowerCase().includes('s3') ||
+      team.campionato?.toLowerCase().includes('minivolley') ||
+      team.campionato?.toLowerCase().includes('s3') ||
+      (team as any).categoria?.toLowerCase()?.includes('minivolley') ||
+      (team as any).categoria?.toLowerCase()?.includes('s3') ||
+      (team as any).categoria_target?.toLowerCase()?.includes('minivolley') ||
+      (team as any).categoria_target?.toLowerCase()?.includes('s3')
+    )
+  );
+
   return (
     <div className="space-y-8">
       {/* Back Button */}
@@ -481,7 +496,7 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                         />
                       ) : (
                         <PlayerJerseyPlaceholder
-                          numeroMaglia={player.numero_maglia}
+                          numeroMaglia={isMinivolley ? undefined : player.numero_maglia}
                           cognome={player.cognome}
                           isCapitano={team.capitano_id === player.id}
                           ruolo={player.ruolo}
@@ -489,7 +504,7 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                       )}
                       
                       {/* Shirt Number Badge / NVA Panther Badge */}
-                      {player.numero_maglia && player.numero_maglia !== 0 && String(player.numero_maglia).trim() !== '0' ? (
+                      {!isMinivolley && player.numero_maglia && player.numero_maglia !== 0 && String(player.numero_maglia).trim() !== '0' ? (
                         <div className="absolute top-4 left-4 bg-brand-yellow text-black font-bebas text-2xl tracking-wider px-3 py-1.5 rounded-lg shadow-md z-10">
                           #{player.numero_maglia}
                         </div>
@@ -524,18 +539,29 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                           )}
                         </h4>
                         
-                        <div className="grid grid-cols-2 gap-2 mt-2 text-[11px] border-t border-zinc-100 pt-2 font-mono">
-                          <div>
-                            <span className="text-zinc-400 block uppercase">Ruolo</span>
-                            <span className="text-zinc-900 font-extrabold">
-                              {player.ruolo ? formatRuoloGiocatore(player.ruolo, (player as any).genere || genderLetter) : '—'}
-                            </span>
+                        {isMinivolley ? (
+                          <div className="mt-2 text-[11px] border-t border-zinc-100 pt-2 font-mono">
+                            <div>
+                              <span className="text-zinc-400 block uppercase">Ruolo</span>
+                              <span className="text-zinc-900 font-extrabold">
+                                {player.ruolo ? formatRuoloGiocatore(player.ruolo, (player as any).genere || genderLetter) : 'Panterina'}
+                              </span>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-zinc-400 block uppercase">Altezza</span>
-                            <span className="text-zinc-900 font-extrabold">{player.altezza ? `${player.altezza} cm` : '—'}</span>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2 mt-2 text-[11px] border-t border-zinc-100 pt-2 font-mono">
+                            <div>
+                              <span className="text-zinc-400 block uppercase">Ruolo</span>
+                              <span className="text-zinc-900 font-extrabold">
+                                {player.ruolo ? formatRuoloGiocatore(player.ruolo, (player as any).genere || genderLetter) : '—'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-zinc-400 block uppercase">Altezza</span>
+                              <span className="text-zinc-900 font-extrabold">{player.altezza ? `${player.altezza} cm` : '—'}</span>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
 
                       <div className="text-[10px] font-mono text-zinc-400 border-t border-zinc-100 pt-2 flex justify-between items-center mt-2">
@@ -644,7 +670,7 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                             </span>
                             {match.luogo && (
                               <span className="text-[10px] text-zinc-400 font-mono flex items-center gap-1">
-                                <MapPin className="w-3 h-3 text-zinc-400" /> {match.luogo}
+                                <MapPin className="w-3 h-3 text-zinc-400" /> {sanitizeLuogoDisplay(match.luogo, match.casa)}
                               </span>
                             )}
                           </div>
@@ -833,9 +859,21 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {renderStaffCard('primo', '1° ALLENATORE', <Trophy className="w-4 h-4 text-black" />)}
-              {renderStaffCard('secondo', '2° ALLENATORE', <User className="w-4 h-4 text-brand-yellow" />)}
-              {renderStaffCard('dirigente_accompagnatore', 'DIRIGENTE ACCOMPAGNATORE', <TrendingUp className="w-4 h-4 text-brand-yellow" />)}
+              {renderStaffCard(
+                'primo', 
+                (team.ruoli_staff?.primo || '1° Allenatore').toUpperCase(), 
+                <Trophy className="w-4 h-4 text-black" />
+              )}
+              {renderStaffCard(
+                'secondo', 
+                (team.ruoli_staff?.secondo || '2° Allenatore').toUpperCase(), 
+                <User className="w-4 h-4 text-brand-yellow" />
+              )}
+              {renderStaffCard(
+                'dirigente_accompagnatore', 
+                (team.ruoli_staff?.dirigente_accompagnatore || 'Dirigente Accompagnatore').toUpperCase(), 
+                <TrendingUp className="w-4 h-4 text-brand-yellow" />
+              )}
             </div>
           </div>
         )}
@@ -867,7 +905,7 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
               {/* Header */}
               <div className="p-6 border-b border-zinc-200 flex justify-between items-center bg-zinc-50 shrink-0">
                 <div className="flex items-center gap-3">
-                  {selectedPlayer.numero_maglia && selectedPlayer.numero_maglia !== 0 && String(selectedPlayer.numero_maglia).trim() !== '0' ? (
+                  {!isMinivolley && selectedPlayer.numero_maglia && selectedPlayer.numero_maglia !== 0 && String(selectedPlayer.numero_maglia).trim() !== '0' ? (
                     <div className="bg-brand-yellow text-black font-bebas text-3xl tracking-wider px-3.5 py-1.5 rounded-xl shadow-sm">
                       #{selectedPlayer.numero_maglia}
                     </div>
@@ -926,7 +964,7 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                           />
                         ) : (
                           <PlayerJerseyPlaceholder
-                            numeroMaglia={selectedPlayer.numero_maglia}
+                            numeroMaglia={isMinivolley ? undefined : selectedPlayer.numero_maglia}
                             cognome={selectedPlayer.cognome}
                             isCapitano={team.capitano_id === selectedPlayer.id}
                             ruolo={selectedPlayer.ruolo}
@@ -961,7 +999,7 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                   <h4 className="text-xs font-mono uppercase tracking-widest text-zinc-400 font-bold border-b border-zinc-100 pb-2">
                     DATI TECNICI & FISICI
                   </h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={`grid ${isMinivolley ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2'} gap-4`}>
                     {/* Ruolo */}
                     <div className="bg-zinc-50 border border-zinc-200 p-4 rounded-xl flex items-center gap-3">
                       <div className="bg-brand-yellow/10 p-2 rounded-lg text-brand-yellow shrink-0">
@@ -970,23 +1008,25 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                       <div>
                         <span className="text-[10px] font-mono text-zinc-400 block uppercase">RUOLO</span>
                         <span className="text-sm font-semibold text-zinc-900">
-                          {selectedPlayer.ruolo ? formatRuoloGiocatore(selectedPlayer.ruolo, (selectedPlayer as any).genere || genderLetter) : '—'}
+                          {selectedPlayer.ruolo ? formatRuoloGiocatore(selectedPlayer.ruolo, (selectedPlayer as any).genere || genderLetter) : (isMinivolley ? 'Panterina' : '—')}
                         </span>
                       </div>
                     </div>
 
-                    {/* Altezza */}
-                    <div className="bg-zinc-50 border border-zinc-200 p-4 rounded-xl flex items-center gap-3">
-                      <div className="bg-brand-yellow/10 p-2 rounded-lg text-brand-yellow shrink-0">
-                        <TrendingUp className="w-5 h-5 text-amber-600" />
+                    {/* Altezza - NASCOSTA PER MINIVOLLEY */}
+                    {!isMinivolley && (
+                      <div className="bg-zinc-50 border border-zinc-200 p-4 rounded-xl flex items-center gap-3">
+                        <div className="bg-brand-yellow/10 p-2 rounded-lg text-brand-yellow shrink-0">
+                          <TrendingUp className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-mono text-zinc-400 block uppercase">ALTEZZA</span>
+                          <span className="text-sm font-semibold text-zinc-900">
+                            {selectedPlayer.altezza ? `${selectedPlayer.altezza} cm` : '—'}
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-[10px] font-mono text-zinc-400 block uppercase">ALTEZZA</span>
-                        <span className="text-sm font-semibold text-zinc-900">
-                          {selectedPlayer.altezza ? `${selectedPlayer.altezza} cm` : '—'}
-                        </span>
-                      </div>
-                    </div>
+                    )}
 
                     {/* Anno Di Nascita */}
                     <div className="bg-zinc-50 border border-zinc-200 p-4 rounded-xl flex items-center gap-3">

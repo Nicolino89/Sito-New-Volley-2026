@@ -30,7 +30,7 @@ import {
   updateProssimaGara,
   ProssimaGara
 } from '../../../firebase-societa';
-import { scrapeFipavFullData, parseFipavHtml } from '../../../utils/fipavScraper';
+import { scrapeFipavFullData, parseFipavHtml, sanitizeLuogoDisplay } from '../../../utils/fipavScraper';
 
 
 interface TabGareFipavProps {
@@ -548,7 +548,7 @@ export default function TabGareFipav({
 
                             <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500 pt-0.5">
                               <span className="flex items-center gap-1">
-                                <MapPin className="w-3.5 h-3.5 text-zinc-400" /> {match.luogo || 'PalaMaroncelli, Forlì'}
+                                <MapPin className="w-3.5 h-3.5 text-zinc-400" /> {sanitizeLuogoDisplay(match.luogo, match.casa)}
                               </span>
                               {match.parzialiSet && (
                                 <span className="bg-zinc-100 text-zinc-800 px-2 py-0.5 rounded font-mono text-[11px] font-semibold">

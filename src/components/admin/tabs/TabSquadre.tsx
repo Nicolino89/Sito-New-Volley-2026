@@ -37,6 +37,7 @@ import {
   getStoricoGiocatore,
   caricaBlobSuStorage,
   formatRuoloGiocatore,
+  CARICHE_STAFF_DEFAULT,
   db
 } from '../../../firebase-societa';
 import { collection, getDocs } from 'firebase/firestore';
@@ -574,11 +575,19 @@ export default function TabSquadre({
   const handleSaveSquadDetails = async () => {
     if (!activeSquad || !editingSquadData) return;
     try {
-      const updated = { ...activeSquad, ...editingSquadData };
+      const updated: RosaSquadra = { 
+        ...activeSquad, 
+        ...editingSquadData,
+        ruoli_staff: {
+          primo: (editingSquadData.ruoli_staff?.primo || activeSquad.ruoli_staff?.primo || '1° Allenatore').trim(),
+          secondo: (editingSquadData.ruoli_staff?.secondo || activeSquad.ruoli_staff?.secondo || '2° Allenatore').trim(),
+          dirigente_accompagnatore: (editingSquadData.ruoli_staff?.dirigente_accompagnatore || activeSquad.ruoli_staff?.dirigente_accompagnatore || 'Dirigente Accompagnatore').trim()
+        }
+      };
       setSquadreAll?.(prev => prev.map(s => s.id === activeSquad.id ? updated : s));
       showToast("Dati squadra aggiornati!", "success");
       setEditingSquadData(null);
-      await aggiornaElementoCompleto('rose_squadre', activeSquad.id, editingSquadData);
+      await aggiornaElementoCompleto('rose_squadre', activeSquad.id, updated);
     } catch (e) {
       console.error(e);
       showToast("Errore durante l'aggiornamento della squadra.", "error");
@@ -840,15 +849,23 @@ export default function TabSquadre({
                 {activeSquad.nome_squadra}
               </h2>
               <p className="text-xs text-zinc-400">
-                1° Allenatore: <b className="text-zinc-200">{typeof activeSquad.allenatori?.primo === 'string' ? activeSquad.allenatori.primo : (activeSquad.allenatori?.primo as any)?.nome || 'Non assegnato'}</b>
-                {activeSquad.allenatori?.secondo && ` • 2° Allenatore: ${activeSquad.allenatori.secondo}`}
-                {activeSquad.allenatori?.dirigente_accompagnatore && ` • Dirigente: ${activeSquad.allenatori.dirigente_accompagnatore}`}
+                {activeSquad.ruoli_staff?.primo || '1° Allenatore'}: <b className="text-zinc-200">{typeof activeSquad.allenatori?.primo === 'string' ? activeSquad.allenatori.primo : (activeSquad.allenatori?.primo as any)?.nome || 'Non assegnato'}</b>
+                {activeSquad.allenatori?.secondo && ` • ${activeSquad.ruoli_staff?.secondo || '2° Allenatore'}: ${typeof activeSquad.allenatori.secondo === 'string' ? activeSquad.allenatori.secondo : (activeSquad.allenatori.secondo as any)?.nome || activeSquad.allenatori.secondo}`}
+                {activeSquad.allenatori?.dirigente_accompagnatore && ` • ${activeSquad.ruoli_staff?.dirigente_accompagnatore || 'Dirigente Accompagnatore'}: ${typeof activeSquad.allenatori.dirigente_accompagnatore === 'string' ? activeSquad.allenatori.dirigente_accompagnatore : (activeSquad.allenatori.dirigente_accompagnatore as any)?.nome || activeSquad.allenatori.dirigente_accompagnatore}`}
               </p>
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
               <button
-                onClick={() => setEditingSquadData(activeSquad)}
+                onClick={() => setEditingSquadData({
+                  ...activeSquad,
+                  ruoli_staff: {
+                    primo: activeSquad.ruoli_staff?.primo || '1° Allenatore',
+                    secondo: activeSquad.ruoli_staff?.secondo || '2° Allenatore',
+                    dirigente_accompagnatore: activeSquad.ruoli_staff?.dirigente_accompagnatore || 'Dirigente Accompagnatore',
+                    ...activeSquad.ruoli_staff
+                  }
+                })}
                 className="bg-zinc-800 hover:bg-zinc-700 text-white font-medium px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 border border-zinc-700 transition-all cursor-pointer"
               >
                 <Sliders className="w-4 h-4 text-brand-yellow" /> Modifica Dati & Staff
@@ -909,92 +926,159 @@ export default function TabSquadre({
                       <option value="GIOVANILI">Settore Giovanile (Under 13 - Under 18)</option>
                     </select>
                   </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <label className="text-zinc-600 text-xs font-semibold uppercase">1° Allenatore</label>
-                      {availableStaff.length > 0 && (
-                        <span className="text-[10px] text-amber-700 font-mono font-medium">💡 Seleziona o digita</span>
-                      )}
-                    </div>
-                    <div className="relative">
+                  {/* 1° MEMBRO STAFF */}
+                  <div className="space-y-2 p-3 bg-zinc-50 border border-zinc-200 rounded-xl">
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <label className="text-zinc-600 text-xs font-semibold uppercase">Carica / Ruolo 1</label>
+                        <span className="text-[10px] text-zinc-400 font-mono">Modificabile a mano</span>
+                      </div>
                       <input
                         type="text"
-                        list="staff-list-primo"
-                        placeholder="Seleziona o digita es. Giovanni Rizzo"
-                        className="w-full bg-zinc-50 border border-zinc-300 rounded-xl p-2.5 text-sm font-medium text-zinc-900 focus:bg-white focus:border-amber-400 focus:outline-none"
-                        value={typeof editingSquadData.allenatori?.primo === 'string' ? editingSquadData.allenatori.primo : (editingSquadData.allenatori?.primo as any)?.nome || ''}
-                        onChange={e => setEditingSquadData({ 
-                          ...editingSquadData, 
-                          allenatori: { ...editingSquadData.allenatori, primo: e.target.value } as any 
+                        list="staff-roles-options"
+                        placeholder="1° Allenatore"
+                        className="w-full bg-white border border-zinc-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-zinc-900 focus:bg-amber-50/50 focus:border-amber-400 focus:outline-none uppercase"
+                        value={editingSquadData.ruoli_staff?.primo ?? ''}
+                        onChange={e => setEditingSquadData({
+                          ...editingSquadData,
+                          ruoli_staff: { ...editingSquadData.ruoli_staff, primo: e.target.value }
                         })}
                       />
-                      <datalist id="staff-list-primo">
-                        {availableStaff.map(st => (
-                          <option key={st.id} value={st.nomeCognome}>
-                            {st.qualificaTecnica ? `${st.nomeCognome} (${st.qualificaTecnica})` : st.nomeCognome}
-                          </option>
-                        ))}
-                      </datalist>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <label className="text-zinc-500 text-[11px] font-semibold uppercase">Nome & Cognome</label>
+                        {availableStaff.length > 0 && (
+                          <span className="text-[10px] text-amber-700 font-mono font-medium">💡 Seleziona o digita</span>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          list="staff-list-primo"
+                          placeholder="Seleziona o digita es. Gabriel Pablo Kunda"
+                          className="w-full bg-white border border-zinc-300 rounded-xl p-2.5 text-sm font-medium text-zinc-900 focus:border-amber-400 focus:outline-none"
+                          value={typeof editingSquadData.allenatori?.primo === 'string' ? editingSquadData.allenatori.primo : (editingSquadData.allenatori?.primo as any)?.nome || ''}
+                          onChange={e => setEditingSquadData({ 
+                            ...editingSquadData, 
+                            allenatori: { ...editingSquadData.allenatori, primo: e.target.value } as any 
+                          })}
+                        />
+                        <datalist id="staff-list-primo">
+                          {availableStaff.map(st => (
+                            <option key={st.id} value={st.nomeCognome}>
+                              {st.qualificaTecnica ? `${st.nomeCognome} (${st.qualificaTecnica})` : st.nomeCognome}
+                            </option>
+                          ))}
+                        </datalist>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <label className="text-zinc-600 text-xs font-semibold uppercase">2° Allenatore</label>
-                      {availableStaff.length > 0 && (
-                        <span className="text-[10px] text-amber-700 font-mono font-medium">💡 Seleziona o digita</span>
-                      )}
-                    </div>
-                    <div className="relative">
+                  {/* 2° MEMBRO STAFF */}
+                  <div className="space-y-2 p-3 bg-zinc-50 border border-zinc-200 rounded-xl">
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <label className="text-zinc-600 text-xs font-semibold uppercase">Carica / Ruolo 2</label>
+                        <span className="text-[10px] text-zinc-400 font-mono">Modificabile a mano</span>
+                      </div>
                       <input
                         type="text"
-                        list="staff-list-secondo"
-                        placeholder="Seleziona o digita es. Laura Bianchi"
-                        className="w-full bg-zinc-50 border border-zinc-300 rounded-xl p-2.5 text-sm font-medium text-zinc-900 focus:bg-white focus:border-amber-400 focus:outline-none"
-                        value={typeof editingSquadData.allenatori?.secondo === 'string' ? editingSquadData.allenatori.secondo : (editingSquadData.allenatori?.secondo as any)?.nome || ''}
-                        onChange={e => setEditingSquadData({ 
-                          ...editingSquadData, 
-                          allenatori: { ...editingSquadData.allenatori, secondo: e.target.value } as any 
+                        list="staff-roles-options"
+                        placeholder="2° Allenatore"
+                        className="w-full bg-white border border-zinc-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-zinc-900 focus:bg-amber-50/50 focus:border-amber-400 focus:outline-none uppercase"
+                        value={editingSquadData.ruoli_staff?.secondo ?? ''}
+                        onChange={e => setEditingSquadData({
+                          ...editingSquadData,
+                          ruoli_staff: { ...editingSquadData.ruoli_staff, secondo: e.target.value }
                         })}
                       />
-                      <datalist id="staff-list-secondo">
-                        {availableStaff.map(st => (
-                          <option key={st.id} value={st.nomeCognome}>
-                            {st.qualificaTecnica ? `${st.nomeCognome} (${st.qualificaTecnica})` : st.nomeCognome}
-                          </option>
-                        ))}
-                      </datalist>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <label className="text-zinc-500 text-[11px] font-semibold uppercase">Nome & Cognome</label>
+                        {availableStaff.length > 0 && (
+                          <span className="text-[10px] text-amber-700 font-mono font-medium">💡 Seleziona o digita</span>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          list="staff-list-secondo"
+                          placeholder="Seleziona o digita es. Giulia Leonardi"
+                          className="w-full bg-white border border-zinc-300 rounded-xl p-2.5 text-sm font-medium text-zinc-900 focus:border-amber-400 focus:outline-none"
+                          value={typeof editingSquadData.allenatori?.secondo === 'string' ? editingSquadData.allenatori.secondo : (editingSquadData.allenatori?.secondo as any)?.nome || ''}
+                          onChange={e => setEditingSquadData({ 
+                            ...editingSquadData, 
+                            allenatori: { ...editingSquadData.allenatori, secondo: e.target.value } as any 
+                          })}
+                        />
+                        <datalist id="staff-list-secondo">
+                          {availableStaff.map(st => (
+                            <option key={st.id} value={st.nomeCognome}>
+                              {st.qualificaTecnica ? `${st.nomeCognome} (${st.qualificaTecnica})` : st.nomeCognome}
+                            </option>
+                          ))}
+                        </datalist>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="space-y-1 sm:col-span-2">
-                    <div className="flex justify-between items-center">
-                      <label className="text-zinc-600 text-xs font-semibold uppercase">Dirigente Accompagnatore</label>
-                      {availableStaff.length > 0 && (
-                        <span className="text-[10px] text-amber-700 font-mono font-medium">💡 Seleziona o digita</span>
-                      )}
-                    </div>
-                    <div className="relative">
+                  {/* 3° MEMBRO STAFF / DIRIGENZIALE */}
+                  <div className="space-y-2 p-3 bg-zinc-50 border border-zinc-200 rounded-xl sm:col-span-2">
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <label className="text-zinc-600 text-xs font-semibold uppercase">Carica / Ruolo 3 (Dirigente / Tecnico)</label>
+                        <span className="text-[10px] text-zinc-400 font-mono">Modificabile a mano</span>
+                      </div>
                       <input
                         type="text"
-                        list="staff-list-dirigente"
-                        placeholder="Seleziona o digita es. Giuseppe Verdi"
-                        className="w-full bg-zinc-50 border border-zinc-300 rounded-xl p-2.5 text-sm font-medium text-zinc-900 focus:bg-white focus:border-amber-400 focus:outline-none"
-                        value={typeof editingSquadData.allenatori?.dirigente_accompagnatore === 'string' ? editingSquadData.allenatori.dirigente_accompagnatore : (editingSquadData.allenatori?.dirigente_accompagnatore as any)?.nome || ''}
-                        onChange={e => setEditingSquadData({ 
-                          ...editingSquadData, 
-                          allenatori: { ...editingSquadData.allenatori, dirigente_accompagnatore: e.target.value } as any 
+                        list="staff-roles-options"
+                        placeholder="Dirigente Accompagnatore"
+                        className="w-full bg-white border border-zinc-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-zinc-900 focus:bg-amber-50/50 focus:border-amber-400 focus:outline-none uppercase"
+                        value={editingSquadData.ruoli_staff?.dirigente_accompagnatore ?? ''}
+                        onChange={e => setEditingSquadData({
+                          ...editingSquadData,
+                          ruoli_staff: { ...editingSquadData.ruoli_staff, dirigente_accompagnatore: e.target.value }
                         })}
                       />
-                      <datalist id="staff-list-dirigente">
-                        {availableStaff.map(st => (
-                          <option key={st.id} value={st.nomeCognome}>
-                            {st.qualificaTecnica ? `${st.nomeCognome} (${st.qualificaTecnica})` : st.nomeCognome}
-                          </option>
-                        ))}
-                      </datalist>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <label className="text-zinc-500 text-[11px] font-semibold uppercase">Nome & Cognome</label>
+                        {availableStaff.length > 0 && (
+                          <span className="text-[10px] text-amber-700 font-mono font-medium">💡 Seleziona o digita</span>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          list="staff-list-dirigente"
+                          placeholder="Seleziona o digita es. Zuppone Massimiliano"
+                          className="w-full bg-white border border-zinc-300 rounded-xl p-2.5 text-sm font-medium text-zinc-900 focus:border-amber-400 focus:outline-none"
+                          value={typeof editingSquadData.allenatori?.dirigente_accompagnatore === 'string' ? editingSquadData.allenatori.dirigente_accompagnatore : (editingSquadData.allenatori?.dirigente_accompagnatore as any)?.nome || ''}
+                          onChange={e => setEditingSquadData({ 
+                            ...editingSquadData, 
+                            allenatori: { ...editingSquadData.allenatori, dirigente_accompagnatore: e.target.value } as any 
+                          })}
+                        />
+                        <datalist id="staff-list-dirigente">
+                          {availableStaff.map(st => (
+                            <option key={st.id} value={st.nomeCognome}>
+                              {st.qualificaTecnica ? `${st.nomeCognome} (${st.qualificaTecnica})` : st.nomeCognome}
+                            </option>
+                          ))}
+                        </datalist>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Datalist globale per i suggerimenti di cariche e ruoli */}
+                  <datalist id="staff-roles-options">
+                    {CARICHE_STAFF_DEFAULT.map(carica => (
+                      <option key={carica} value={carica} />
+                    ))}
+                  </datalist>
                   <div className="space-y-1 sm:col-span-2">
                     <label className="text-zinc-600 text-xs font-semibold uppercase">Foto di Copertina Squadra</label>
                     <div className="flex gap-2">

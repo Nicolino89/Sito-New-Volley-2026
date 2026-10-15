@@ -43,6 +43,93 @@ export function isNvaTeam(name: string, customOfficialName?: string): boolean {
 }
 
 /**
+ * Normalizza il luogo della partita per la visualizzazione a video,
+ * assicurandosi che testi con arbitri o stato gara non appaiano mai come palestra.
+ */
+export function sanitizeLuogoDisplay(luogo?: string | null, isCasa: boolean = true): string {
+  if (!luogo) return isCasa ? "Pal. Comunale Fabio Lombini, Castrocaro Terme" : "Palasport";
+  
+  const lower = luogo.toLowerCase().trim();
+  if (
+    lower.includes('arbitro designato') || 
+    lower.includes('designazioni') || 
+    lower.startsWith('da disputare') || 
+    lower.startsWith('disputata')
+  ) {
+    return isCasa 
+      ? "Pal. Comunale Fabio Lombini, Castrocaro Terme" 
+      : "Palasport";
+  }
+
+  return luogo;
+}
+
+/**
+ * Estrae e pulisce il luogo di gara dall'HTML/tooltip della cella FIPAV (es. icona info_16.png).
+ * Rimuove le designazioni arbitrali, lo stato gara ed evita che le parole si incollino sui <br>.
+ */
+function extractVenueFromTooltip(cell?: Element | null, isHome: boolean = true): string {
+  const defaultVenue = isHome ? 'Pal. Comunale Fabio Lombini, Castrocaro Terme' : 'Palasport';
+  if (!cell) return defaultVenue;
+
+  // 1. Cerca l'icona info specifica per le palestre
+  let infoImg = cell.querySelector('img[src*="info_16"], img[src*="info"], img[alt*="info" i]');
+
+  // 2. Se non trovata per src, cerca tra le immagini escludendo lo stato della gara o arbitri
+  if (!infoImg) {
+    const allImgs = Array.from(cell.querySelectorAll('img[title]'));
+    infoImg = allImgs.find(img => {
+      const src = (img.getAttribute('src') || '').toLowerCase();
+      const title = (img.getAttribute('title') || '').toLowerCase();
+      if (src.includes('statogara') || img.closest('[id*="StatoGara"]')) return false;
+      if (title.startsWith('da disputare') || title.startsWith('disputata') || title.includes('arbitro designato')) return false;
+      return true;
+    }) || null;
+  }
+
+  if (!infoImg) return defaultVenue;
+
+  const rawTitle = infoImg.getAttribute('title') || '';
+  if (!rawTitle.trim()) return defaultVenue;
+
+  const tmp = document.createElement('div');
+  tmp.innerHTML = rawTitle;
+
+  // Rimuovi designazioni arbitrali se presenti all'interno del tooltip
+  tmp.querySelectorAll('.designazione').forEach(el => el.remove());
+  Array.from(tmp.querySelectorAll('p, div')).forEach(p => {
+    if (p.textContent?.toLowerCase().includes('designazion')) {
+      p.remove();
+    }
+  });
+
+  // Converti <br> e <p> in virgole/separatori
+  tmp.querySelectorAll('br').forEach(br => br.replaceWith(document.createTextNode(', ')));
+  tmp.querySelectorAll('p').forEach(p => p.appendChild(document.createTextNode(', ')));
+
+  let cleanLoc = cleanString(tmp.textContent || '');
+  cleanLoc = cleanLoc
+    .replace(/\s*,\s*/g, ', ')
+    .replace(/(,\s*)+/g, ', ')
+    .replace(/^,\s*/, '')
+    .replace(/,\s*$/, '')
+    .trim();
+
+  // Correzione stilistica "pAL." -> "Pal."
+  cleanLoc = cleanLoc.replace(/^pal\.\s*/i, 'Pal. ');
+
+  if (
+    cleanLoc.length > 3 && 
+    !cleanLoc.toLowerCase().includes('arbitro designato') && 
+    !cleanLoc.toLowerCase().startsWith('da disputare')
+  ) {
+    return cleanLoc;
+  }
+
+  return defaultVenue;
+}
+
+/**
  * Parse HTML content (from either portalefipav.net or fipavromagna.it / general FIPAV)
  */
 export function parseFipavHtml(
@@ -164,17 +251,6 @@ export function parseFipavHtml(
         const risul = cleanString(cells[5].textContent || '');
         const parziali = cleanString(cells[6]?.textContent || '').replace(/\u00a0/g, ' ');
 
-        // Extract location info from tooltip / HTML
-        let luogo = 'PalaMaroncelli, Forlì';
-        const infoImg = cells[7]?.querySelector('img[title*="Pal"]') || cells[7]?.querySelector('img[title*="Sc."]') || cells[7]?.querySelector('img[title*="FORLI"]') || cells[7]?.querySelector('img[title]');
-        if (infoImg) {
-          const titleText = infoImg.getAttribute('title') || '';
-          const tmp = document.createElement('div');
-          tmp.innerHTML = titleText;
-          const cleanLoc = cleanString(tmp.textContent || '');
-          if (cleanLoc.length > 3) luogo = cleanLoc;
-        }
-
         const dateParts = dataOra.split(' ');
         const data = dateParts[0] || new Date().toLocaleDateString('it-IT');
         const ora = dateParts[1] || '20:30';
@@ -196,6 +272,9 @@ export function parseFipavHtml(
             setNva = isHome ? s1 : s2;
             setAvversario = isHome ? s2 : s1;
           }
+
+          // Extract location info from tooltip / HTML (specifically targeting info_16 icon and stripping referee/statogara)
+          const luogo = extractVenueFromTooltip(cells[7], isHome);
 
           partite.push({
             id: `p_fipav_${garaNum || matchIdx}_${Date.now()}`,
@@ -307,7 +386,7 @@ export function parseFipavHtml(
       categoria: myTeamName.toLowerCase().includes('masch') ? 'Serie D Maschile' : 'Serie D Femminile',
       avversario: unplayed.avversario,
       data_ora: `${unplayed.data} ${unplayed.ora}`,
-      luogo: unplayed.luogo || 'PalaMaroncelli, Forlì',
+      luogo: sanitizeLuogoDisplay(unplayed.luogo, unplayed.casa),
       giornata: unplayed.giornata,
       casa: unplayed.casa,
       punti_nva: null,

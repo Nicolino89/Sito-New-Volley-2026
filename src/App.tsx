@@ -33,6 +33,7 @@ import Societa from './pages/Societa';
 import SponsorPage from './pages/Sponsor';
 import NotFound from './pages/NotFound';
 import Maintenance from './pages/Maintenance';
+import SitoInAggiornamento from './components/SitoInAggiornamento';
 
 import {
   ascoltaStatoAutenticazione,
@@ -191,6 +192,9 @@ function getInitialCache() {
             parsed.societaConfig.staffTecnico = [];
           }
         }
+        if (parsed.societaSettings) {
+          parsed.societaSettings.isMaintenanceMode = false;
+        }
         return parsed;
       }
     }
@@ -199,6 +203,124 @@ function getInitialCache() {
   }
   return null;
 }
+
+export interface PageMeta {
+  key: string;
+  title: string;
+  sezione: string;
+  descrizione: string;
+}
+
+export const DEFAULT_PAGE_MAINTENANCE: Record<string, boolean> = {
+  'home': false,
+  'squadre': false,
+  'camp-tornei': true,
+  'societa': true,
+  'news': true,
+  'galleria': true,
+  'modulistica': true,
+  'albo-d-oro': true,
+  'sponsor': true,
+  'voltex': true,
+  'privacy': false,
+};
+
+export const getPageMeta = (pathname: string): PageMeta => {
+  if (pathname === '/' || pathname === '' || pathname === '/home' || pathname === '/index.html') {
+    return {
+      key: 'home',
+      title: 'HOME',
+      sezione: 'Home',
+      descrizione: ''
+    };
+  }
+  if (pathname.startsWith('/squadre')) {
+    return {
+      key: 'squadre',
+      title: 'SQUADRE',
+      sezione: 'Squadre & Roster',
+      descrizione: ''
+    };
+  }
+  if (pathname.startsWith('/camp-tornei') || pathname.startsWith('/eventi')) {
+    return {
+      key: 'camp-tornei',
+      title: 'CAMP & TORNEI',
+      sezione: 'Camp & Tornei',
+      descrizione: 'Stiamo definendo il programma e il calendario eventi per la nuova stagione 2026/2027. A breve tutti i dettagli e le date!'
+    };
+  }
+  if (pathname.startsWith('/societa')) {
+    return {
+      key: 'societa',
+      title: 'LA SOCIETÀ',
+      sezione: 'La Società',
+      descrizione: "Stiamo aggiornando l'organigramma societario e i documenti ufficiali NVA per la nuova stagione agonistica."
+    };
+  }
+  if (pathname.startsWith('/news')) {
+    return {
+      key: 'news',
+      title: 'NEWS',
+      sezione: 'News & Comunicazioni',
+      descrizione: 'La redazione sta preparando i nuovi comunicati ufficiali e gli approfondimenti sul campionato delle Pantere.'
+    };
+  }
+  if (pathname.startsWith('/galleria')) {
+    return {
+      key: 'galleria',
+      title: 'GALLERIA',
+      sezione: 'Galleria Foto',
+      descrizione: 'I nuovi scatti fotografici ufficiali e le gallerie delle squadre sono in fase di allestimento. Torna presto!'
+    };
+  }
+  if (pathname.startsWith('/modulistica')) {
+    return {
+      key: 'modulistica',
+      title: 'MODULISTICA',
+      sezione: 'Modulistica',
+      descrizione: 'I moduli di iscrizione e la documentazione per la nuova stagione 2026/2027 sono in fase di predisposizione.'
+    };
+  }
+  if (pathname.startsWith('/albo-d-oro') || pathname.startsWith('/hall-of-fame')) {
+    return {
+      key: 'albo-d-oro',
+      title: 'MURO DEI FAMOSI',
+      sezione: "Muro dei Famosi & Albo d'Oro",
+      descrizione: 'Stiamo rinnovando la galleria delle memorie storiche e dei successi delle Pantere.'
+    };
+  }
+  if (pathname.startsWith('/sponsor')) {
+    return {
+      key: 'sponsor',
+      title: 'SPONSOR',
+      sezione: 'I Nostri Sponsor',
+      descrizione: 'Stiamo allestendo la vetrina ufficiale con tutti i partner e sostenitori delle Pantere.'
+    };
+  }
+  if (pathname.startsWith('/voltex')) {
+    return {
+      key: 'voltex',
+      title: 'VOLTEX CAMP',
+      sezione: 'Voltex Camp',
+      descrizione: 'Tutte le informazioni e le iscrizioni per il Voltex Camp estivo saranno rese disponibili a breve.'
+    };
+  }
+  if (pathname.startsWith('/privacy')) {
+    return {
+      key: 'privacy',
+      title: 'PRIVACY',
+      sezione: 'Privacy Policy',
+      descrizione: ''
+    };
+  }
+  return {
+    key: 'generale',
+    title: 'PAGINA',
+    sezione: 'Contenuti Ufficiali',
+    descrizione: 'Pagina in fase di aggiornamento.'
+  };
+};
 
 export default function App() {
   const location = useLocation();
@@ -252,7 +374,7 @@ export default function App() {
   const [eventiAll, setEventiAll] = useState<EventiTorneo[]>(initialCache?.eventiAll || []);
   const [societaInfo, setSocietaInfo] = useState<SocietaInfo | null>(initialCache?.societaInfo || null);
   const [societaConfig, setSocietaConfig] = useState<SocietaConfig | null>(initialCache?.societaConfig || null);
-  const [societaSettings, setSocietaSettings] = useState<any>(initialCache?.societaSettings || { logoUrl: '', isMaintenanceMode: true });
+  const [societaSettings, setSocietaSettings] = useState<any>(initialCache?.societaSettings || { logoUrl: '', isMaintenanceMode: false });
 
   // Synchronous LocalStorage Cache Updater for 0ms optimistic UI & instant refresh persistence
   const updateLocalCache = (partial: Record<string, any>) => {
@@ -263,6 +385,47 @@ export default function App() {
       localStorage.setItem(CACHE_KEY, JSON.stringify(updated));
     } catch (e) {
       // quota or private mode
+    }
+  };
+
+  const currentPageMeta = React.useMemo(() => getPageMeta(location.pathname), [location.pathname]);
+
+  const isPageInMaintenance = (pageKey: string): boolean => {
+    const custom = societaSettings?.pagineInManutenzione;
+    if (custom && typeof custom === 'object' && custom[pageKey] !== undefined) {
+      return Boolean(custom[pageKey]);
+    }
+    return DEFAULT_PAGE_MAINTENANCE[pageKey] ?? false;
+  };
+
+  const isCurrentPageInMaintenance = isPageInMaintenance(currentPageMeta.key);
+
+  const toggleCurrentPageMaintenance = async () => {
+    const pageKey = currentPageMeta.key;
+    const nextStatus = !isCurrentPageInMaintenance;
+    const currentMap = societaSettings?.pagineInManutenzione || { ...DEFAULT_PAGE_MAINTENANCE };
+    const updatedMap = {
+      ...currentMap,
+      [pageKey]: nextStatus
+    };
+    const updatedSettings = {
+      ...societaSettings,
+      pagineInManutenzione: updatedMap
+    };
+    setSocietaSettings(updatedSettings);
+    updateLocalCache({ societaSettings: updatedSettings });
+
+    try {
+      await updateSocietaSettings(updatedSettings);
+      showToast(
+        nextStatus
+          ? `Manutenzione ATTIVATA per ${currentPageMeta.title}. I visitatori vedono la schermata di aggiornamento.`
+          : `Manutenzione DISATTIVATA per ${currentPageMeta.title}! La pagina è ora PUBBLICA per tutti.`,
+        "success"
+      );
+    } catch (err) {
+      console.error("Errore salvataggio manutenzione pagina:", err);
+      showToast("Errore durante l'aggiornamento dello stato della pagina.", "error");
     }
   };
 
@@ -322,13 +485,12 @@ export default function App() {
         getEventiAll().catch(() => []),
         getSocietaInfo().catch(() => null),
         getSocietaConfig().catch(() => null),
-        getSocietaSettings().catch(() => ({ logoUrl: '', isMaintenanceMode: true }))
+        getSocietaSettings().catch(() => ({ logoUrl: '', isMaintenanceMode: false }))
       ]);
 
-      const safeSettings = settings && typeof settings === 'object' ? settings : { logoUrl: '', isMaintenanceMode: true };
-      if (safeSettings.isMaintenanceMode === undefined) {
-        safeSettings.isMaintenanceMode = true;
-      }
+      const safeSettings = settings && typeof settings === 'object' ? settings : { logoUrl: '', isMaintenanceMode: false };
+      // Il sito è ora pubblico per l'inizio del campionato
+      safeSettings.isMaintenanceMode = false;
 
       // Sanitize info e config contatti per garantire dati reali NVA
       if (info && info.contatti) {
@@ -460,105 +622,119 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* MAINTENANCE MODE CHECK:
-          Visitors (not logged in) see the Panther Maintenance page if isMaintenanceMode is true.
-          If admin is logged in, they can browse the full public site freely, and can toggle Preview or toggle Maintenance.
-      */}
-      {((!currentUser && !loadingAuth && societaSettings?.isMaintenanceMode === true && location.pathname !== '/login') || 
-        (currentUser && previewAsVisitor)) ? (
-        <div className="relative">
-          {currentUser && (
-            <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#FFE600] text-black px-4 py-2 rounded-full font-sport uppercase tracking-wider text-xs font-black shadow-2xl flex items-center gap-3 border border-black/20">
-              <span className="w-2 h-2 rounded-full bg-black animate-ping" />
-              <span>ANTEPRIMA VISITATORE (ATTIVA)</span>
-              <button 
-                onClick={() => setPreviewAsVisitor(false)}
-                className="bg-black text-[#FFE600] px-3 py-1 rounded-full text-[11px] font-mono font-bold cursor-pointer hover:bg-zinc-850 transition-all ml-2"
-              >
-                CHIUDI ANTEPRIMA
-              </button>
-            </div>
-          )}
-          <Maintenance 
-            onAdminLogin={() => {
-              if (currentUser) {
-                setPreviewAsVisitor(false);
-              } else {
-                navigate('/login');
-              }
-            }}
-            logoUrl={societaSettings?.logoUrl}
-            societaInfo={societaInfo}
-          />
-        </div>
-      ) : (
-        <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#f4f4f0] text-zinc-900 font-sans antialiased selection:bg-brand-yellow selection:text-black flex flex-col justify-between" id="main-container">
+      <div className="min-h-screen w-full max-w-full overflow-x-clip bg-[#f4f4f0] text-zinc-900 font-sans antialiased selection:bg-brand-yellow selection:text-black flex flex-col justify-between" id="main-container">
           
           <div>
-            {/* ADMIN TOOLBAR: Always visible when currentUser is logged in */}
+            {/* ADMIN TOOLBAR: Always visible when currentUser is logged in, linked to CURRENT PAGE */}
             {currentUser && (
-              <div className={`px-4 py-2 text-xs font-black font-sport uppercase tracking-wider flex flex-wrap items-center justify-between z-50 sticky top-0 shadow-lg border-b transition-colors ${
-                societaSettings?.isMaintenanceMode === true
+              <div className={`px-2.5 sm:px-4 py-2 text-xs font-black font-sport uppercase tracking-wider z-50 sticky top-0 shadow-lg border-b transition-colors w-full max-w-full overflow-hidden ${
+                isCurrentPageInMaintenance
                   ? 'bg-[#FFE600] text-black border-black/15'
                   : 'bg-zinc-900 text-zinc-200 border-zinc-800'
               }`}>
-                <div className="flex items-center gap-2">
-                  <span className={`w-2.5 h-2.5 rounded-full ${societaSettings?.isMaintenanceMode === true ? 'bg-black animate-ping' : 'bg-emerald-400'}`} />
-                  <span>
-                    {societaSettings?.isMaintenanceMode === true 
-                      ? "MODALITÀ MANUTENZIONE ATTIVA — I visitatori vedono la pantera" 
-                      : "SITO PUBBLICO ATTIVO — Visibile a tutti"}
-                  </span>
-                  <span className="hidden md:inline text-[10px] font-mono font-normal opacity-75 pl-2">
-                    ({currentUser.email})
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 w-full max-w-full">
+                  {/* Left: Info pagina corrente e stato manutenzione */}
+                  <div className="flex items-center gap-2 flex-wrap min-w-0">
+                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${isCurrentPageInMaintenance ? 'bg-black animate-ping' : 'bg-emerald-400'}`} />
+                    <span className="font-barlow font-bold truncate max-w-[150px] sm:max-w-none">
+                      PAGINA: <span className="underline decoration-2 underline-offset-2">{currentPageMeta.title}</span>
+                    </span>
+                    <span className="text-zinc-500 font-mono text-[11px] hidden sm:inline">—</span>
+                    <span className="font-mono text-[10px] sm:text-[11px] flex items-center gap-1 shrink-0">
+                      {isCurrentPageInMaintenance ? (
+                        <span className="bg-black text-[#FFE600] px-1.5 sm:px-2 py-0.5 rounded font-bold">
+                          MANUTENZIONE
+                        </span>
+                      ) : (
+                        <span className="bg-emerald-600 text-white px-1.5 sm:px-2 py-0.5 rounded font-bold">
+                          PUBBLICA
+                        </span>
+                      )}
+                    </span>
+                    {previewAsVisitor && (
+                      <span className="bg-amber-600 text-white px-1.5 py-0.5 rounded font-mono text-[9px] sm:text-[10px] font-black animate-pulse shrink-0">
+                        PANTERA ATTIVA
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Right: Azioni legate alla pagina corrente (Grid compatto su mobile per evitare overflow) */}
+                  <div className="grid grid-cols-3 sm:flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto shrink-0">
+                    {/* Tasto VEDI PANTERA / ESCI DA PANTERA (Anteprima visitatore della pagina) */}
+                    <button
+                      onClick={() => {
+                        const next = !previewAsVisitor;
+                        setPreviewAsVisitor(next);
+                        showToast(
+                          next
+                            ? `Anteprima Pantera attiva: vedi "${currentPageMeta.title}" come visitatore.`
+                            : `Tornato a vista Admin: vedi tutti i contenuti di "${currentPageMeta.title}".`,
+                          "info"
+                        );
+                      }}
+                      className={`px-2 sm:px-3 py-1.5 sm:py-1 rounded text-[10px] sm:text-[11px] font-mono font-bold cursor-pointer transition-all flex items-center justify-center gap-1 shadow truncate ${
+                        previewAsVisitor
+                          ? 'bg-black text-[#FFE600] border-2 border-[#FFE600] ring-1 ring-black'
+                          : isCurrentPageInMaintenance
+                            ? 'bg-black/15 hover:bg-black/25 text-black border border-black/20'
+                            : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700'
+                      }`}
+                      title={previewAsVisitor ? "Esci dall'anteprima visitatore" : "Vedi questa pagina come la vede un visitatore"}
+                    >
+                      <span>👁️</span>
+                      <span className="truncate">{previewAsVisitor ? "ESCI" : "PANTERA"}</span>
+                    </button>
+
+                    {/* Toggle Admin CMS vs Public site view */}
+                    <button
+                      onClick={handleToggleAdmin}
+                      className={`px-2 sm:px-2.5 py-1.5 sm:py-1 rounded text-[10px] sm:text-[10.5px] font-mono font-bold cursor-pointer transition-all flex items-center justify-center truncate ${
+                        isCurrentPageInMaintenance
+                          ? 'bg-black/10 hover:bg-black/20 text-black border border-black/20'
+                          : 'bg-zinc-800 hover:bg-zinc-750 text-zinc-200 border border-zinc-700'
+                      }`}
+                    >
+                      {isAdminMode ? "🌐 SITO" : "⚙️ CMS"}
+                    </button>
+
+                    {/* 1-Click Toggle Maintenance Mode per la pagina corrente */}
+                    <button
+                      onClick={toggleCurrentPageMaintenance}
+                      className={`px-2 sm:px-3 py-1.5 sm:py-1 rounded text-[10px] sm:text-[11px] font-mono font-bold cursor-pointer transition-all shadow flex items-center justify-center gap-1 truncate ${
+                        isCurrentPageInMaintenance
+                          ? 'bg-black hover:bg-zinc-900 text-[#FFE600] border border-black'
+                          : 'bg-[#FFE600] hover:bg-yellow-400 text-black'
+                      }`}
+                      title={isCurrentPageInMaintenance ? "Rendi questa pagina visibile e accessibile a tutti i visitatori" : "Nascondi questa pagina ai visitatori con la schermata di aggiornamento"}
+                    >
+                      <span className="truncate">{isCurrentPageInMaintenance ? "PUBBLICA" : "MANUTENZIONE"}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Banner di avviso quando l'admin visualizza una pagina in manutenzione */}
+            {currentUser && !previewAsVisitor && !isAdminMode && isCurrentPageInMaintenance && (
+              <div className="bg-amber-500/15 border-b border-amber-500/30 text-amber-950 px-3 sm:px-4 py-1.5 text-xs font-mono flex flex-col sm:flex-row sm:items-center justify-between gap-2 w-full max-w-full overflow-hidden">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                  <span className="truncate sm:whitespace-normal">
+                    <strong>VISTA ADMIN:</strong> Contenuti reali di <strong>{currentPageMeta.title}</strong>. Visitatori vedono aggiornamento.
                   </span>
                 </div>
-
-                <div className="flex items-center gap-2 mt-1 sm:mt-0">
-                  {/* Preview Button (if maintenance is on) */}
-                  {societaSettings?.isMaintenanceMode === true && (
-                    <button
-                      onClick={() => setPreviewAsVisitor(true)}
-                      className="bg-black/15 hover:bg-black/25 text-black px-2.5 py-1 rounded text-[10.5px] font-mono font-bold cursor-pointer transition-all"
-                      title="Guarda la pagina come la vede un visitatore non loggato"
-                    >
-                      👁️ VEDI PANTERA
-                    </button>
-                  )}
-
-                  {/* Toggle Admin CMS vs Public site view */}
+                <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-auto">
                   <button
-                    onClick={handleToggleAdmin}
-                    className={`px-2.5 py-1 rounded text-[10.5px] font-mono font-bold cursor-pointer transition-all ${
-                      societaSettings?.isMaintenanceMode === true
-                        ? 'bg-black/10 hover:bg-black/20 text-black border border-black/20'
-                        : 'bg-zinc-800 hover:bg-zinc-750 text-zinc-200 border border-zinc-700'
-                    }`}
+                    onClick={() => setPreviewAsVisitor(true)}
+                    className="underline font-bold hover:text-black cursor-pointer text-[11px]"
                   >
-                    {isAdminMode ? "🌐 VEDI SITO PUBBLICO" : "⚙️ PANNELLO CMS"}
+                    👁️ Vedi Pantera
                   </button>
-
-                  {/* 1-Click Toggle Maintenance Mode */}
                   <button
-                    onClick={async () => {
-                      const nextState = societaSettings?.isMaintenanceMode !== true;
-                      const updated = { ...societaSettings, isMaintenanceMode: nextState };
-                      setSocietaSettings(updated);
-                      await updateSocietaSettings(updated);
-                      showToast(
-                        nextState 
-                          ? "Modalità manutenzione ATTIVATA! I visitatori vedono la pantera." 
-                          : "Modalità manutenzione DISATTIVATA! Il sito è ora pubblico.", 
-                        "success"
-                      );
-                    }}
-                    className={`px-3 py-1 rounded text-[11px] font-mono font-bold cursor-pointer transition-all shadow ${
-                      societaSettings?.isMaintenanceMode === true
-                        ? 'bg-black hover:bg-zinc-900 text-[#FFE600]'
-                        : 'bg-[#FFE600] hover:bg-yellow-400 text-black'
-                    }`}
+                    onClick={toggleCurrentPageMaintenance}
+                    className="bg-black text-[#FFE600] px-2.5 py-0.5 rounded font-bold hover:bg-zinc-800 cursor-pointer text-[10px]"
                   >
-                    {societaSettings?.isMaintenanceMode === true ? "DISATTIVA MANUTENZIONE" : "ATTIVA MANUTENZIONE"}
+                    Pubblica per Tutti
                   </button>
                 </div>
               </div>
@@ -650,10 +826,21 @@ export default function App() {
                   <Suspense fallback={<LoadingFallback />}>
                     {(() => {
                       const path = location.pathname;
+                      const pageMeta = getPageMeta(path);
+                      const isPageMaintenance = isPageInMaintenance(pageMeta.key);
+                      const isVisitorView = !currentUser || previewAsVisitor;
+
+                      // Se l'utente è un visitatore (o l'admin ha cliccato 'Vedi Pantera')
+                      // E la pagina è contrassegnata in manutenzione: mostra Sito In Aggiornamento
+                      if (isVisitorView && isPageMaintenance) {
+                        return <SitoInAggiornamento sezione={pageMeta.sezione} descrizione={pageMeta.descrizione} />;
+                      }
+
+                      // ALTRIMENTI: rendering reale dei contenuti (visibile all'admin e ai visitatori se pubblicata)
                       if (path === '/privacy') return <Privacy />;
                       if (path === '/sponsor') return <SponsorPage />;
                       if (path === '/voltex' || path.startsWith('/voltex')) return <VoltexCampPage societaInfo={societaInfo} />;
-                      if (path === '/') return (
+                      if (path === '/' || path === '/home' || path === '/index.html') return (
                         <Home 
                           societaSettings={societaSettings} 
                           setSocietaSettings={setSocietaSettings} 
@@ -670,7 +857,7 @@ export default function App() {
                           ? <Squadre squadre={squadreAll} />
                           : <SquadraDetail squadre={squadreAll} giocatori={giocatoriAll} />;
                       }
-                      if (path.startsWith('/news')) return <News newsAll={newsAll} />;
+                      if (path.startsWith('/news')) return <News newsAll={newsAll} squadreAll={squadreAll} />;
                       if (path.startsWith('/camp-tornei') || path.startsWith('/eventi')) {
                         const parts = path.split('/').filter(Boolean);
                         if (parts.length >= 2 && parts[1] !== '' && !['camp', 'tornei', 'generico', 'archivio'].includes(parts[1])) {
@@ -749,7 +936,6 @@ export default function App() {
         <CookieBanner />
 
       </div>
-      )}
     </ErrorBoundary>
   );
 }

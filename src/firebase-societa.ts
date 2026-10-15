@@ -208,7 +208,7 @@ export interface NewsBlog {
   data_pubblicazione: string; // Formato ISO String
   testo: string;
   foto_copertina_url: string;
-  tag_categoria: 'Serie D' | 'Prima Divisione' | 'Giovanili' | 'Comunicato Ufficiale' | 'Eventi';
+  tag_categoria: string;
   autore: string;
   stato_pubblicazione?: 'bozza' | 'pubblicato';
   squadra_associata_id?: string; // ID della rosa_squadra a cui è legata la news
@@ -309,6 +309,11 @@ export interface RosaSquadra {
     secondo?: string;
     dirigente_accompagnatore?: string;
   };
+  ruoli_staff?: {
+    primo?: string;
+    secondo?: string;
+    dirigente_accompagnatore?: string;
+  };
   id_atleti: string[]; // Riferimenti agli ID della collezione 'giocatori'
   sponsor_abbinato_id?: string; // ID sponsor principale della squadra
   cronologia_gare?: IncontroGara[];
@@ -321,6 +326,28 @@ export interface RosaSquadra {
   nome_visualizzato_gare?: string; // Nome personalizzato mostrato nelle partite (es. "Serie D Femminile" o "SALFEP Volley Academy")
   squadra_fipav_ufficiale?: string; // Nome esatto della squadra societaria nel girone FIPAV (es. "SALFEP VOLLEY ACADEMY FORLI'")
 }
+
+/**
+ * Elenco cariche e ruoli tipici dello staff tecnico e dirigenziale (senza area sanitaria).
+ * Può essere integrato o personalizzato liberamente dall'utente.
+ */
+export const CARICHE_STAFF_DEFAULT: readonly string[] = [
+  '1° Allenatore',
+  '2° Allenatore',
+  'Assistente Tecnico',
+  'Aiuto Allenatore',
+  'Direttore Tecnico',
+  'Responsabile Tecnico',
+  'Direttore Sportivo',
+  'Dirigente Accompagnatore',
+  'Team Manager',
+  'Dirigente Responsabile',
+  'Scoutman',
+  'Rilevatore Statistico',
+  'Preparatore Atletico',
+  'Segretario Generale',
+  'Addetto Arbitri'
+];
 
 /**
  * Converte il ruolo del giocatore in declinazione femminile/maschile.
@@ -1549,18 +1576,19 @@ export interface SocietaSettings {
 
 export async function getSocietaSettings(): Promise<SocietaSettings> {
   if (isDemoMode) {
-    return getLocalData<SocietaSettings>('societa_settings', { logoUrl: '', isMaintenanceMode: true });
+    return getLocalData<SocietaSettings>('societa_settings', { logoUrl: '', isMaintenanceMode: false });
   }
   try {
     const docRef = doc(db, 'content', 'settings');
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      return docSnap.data() as SocietaSettings;
+      const data = docSnap.data() as SocietaSettings;
+      return { ...data, isMaintenanceMode: false };
     }
-    return { isMaintenanceMode: true };
+    return { isMaintenanceMode: false };
   } catch (error) {
     console.warn("Errore getSocietaSettings:", error);
-    return { isMaintenanceMode: true };
+    return { isMaintenanceMode: false };
   }
 }
 

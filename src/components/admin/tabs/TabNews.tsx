@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   Newspaper, 
@@ -46,16 +46,36 @@ export default function TabNews({
   showToast,
   caricaFileSuStorage
 }: TabNewsProps) {
+  // Squadre create dinamicamente & categorie istituzionali
+  const squadreNomi = squadreAll.map(s => s.nome_squadra?.trim()).filter(Boolean);
+  const categorieIstituzionali = ['Comunicato Ufficiale', 'Eventi', 'Giovanili', 'Generale Società'];
+  const defaultCategory = squadreNomi[0] || 'Comunicato Ufficiale';
+
   // Form state
   const [newsForm, setNewsForm] = useState({
     titolo: '',
     testo: '',
     foto_copertina_url: '',
-    tag_categoria: 'Serie D' as NewsBlog['tag_categoria'],
+    tag_categoria: defaultCategory,
     autore: 'Ufficio Stampa NVA',
     social_trigger: true,
     squadra_associata_id: ''
   });
+
+  // Aggiorna la categoria iniziale se le squadre arrivano asincrone
+  useEffect(() => {
+    if (squadreAll.length > 0) {
+      setNewsForm(prev => {
+        if (!prev.tag_categoria || prev.tag_categoria === 'Serie D') {
+          return {
+            ...prev,
+            tag_categoria: squadreAll[0].nome_squadra
+          };
+        }
+        return prev;
+      });
+    }
+  }, [squadreAll]);
 
   // Filters
   const [newsSearch, setNewsSearch] = useState('');
@@ -68,12 +88,21 @@ export default function TabNews({
   const [isUploading, setIsUploading] = useState(false);
   const [subTab, setSubTab] = useState<"articoli" | "instagram">("articoli");
 
-  // Filtered news
+  // Filtered news: match ricerca testuale e categoria (sia per tag_categoria che per squadra_associata_id)
   const displayedNews = newsAll.filter(item => {
     const matchSearch = (item.titolo || '').toLowerCase().includes(newsSearch.toLowerCase()) || 
-                        (item.testo || '').toLowerCase().includes(newsSearch.toLowerCase());
-    const matchCategory = newsCategoryFilter === 'Tutte' || item.tag_categoria === newsCategoryFilter;
-    return matchSearch && matchCategory;
+                        (item.testo || '').toLowerCase().includes(newsSearch.toLowerCase()) ||
+                        (item.autore || '').toLowerCase().includes(newsSearch.toLowerCase());
+    if (!matchSearch) return false;
+    if (newsCategoryFilter === 'Tutte') return true;
+
+    const catLower = newsCategoryFilter.toLowerCase();
+    const tagMatch = (item.tag_categoria || '').toLowerCase() === catLower;
+    const squadMatch = item.squadra_associata_id 
+      ? squadreAll.find(s => s.id === item.squadra_associata_id)?.nome_squadra.toLowerCase() === catLower
+      : false;
+
+    return tagMatch || squadMatch;
   });
 
   const handleCreateNews = async (e: React.FormEvent) => {
@@ -89,7 +118,7 @@ export default function TabNews({
         titolo: newsForm.titolo.trim(),
         testo: newsForm.testo.trim(),
         foto_copertina_url: newsForm.foto_copertina_url.trim() || 'https://images.unsplash.com/photo-1592656094267-764a45157575?w=1200&q=80',
-        tag_categoria: newsForm.tag_categoria,
+        tag_categoria: newsForm.tag_categoria || defaultCategory,
         autore: newsForm.autore.trim() || 'Ufficio Stampa NVA',
         squadra_associata_id: newsForm.squadra_associata_id.trim() || undefined,
         stato_pubblicazione: 'pubblicato',
@@ -104,7 +133,7 @@ export default function TabNews({
         titolo: '',
         testo: '',
         foto_copertina_url: '',
-        tag_categoria: 'Serie D',
+        tag_categoria: defaultCategory,
         autore: 'Ufficio Stampa NVA',
         social_trigger: true,
         squadra_associata_id: ''
@@ -249,14 +278,37 @@ export default function TabNews({
                 <label className="text-[10px] text-slate-500 font-mono uppercase font-bold">Categoria *</label>
                 <select
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-900 font-bold focus:outline-none focus:border-amber-500 cursor-pointer"
-                  value={editingNewsData.tag_categoria || 'Serie D'}
-                  onChange={e => setEditingNewsData(prev => prev ? { ...prev, tag_categoria: e.target.value as any } : null)}
+                  value={editingNewsData.tag_categoria || defaultCategory}
+                  onChange={e => {
+                    const chosen = e.target.value;
+                    const matchedSq = squadreAll.find(s => s.nome_squadra.toLowerCase() === chosen.toLowerCase());
+                    setEditingNewsData(prev => prev ? { 
+                      ...prev, 
+                      tag_categoria: chosen,
+                      squadra_associata_id: matchedSq ? matchedSq.id : prev.squadra_associata_id
+                    } : null);
+                  }}
                 >
-                  <option value="Serie D">Serie D</option>
-                  <option value="Prima Divisione">Prima Divisione</option>
-                  <option value="Giovanili">Giovanili</option>
-                  <option value="Comunicato Ufficiale">Comunicato Ufficiale</option>
-                  <option value="Eventi">Eventi</option>
+                  {squadreAll.length > 0 && (
+                    <optgroup label="🏐 Squadre NVA">
+                      {squadreAll.map(sq => (
+                        <option key={sq.id} value={sq.nome_squadra}>{sq.nome_squadra}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <optgroup label="📋 Istituzionali / Altro">
+                    <option value="Comunicato Ufficiale">Comunicato Ufficiale</option>
+                    <option value="Eventi">Eventi</option>
+                    <option value="Giovanili">Giovanili</option>
+                    <option value="Generale Società">Generale Società</option>
+                  </optgroup>
+                  {editingNewsData.tag_categoria && 
+                   !squadreAll.some(sq => sq.nome_squadra === editingNewsData.tag_categoria) &&
+                   !['Comunicato Ufficiale', 'Eventi', 'Giovanili', 'Generale Società'].includes(editingNewsData.tag_categoria) && (
+                    <optgroup label="Altra Categoria">
+                      <option value={editingNewsData.tag_categoria}>{editingNewsData.tag_categoria}</option>
+                    </optgroup>
+                  )}
                 </select>
               </div>
 
@@ -265,7 +317,15 @@ export default function TabNews({
                 <select
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-amber-500 cursor-pointer"
                   value={editingNewsData.squadra_associata_id || ''}
-                  onChange={e => setEditingNewsData(prev => prev ? { ...prev, squadra_associata_id: e.target.value } : null)}
+                  onChange={e => {
+                    const sqId = e.target.value;
+                    const matchedSq = squadreAll.find(s => s.id === sqId);
+                    setEditingNewsData(prev => prev ? { 
+                      ...prev, 
+                      squadra_associata_id: sqId,
+                      tag_categoria: matchedSq ? matchedSq.nome_squadra : prev.tag_categoria
+                    } : null);
+                  }}
                 >
                   <option value="">Generale / Tutta la società</option>
                   {squadreAll.map(sq => (
@@ -383,13 +443,29 @@ export default function TabNews({
               <select
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold focus:outline-none focus:border-amber-500 cursor-pointer"
                 value={newsForm.tag_categoria}
-                onChange={e => setNewsForm(prev => ({ ...prev, tag_categoria: e.target.value as any }))}
+                onChange={e => {
+                  const chosen = e.target.value;
+                  const matchedSq = squadreAll.find(s => s.nome_squadra.toLowerCase() === chosen.toLowerCase());
+                  setNewsForm(prev => ({ 
+                    ...prev, 
+                    tag_categoria: chosen,
+                    squadra_associata_id: matchedSq ? matchedSq.id : prev.squadra_associata_id
+                  }));
+                }}
               >
-                <option value="Serie D">Serie D</option>
-                <option value="Prima Divisione">Prima Divisione</option>
-                <option value="Giovanili">Giovanili</option>
-                <option value="Comunicato Ufficiale">Comunicato Ufficiale</option>
-                <option value="Eventi">Eventi</option>
+                {squadreAll.length > 0 && (
+                  <optgroup label="🏐 Squadre NVA (Create)">
+                    {squadreAll.map(sq => (
+                      <option key={sq.id} value={sq.nome_squadra}>{sq.nome_squadra}</option>
+                    ))}
+                  </optgroup>
+                )}
+                <optgroup label="📋 Istituzionali / Altro">
+                  <option value="Comunicato Ufficiale">Comunicato Ufficiale</option>
+                  <option value="Eventi">Eventi</option>
+                  <option value="Giovanili">Giovanili</option>
+                  <option value="Generale Società">Generale Società</option>
+                </optgroup>
               </select>
             </div>
           </div>
@@ -410,7 +486,15 @@ export default function TabNews({
               <select
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-amber-500 cursor-pointer"
                 value={newsForm.squadra_associata_id}
-                onChange={e => setNewsForm(prev => ({ ...prev, squadra_associata_id: e.target.value }))}
+                onChange={e => {
+                  const sqId = e.target.value;
+                  const matchedSq = squadreAll.find(s => s.id === sqId);
+                  setNewsForm(prev => ({ 
+                    ...prev, 
+                    squadra_associata_id: sqId,
+                    tag_categoria: matchedSq ? matchedSq.nome_squadra : prev.tag_categoria
+                  }));
+                }}
               >
                 <option value="">Generale / Tutta la società</option>
                 {squadreAll.map(sq => (
@@ -519,11 +603,25 @@ export default function TabNews({
               onChange={e => setNewsCategoryFilter(e.target.value)}
             >
               <option value="Tutte">Tutte le Categorie</option>
-              <option value="Serie D">Serie D</option>
-              <option value="Prima Divisione">Prima Divisione</option>
-              <option value="Giovanili">Giovanili</option>
-              <option value="Comunicato Ufficiale">Comunicato Ufficiale</option>
-              <option value="Eventi">Eventi</option>
+              {squadreAll.length > 0 && (
+                <optgroup label="🏐 Squadre NVA">
+                  {squadreAll.map(sq => (
+                    <option key={sq.id} value={sq.nome_squadra}>{sq.nome_squadra}</option>
+                  ))}
+                </optgroup>
+              )}
+              <optgroup label="📋 Istituzionali / Altro">
+                <option value="Comunicato Ufficiale">Comunicato Ufficiale</option>
+                <option value="Eventi">Eventi</option>
+                <option value="Giovanili">Giovanili</option>
+                <option value="Generale Società">Generale Società</option>
+              </optgroup>
+              {Array.from(new Set(newsAll.map(n => n.tag_categoria).filter(Boolean)))
+                .filter(cat => !squadreAll.some(sq => sq.nome_squadra === cat) && !['Comunicato Ufficiale', 'Eventi', 'Giovanili', 'Generale Società'].includes(cat))
+                .map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))
+              }
             </select>
           </div>
         </div>

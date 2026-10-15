@@ -59,6 +59,7 @@ import {
   NewsBlog,
   AdminUser
 } from '../firebase-societa';
+import { sanitizeLuogoDisplay } from '../utils/fipavScraper';
 
 declare module '../firebase-societa' {
   interface ConfigHome {
@@ -561,7 +562,8 @@ export default function Home({
         tickerAnnouncements: currentSettings.tickerAnnouncementsDraft || currentSettings.tickerAnnouncements || [],
         footerDescription: currentSettings.footerDescriptionDraft || currentSettings.footerDescription || "Società sportiva dilettantistica di pallavolo a Forlì. Promuoviamo i valori dello sport e la crescita dei giovani atleti, dal minivolley e settore giovanile fino ai campionati regionali di Serie D.",
         footerCopyright: currentSettings.footerCopyrightDraft || currentSettings.footerCopyright || `© ${new Date().getFullYear()} New Volley Academy S.S.D. a R.L. Tutti i diritti riservati. P.IVA ${societaInfo?.partita_iva || '01234567890'}.`,
-        footerCredits: currentSettings.footerCreditsDraft || currentSettings.footerCredits || "Sviluppato con React, Vite & Tailwind CSS."
+        footerCredits: currentSettings.footerCreditsDraft || currentSettings.footerCredits || "Sviluppato con React, Vite & Tailwind CSS.",
+        isMaintenanceMode: false
       };
       await updateSocietaSettings(publishedSettings);
       setSocietaSettings(publishedSettings);
@@ -668,16 +670,16 @@ export default function Home({
           </div>
 
           {/* Contenuto Allineato al Grid di Pagina */}
-          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-10 sm:pt-6 sm:pb-12 lg:pt-6 lg:pb-14 w-full">
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-10 sm:pt-8 sm:pb-12 lg:pt-8 lg:pb-14 w-full max-w-full overflow-hidden">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
               
               {/* Colonna Sinistra: Brand & Call To Actions */}
-              <div className="lg:col-span-7 space-y-6">
+              <div className="lg:col-span-7 space-y-6 max-w-full overflow-hidden">
                 
                 {/* Tagline / Badge */}
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFE600]/10 border border-[#FFE600]/30 text-[#FFE600] text-xs font-bold tracking-widest uppercase">
-                  <span className="w-2 h-2 rounded-full bg-[#FFE600] animate-ping" />
-                  {configHome?.heroTagline || "FORLÌ · PALLAVOLO DAL 1800"}
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFE600]/10 border border-[#FFE600]/30 text-[#FFE600] text-xs font-bold tracking-widest uppercase max-w-full truncate">
+                  <span className="w-2 h-2 rounded-full bg-[#FFE600] animate-ping shrink-0" />
+                  <span className="truncate">{configHome?.heroTagline || "FORLÌ · PALLAVOLO DAL 1800"}</span>
                 </div>
 
                 {/* Titolo Principale */}
@@ -797,7 +799,7 @@ export default function Home({
                   <div className="pt-3 border-t border-zinc-800 flex items-center justify-between text-[11px] text-zinc-400">
                     <div className="flex items-center gap-1.5 truncate mr-2">
                       <MapPin className="w-3.5 h-3.5 text-[#FFE600] flex-shrink-0" />
-                      <span className="truncate">{activeGara?.luogo || "Palestra Giulianini FORLI' FC Via XIII Novembre"}</span>
+                      <span className="truncate">{sanitizeLuogoDisplay(activeGara?.luogo, activeGara?.casa ?? true)}</span>
                     </div>
                     <span className="font-bold text-zinc-300 flex-shrink-0">
                       {activeGara?.giornata || "1ª Giornata"}

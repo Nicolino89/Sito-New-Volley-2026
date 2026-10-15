@@ -14,7 +14,7 @@ import {
   User,
   Calendar
 } from 'lucide-react';
-import { NewsBlog } from '../firebase-societa';
+import { NewsBlog, RosaSquadra } from '../firebase-societa';
 import { updatePageMeta } from '../utils/seoHelper';
 
 import SocialShareBar from '../components/SocialShareBar';
@@ -29,9 +29,10 @@ export const slugify = (text: string) =>
 
 interface NewsProps {
   newsAll: NewsBlog[];
+  squadreAll?: RosaSquadra[];
 }
 
-export default function News({ newsAll }: NewsProps) {
+export default function News({ newsAll, squadreAll = [] }: NewsProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { slug } = useParams<{ slug?: string }>();
@@ -65,11 +66,31 @@ export default function News({ newsAll }: NewsProps) {
     }
   }, [singleArticle?.id]);
 
+  // Dynamic categories: Tutte, plus created teams, base categories, and any existing tags
+  const teamCategories = (squadreAll || [])
+    .map(s => s.nome_squadra?.trim())
+    .filter(Boolean);
+
+  const baseCategories = ['Comunicato Ufficiale', 'Eventi', 'Giovanili'];
+  
+  const existingCategories = newsAll
+    .map(n => n.tag_categoria?.trim())
+    .filter(Boolean);
+
+  const categories = [
+    'Tutte',
+    ...Array.from(new Set([...teamCategories, ...baseCategories, ...existingCategories]))
+  ];
+
   // Filter published news
   const displayedNews = newsAll.filter(item => {
     if (item.stato_pubblicazione === 'bozza') return false;
 
-    const matchCategory = selectedCategory === 'Tutte' || item.tag_categoria === selectedCategory;
+    const catLower = selectedCategory.toLowerCase();
+    const matchCategory = selectedCategory === 'Tutte' || 
+      (item.tag_categoria || '').toLowerCase() === catLower ||
+      (item.squadra_associata_id && squadreAll?.find(s => s.id === item.squadra_associata_id)?.nome_squadra.toLowerCase() === catLower);
+
     const query = newsSearch.toLowerCase().trim();
     const matchSearch = !query || 
       item.titolo.toLowerCase().includes(query) || 
@@ -78,8 +99,6 @@ export default function News({ newsAll }: NewsProps) {
 
     return matchCategory && matchSearch;
   });
-
-  const categories = ['Tutte', 'Serie D', 'Prima Divisione', 'Giovanili', 'Comunicato Ufficiale', 'Eventi'];
 
   // =========================================================================
   // VIEW 1: SINGLE ARTICLE DETAIL
