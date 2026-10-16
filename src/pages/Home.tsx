@@ -148,6 +148,117 @@ let cachedSponsorMain: any[] = [];
 let cachedSponsorGold: any[] = [];
 let cachedSponsorSilver: any[] = [];
 
+/**
+ * Parsing tollerante di date e orari partite (dd/mm/yy, dd/mm/yyyy, ISO, testuale)
+ */
+export function parseMatchDate(rawStr?: string): Date | null {
+  if (!rawStr) return null;
+  const str = rawStr.trim();
+
+  // 1. Prova formato standard italiano: dd/mm/yy o dd/mm/yyyy con ora facoltativa
+  // es: "16/10/26 20:30", "24/10/26 21:00", "16/10/2026 20:30"
+  const ddmmyyMatch = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[^\d]+(\d{1,2}):(\d{2}))?/);
+  if (ddmmyyMatch) {
+    const day = parseInt(ddmmyyMatch[1], 10);
+    const month = parseInt(ddmmyyMatch[2], 10) - 1;
+    let year = parseInt(ddmmyyMatch[3], 10);
+    if (year < 100) year += 2000;
+    const hour = ddmmyyMatch[4] ? parseInt(ddmmyyMatch[4], 10) : 20;
+    const min = ddmmyyMatch[5] ? parseInt(ddmmyyMatch[5], 10) : 0;
+    return new Date(year, month, day, hour, min, 0);
+  }
+
+  // 2. Prova formato ISO yyyy-mm-dd
+  const isoMatch = str.match(/(\d{4})-(\d{1,2})-(\d{1,2})(?:[^\d]+(\d{1,2}):(\d{2}))?/);
+  if (isoMatch) {
+    const year = parseInt(isoMatch[1], 10);
+    const month = parseInt(isoMatch[2], 10) - 1;
+    const day = parseInt(isoMatch[3], 10);
+    const hour = isoMatch[4] ? parseInt(isoMatch[4], 10) : 20;
+    const min = isoMatch[5] ? parseInt(isoMatch[5], 10) : 0;
+    return new Date(year, month, day, hour, min, 0);
+  }
+
+  // 3. Prova formato testuale italiano con nome mese (es: "SAB 18 OTT • 20:30")
+  const mesiItaliani: { [key: string]: number } = {
+    gen: 0, gennaio: 0,
+    feb: 1, febbraio: 1,
+    mar: 2, marzo: 2,
+    apr: 3, aprile: 3,
+    mag: 4, maggio: 4,
+    giu: 5, giugno: 5,
+    lug: 6, luglio: 6,
+    ago: 7, agosto: 7,
+    set: 8, settembre: 8,
+    ott: 9, ottobre: 9,
+    nov: 10, novembre: 10,
+    dic: 11, dicembre: 11
+  };
+
+  const textMatch = str.match(/(\d{1,2})\s+([a-zA-Z]{3,9})(?:\s+(\d{4}))?(?:[^\d]+(\d{1,2}):(\d{2}))?/i);
+  if (textMatch) {
+    const day = parseInt(textMatch[1], 10);
+    const mStr = textMatch[2].toLowerCase();
+    const month = mesiItaliani[mStr] !== undefined ? mesiItaliani[mStr] : mesiItaliani[mStr.slice(0, 3)];
+    if (month !== undefined) {
+      const year = textMatch[3] ? parseInt(textMatch[3], 10) : (new Date().getFullYear());
+      const hour = textMatch[4] ? parseInt(textMatch[4], 10) : 20;
+      const min = textMatch[5] ? parseInt(textMatch[5], 10) : 0;
+      return new Date(year, month, day, hour, min, 0);
+    }
+  }
+
+  // 4. Fallback nativo Date.parse
+  const nativeTimestamp = Date.parse(str);
+  if (!isNaN(nativeTimestamp)) {
+    return new Date(nativeTimestamp);
+  }
+
+  return null;
+}
+
+/**
+ * Calcola automaticamente quale squadra ha la partita più vicina nel tempo (imminente o in arrivo)
+ */
+export function getClosestMatchCategory(prossimeGare: ProssimaGara[]): 'D Maschile' | 'D Femminile' {
+  if (!prossimeGare || prossimeGare.length === 0) return 'D Femminile';
+
+  const garaM = prossimeGare.find(g => g?.categoria === "Serie D Maschile");
+  const garaF = prossimeGare.find(g => g?.categoria === "Serie D Femminile");
+
+  if (!garaM && garaF) return 'D Femminile';
+  if (!garaF && garaM) return 'D Maschile';
+  if (!garaM && !garaF) return 'D Femminile';
+
+  const dateM = parseMatchDate(garaM?.data_ora);
+  const dateF = parseMatchDate(garaF?.data_ora);
+
+  if (!dateM && dateF) return 'D Femminile';
+  if (!dateF && dateM) return 'D Maschile';
+  if (!dateM && !dateF) return 'D Femminile';
+
+  const now = Date.now();
+  const timeM = dateM!.getTime();
+  const timeF = dateF!.getTime();
+
+  // Una gara è considerata "ancora in corso / da giocare" fino a 3 ore dopo il fischio d'inizio
+  const MATCH_DURATION_MS = 3 * 60 * 60 * 1000;
+  const isPendingM = (timeM + MATCH_DURATION_MS) >= now;
+  const isPendingF = (timeF + MATCH_DURATION_MS) >= now;
+
+  // Se una è ancora da giocare (o in arrivo) e l'altra è già passata nel passato, vince quella da giocare!
+  if (isPendingF && !isPendingM) return 'D Femminile';
+  if (isPendingM && !isPendingF) return 'D Maschile';
+
+  // Se entrambe sono da giocare nel futuro, vince quella cronologicamente più vicina
+  if (isPendingF && isPendingM) {
+    return timeF <= timeM ? 'D Femminile' : 'D Maschile';
+  }
+
+  // Se entrambe sono già terminate (in attesa del nuovo inserimento calendario), vince quella più recente
+  return timeF >= timeM ? 'D Femminile' : 'D Maschile';
+}
+
 interface HomeProps {
   societaSettings?: any;
   setSocietaSettings?: React.Dispatch<React.SetStateAction<any>>;
@@ -231,8 +342,19 @@ export default function Home({
     }
   };
 
-  // UI state
-  const [selectedMatchCategory, setSelectedMatchCategory] = useState<'D Maschile' | 'D Femminile'>('D Maschile');
+  // UI state: selezione automatica della squadra con la partita più vicina nel tempo (imminente o in arrivo)
+  const [selectedMatchCategory, setSelectedMatchCategory] = useState<'D Maschile' | 'D Femminile'>(() => {
+    const initialGare = homeCache?.prossimeGare || (cachedProssimeGare.length > 0 ? cachedProssimeGare : DEFAULT_PROSSIME_GARE);
+    return getClosestMatchCategory(initialGare);
+  });
+  const [hasUserSelectedCategory, setHasUserSelectedCategory] = useState<boolean>(false);
+
+  // Sincronizza automaticamente la categoria quando arrivano i dati aggiornati da Firestore
+  useEffect(() => {
+    if (!hasUserSelectedCategory && prossimeGare && prossimeGare.length > 0) {
+      setSelectedMatchCategory(getClosestMatchCategory(prossimeGare));
+    }
+  }, [prossimeGare, hasUserSelectedCategory]);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   const [compState, setCompState] = useState<{
@@ -714,7 +836,10 @@ export default function Home({
                   {/* Selettore Maschile / Femminile */}
                   <div className="flex bg-black/60 p-1 rounded-xl border border-zinc-800 mb-4" id="match-category-toggles">
                     <button
-                      onClick={() => setSelectedMatchCategory('D Maschile')}
+                      onClick={() => {
+                        setSelectedMatchCategory('D Maschile');
+                        setHasUserSelectedCategory(true);
+                      }}
                       className={`flex-1 py-1.5 rounded-lg text-xs font-bold uppercase transition-all cursor-pointer ${
                         selectedMatchCategory === 'D Maschile'
                           ? 'bg-[#FFE600] text-zinc-950 shadow-sm'
@@ -724,7 +849,10 @@ export default function Home({
                       D Maschile
                     </button>
                     <button
-                      onClick={() => setSelectedMatchCategory('D Femminile')}
+                      onClick={() => {
+                        setSelectedMatchCategory('D Femminile');
+                        setHasUserSelectedCategory(true);
+                      }}
                       className={`flex-1 py-1.5 rounded-lg text-xs font-bold uppercase transition-all cursor-pointer ${
                         selectedMatchCategory === 'D Femminile'
                           ? 'bg-[#FFE600] text-zinc-950 shadow-sm'
