@@ -35,6 +35,7 @@ import {
   OspiteIllustre,
   EventoOspite,
   getEventiOspite,
+  getAnniOspite,
   getOspitiIllustriAll
 } from '../firebase-societa';
 import { updatePageMeta } from '../utils/seoHelper';
@@ -146,8 +147,9 @@ export default function AlboDOro() {
   const anniDisponibili = Array.from(new Set(atleti.map(a => a.anno).filter(Boolean))).sort().reverse();
   const categorieDisponibili = Array.from(new Set(atleti.map(a => a.categoria).filter(Boolean)));
 
-  // Calcola gli anni per ospiti illustri
-  const anniOspitiDisponibili = Array.from(new Set(ospiti.map(o => o.anno).filter(Boolean))).sort().reverse();
+  // Calcola tutti i singoli anni distinti per ospiti illustri (senza raggrupparli o concatenarli)
+  const tuttiAnniOspiti = ospiti.flatMap(o => getAnniOspite(o)).filter(Boolean);
+  const anniOspitiDisponibili = Array.from(new Set(tuttiAnniOspiti)).sort((a, b) => b.localeCompare(a));
 
   // Filtra atleti NVA
   const atletiFiltrati = atleti.filter(a => {
@@ -156,10 +158,11 @@ export default function AlboDOro() {
     return matchAnno && matchCat;
   });
 
-  // Filtra ospiti illustri
+  // Filtra ospiti illustri: verifica se l'anno selezionato appartiene agli anni di visita dell'ospite
   const ospitiFiltrati = ospiti.filter(o => {
-    const matchAnno = filtroAnnoOspiti === 'TUTTI' || o.anno === filtroAnnoOspiti;
-    return matchAnno;
+    if (filtroAnnoOspiti === 'TUTTI') return true;
+    const anniOspite = getAnniOspite(o);
+    return anniOspite.includes(filtroAnnoOspiti);
   });
 
   // Gestione movimento mouse per parallasse visuale fluido
@@ -552,6 +555,7 @@ export default function AlboDOro() {
                     <TotemOspiteArena 
                       key={ospite.id} 
                       ospite={ospite} 
+                      filtroAnno={filtroAnnoOspiti}
                       onClick={() => setSelectedOspite(ospite)} 
                     />
                   ))}
@@ -1108,10 +1112,11 @@ function ModalDettaglioGiocatrice({ atleta, tuttiAtleti, giocatori = [], squadre
 interface TotemOspiteArenaProps {
   key?: React.Key;
   ospite: OspiteIllustre;
+  filtroAnno?: string;
   onClick: () => void;
 }
 
-function TotemOspiteArena({ ospite, onClick }: TotemOspiteArenaProps) {
+function TotemOspiteArena({ ospite, filtroAnno, onClick }: TotemOspiteArenaProps) {
   const [isHovered, setIsHovered] = useState(false);
 
   // Estrai il cognome o la prima parola del nome per il watermark verticale monumentale
@@ -1119,6 +1124,20 @@ function TotemOspiteArena({ ospite, onClick }: TotemOspiteArenaProps) {
     const parts = (ospite.nome || '').trim().split(/\s+/);
     return parts.length > 1 ? parts[parts.length - 1] : parts[0];
   }, [ospite.nome]);
+
+  // Calcolo badge anno distinto, pulito e leggibile
+  const badgeAnnoText = React.useMemo(() => {
+    if (filtroAnno && filtroAnno !== 'TUTTI') {
+      return `#${filtroAnno}`;
+    }
+    const anni = getAnniOspite(ospite).sort();
+    if (anni.length === 0) return ospite.anno ? `#${ospite.anno}` : '#NVA';
+    if (anni.length === 1) return `#${anni[0]}`;
+    if (anni.length === 2 && Math.abs(parseInt(anni[1]) - parseInt(anni[0])) === 1) {
+      return `#${anni[0]}/${anni[1]}`;
+    }
+    return `#${anni[0]}-${anni[anni.length - 1]}`;
+  }, [ospite, filtroAnno]);
 
   return (
     <div 
@@ -1181,7 +1200,7 @@ function TotemOspiteArena({ ospite, onClick }: TotemOspiteArenaProps) {
                 </span>
               )}
               <span className="px-2.5 py-1 rounded-full bg-black/45 backdrop-blur-md border border-white/20 text-zinc-100 font-mono text-[10px] font-bold shadow-lg">
-                #{ospite.anno}
+                {badgeAnnoText}
               </span>
             </div>
           </div>

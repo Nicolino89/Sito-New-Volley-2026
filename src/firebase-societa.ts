@@ -3133,10 +3133,11 @@ export function getEventiOspite(ospite: Partial<OspiteIllustre>): EventoOspite[]
     const eventiList = rawOccasione.split(' - ').map(s => s.trim()).filter(Boolean);
     const anniList = rawAnno.split(' - ').map(s => s.trim()).filter(Boolean);
 
-    if (eventiList.length > 0) {
-      return eventiList.map((ev, idx) => ({
+    const maxLength = Math.max(eventiList.length, anniList.length);
+    if (maxLength > 0) {
+      return Array.from({ length: maxLength }, (_, idx) => ({
         anno: anniList[idx] || anniList[anniList.length - 1] || '',
-        evento: ev
+        evento: eventiList[idx] || eventiList[0] || 'Ospite Speciale NVA'
       }));
     }
   }
@@ -3149,6 +3150,42 @@ export function getEventiOspite(ospite: Partial<OspiteIllustre>): EventoOspite[]
   }
 
   return [];
+}
+
+/**
+ * Utility per estrarre tutti gli anni distinti in cui un Ospite Illustre ha partecipato o fatto visita.
+ * Separa stringhe concatenate ("2023 - 2024 - 2025 - 2026"), stagioni ("2024/2025") o array di eventi.
+ */
+export function getAnniOspite(ospite: Partial<OspiteIllustre>): string[] {
+  const anniSet = new Set<string>();
+
+  // 1. Dagli eventi di partecipazione
+  if (ospite.eventiPartecipazione && Array.isArray(ospite.eventiPartecipazione) && ospite.eventiPartecipazione.length > 0) {
+    for (const ev of ospite.eventiPartecipazione) {
+      if (ev.anno) {
+        const matches = ev.anno.match(/\b(20\d{2})\b/g);
+        if (matches) {
+          matches.forEach(y => anniSet.add(y));
+        } else {
+          const trimmed = ev.anno.trim();
+          if (trimmed) anniSet.add(trimmed);
+        }
+      }
+    }
+  }
+
+  // 2. Dalla stringa legacy/fallback ospite.anno
+  if (ospite.anno) {
+    const matches = ospite.anno.match(/\b(20\d{2})\b/g);
+    if (matches && matches.length > 0) {
+      matches.forEach(y => anniSet.add(y));
+    } else {
+      const parts = ospite.anno.split(/\s*[-,\/]\s*/).map(s => s.trim()).filter(Boolean);
+      parts.forEach(p => anniSet.add(p));
+    }
+  }
+
+  return Array.from(anniSet);
 }
 
 export async function getOspitiIllustriAll(): Promise<OspiteIllustre[]> {
