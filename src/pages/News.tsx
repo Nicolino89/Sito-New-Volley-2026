@@ -308,56 +308,56 @@ export default function News({ newsAll, squadreAll = [] }: NewsProps) {
   return (
     <div className="w-full" id="news-archive-view">
       
-      {/* ================= HERO HEADER NEWS FULL-BLEED ================= */}
-      <section className="relative w-full bg-zinc-950 border-b border-zinc-850 overflow-hidden pt-6 pb-6 sm:pt-8 sm:pb-8">
+      {/* ================= HERO HEADER NEWS COMPATTO E RESPONSIVE ================= */}
+      <section className="relative w-full bg-zinc-950 border-b border-zinc-850 overflow-hidden pt-4 pb-3 sm:pt-8 sm:pb-6">
         <div className="absolute inset-0 z-0">
           <div className="w-full h-full bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(255,230,0,0.14),rgba(255,255,255,0))]" />
           <div className="absolute -top-24 left-1/3 w-96 h-96 bg-[#FFE600]/10 rounded-full blur-3xl pointer-events-none" />
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-3 sm:space-y-5">
           {/* Header Snello e Diretto */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-800/80 pb-4">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-2 sm:gap-4 border-b border-zinc-800/80 pb-2.5 sm:pb-4">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/80 border border-[#FFE600]/40 text-[#FFE600] text-xs font-mono font-bold tracking-widest uppercase shadow-sm mb-2">
+              <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/80 border border-[#FFE600]/40 text-[#FFE600] text-xs font-mono font-bold tracking-widest uppercase shadow-sm mb-2">
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>COMUNICAZIONE & MATCH REPORT • STAGIONE 2026/2027</span>
               </div>
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-barlow font-black tracking-tight text-white uppercase leading-[0.95] drop-shadow-sm flex items-center gap-3">
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-barlow font-black tracking-tight text-white uppercase leading-none drop-shadow-sm flex items-center gap-3">
                 <span>ARCHIVIO NOTIZIE & COMUNICATI</span>
               </h1>
             </div>
-            <p className="text-zinc-400 text-xs sm:text-sm font-inter max-w-md leading-relaxed">
+            <p className="hidden sm:block text-zinc-400 text-xs sm:text-sm font-inter max-w-md leading-relaxed">
               Resta aggiornato su tutte le partite, gli eventi, i campionati e la vita societaria delle Pantere.
             </p>
           </div>
 
           {/* Search & Category Filter Bar */}
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between pt-1">
-            {/* Search Box */}
-            <div className="relative w-full lg:w-96">
-              <Search className="h-4 w-4 text-zinc-400 absolute left-3.5 top-3.5" />
+          <div className="flex flex-col md:flex-row gap-2.5 sm:gap-4 items-stretch md:items-center justify-between pt-0.5">
+            {/* Search Box - compatto su mobile */}
+            <div className="relative w-full md:w-80 lg:w-96 shrink-0">
+              <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-zinc-400 absolute left-3 top-2.5 sm:top-3" />
               <input
                 type="text"
                 value={newsSearch}
                 onChange={(e) => setNewsSearch(e.target.value)}
-                placeholder="Cerca notizie, avversari, coach..."
-                className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm border border-zinc-800 rounded-2xl bg-black/80 text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#FFE600] transition-colors shadow-inner"
+                placeholder="Cerca notizie..."
+                className="w-full pl-9 pr-3 py-1.5 sm:py-2.5 text-xs sm:text-sm border border-zinc-800 rounded-xl sm:rounded-2xl bg-black/80 text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#FFE600] transition-colors shadow-inner"
               />
             </div>
 
-            {/* Category Pills */}
-            <div className="flex flex-wrap gap-1.5 w-full lg:w-auto bg-black/90 p-1.5 rounded-2xl border border-zinc-800 shadow-xl">
+            {/* Category Pills - Scorrimento orizzontale su riga singola su mobile (zero ingombro!) */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scrollbar-none py-1 w-full md:w-auto -mx-1 px-1 sm:mx-0 sm:px-0">
               {categories.map((cat) => {
                 const isSelected = selectedCategory === cat;
                 return (
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`px-4 py-2 text-xs font-bold uppercase font-barlow tracking-wider rounded-xl transition-all cursor-pointer ${
+                    className={`px-3 py-1.5 sm:px-4 sm:py-2 text-[11px] sm:text-xs font-bold uppercase font-barlow tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                       isSelected
                         ? 'bg-[#FFE600] text-zinc-950 shadow-md font-extrabold'
-                        : 'text-zinc-400 hover:text-white'
+                        : 'bg-zinc-900/90 text-zinc-400 hover:text-white border border-zinc-800'
                     }`}
                   >
                     {cat}
@@ -370,43 +370,42 @@ export default function News({ newsAll, squadreAll = [] }: NewsProps) {
       </section>
 
       {/* ================= CONTENUTO NEWS CON TRANSIZIONE SFUMATA ================= */}
-      <div className="w-full bg-gradient-to-b from-zinc-950 via-slate-900/10 to-slate-100/95 py-8 sm:py-10 transition-all relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      <div className="w-full bg-gradient-to-b from-zinc-950 via-slate-900/10 to-slate-100/95 py-4 sm:py-8 transition-all relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-6">
           
-          {/* Sub Header & Count */}
-          <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3.5">
-            <div className="flex items-center gap-2.5">
-              <span className="w-2.5 h-6 bg-[#FFE600] rounded-sm inline-block shadow-sm" />
-              <BookOpen className="w-5 h-5 text-[#FFE600]" />
-              <h2 className="text-2xl font-barlow font-extrabold uppercase tracking-wide text-white drop-shadow-sm">
-                {selectedCategory === 'Tutte' ? 'TUTTI GLI ARTICOLI' : `CATEGORIA: ${selectedCategory.toUpperCase()}`}
+          {/* Sub Header & Count - compatto e immediato */}
+          <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-4 sm:w-2.5 sm:h-5 bg-[#FFE600] rounded-sm inline-block shadow-sm" />
+              <h2 className="text-lg sm:text-2xl font-barlow font-bold uppercase tracking-wide text-white drop-shadow-sm">
+                {selectedCategory === 'Tutte' ? 'Tutte le Notizie' : selectedCategory}
               </h2>
             </div>
-            <span className="text-xs font-mono font-bold text-zinc-300 bg-black/80 border border-zinc-800 px-3 py-1.5 rounded-xl shadow-sm">
-              {displayedNews.length} Articoli Trovati
+            <span className="text-[11px] sm:text-xs font-mono font-bold text-zinc-400 bg-black/80 border border-zinc-800 px-2.5 py-1 rounded-lg sm:rounded-xl shadow-sm">
+              {displayedNews.length} {displayedNews.length === 1 ? 'notizia' : 'notizie'}
             </span>
           </div>
 
           {/* News Grid */}
           {displayedNews.length === 0 ? (
-            <div className="bg-white/95 backdrop-blur-sm border border-slate-200/90 p-12 rounded-3xl text-center shadow-sm space-y-3 max-w-md mx-auto">
-              <Newspaper className="w-12 h-12 text-slate-300 mx-auto" />
-              <h3 className="text-lg font-barlow font-bold uppercase text-slate-900">Nessuna notizia trovata</h3>
+            <div className="bg-white/95 backdrop-blur-sm border border-slate-200/90 p-8 sm:p-12 rounded-2xl sm:rounded-3xl text-center shadow-sm space-y-3 max-w-md mx-auto">
+              <Newspaper className="w-10 h-10 sm:w-12 sm:h-12 text-slate-300 mx-auto" />
+              <h3 className="text-base sm:text-lg font-barlow font-bold uppercase text-slate-900">Nessuna notizia trovata</h3>
               <p className="text-slate-500 text-xs font-inter leading-relaxed">
                 Nessun articolo corrisponde ai filtri selezionati. Prova a cercare un termine diverso o seleziona un'altra categoria.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {displayedNews.map((news) => (
                 <div
                   key={news.id}
                   onClick={() => navigate(`/news/${slugify(news.titolo)}`)}
-                  className="bg-white/95 backdrop-blur-sm border border-slate-200/90 rounded-3xl overflow-hidden hover:border-[#FFE600] hover:shadow-[0_10px_35px_rgba(0,0,0,0.08)] transition-all duration-300 flex flex-col justify-between group cursor-pointer"
+                  className="bg-white/95 backdrop-blur-sm border border-slate-200/90 rounded-2xl sm:rounded-3xl overflow-hidden hover:border-[#FFE600] hover:shadow-[0_10px_35px_rgba(0,0,0,0.08)] transition-all duration-300 flex flex-col justify-between group cursor-pointer"
                 >
                   <div>
                     {/* Cover Image */}
-                    <div className="h-52 overflow-hidden relative bg-zinc-950 border-b border-slate-100">
+                    <div className="h-44 sm:h-52 overflow-hidden relative bg-zinc-950 border-b border-slate-100">
                       <img
                         src={news.foto_copertina_url || 'https://images.unsplash.com/photo-1592656094267-764a45157575?w=600&q=80'}
                         alt={news.titolo}
@@ -415,13 +414,13 @@ export default function News({ newsAll, squadreAll = [] }: NewsProps) {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         referrerPolicy="no-referrer"
                       />
-                      <span className="absolute top-3 left-3 bg-[#FFE600] text-zinc-950 text-[10px] font-mono font-black uppercase tracking-wider px-2.5 py-1 rounded-md shadow-md">
+                      <span className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 bg-[#FFE600] text-zinc-950 text-[10px] font-mono font-black uppercase tracking-wider px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md shadow-md">
                         {news.tag_categoria}
                       </span>
                     </div>
 
                     {/* Content */}
-                    <div className="p-6 space-y-3">
+                    <div className="p-4 sm:p-6 space-y-2 sm:space-y-3">
                       <div className="flex items-center gap-2 text-xs text-slate-400 font-mono font-medium">
                         <Clock className="w-3.5 h-3.5 text-amber-500" />
                         <span>{new Date(news.data_pubblicazione).toLocaleDateString('it-IT')}</span>
@@ -429,17 +428,17 @@ export default function News({ newsAll, squadreAll = [] }: NewsProps) {
                         <span className="truncate">{news.autore || 'Ufficio Stampa NVA'}</span>
                       </div>
 
-                      <h3 className="text-xl font-barlow font-bold leading-snug text-slate-950 group-hover:text-amber-600 transition-colors uppercase">
+                      <h3 className="text-lg sm:text-xl font-barlow font-bold leading-snug text-slate-950 group-hover:text-amber-600 transition-colors uppercase">
                         {news.titolo}
                       </h3>
 
-                      <p className="text-slate-600 text-xs leading-relaxed line-clamp-3 font-inter">
+                      <p className="text-slate-600 text-xs leading-relaxed line-clamp-2 sm:line-clamp-3 font-inter">
                         {news.testo}
                       </p>
                     </div>
                   </div>
 
-                  <div className="p-6 pt-0 flex items-center justify-between gap-2 border-t border-slate-100 mt-2">
+                  <div className="p-4 pt-0 sm:p-6 sm:pt-0 flex items-center justify-between gap-2 border-t border-slate-100 mt-2">
                     <span className="text-xs font-barlow font-extrabold uppercase text-amber-600 group-hover:translate-x-1 transition-transform flex items-center gap-1">
                       <span>Leggi l'articolo</span>
                       <ArrowRight className="w-3.5 h-3.5" />
