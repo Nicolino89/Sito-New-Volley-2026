@@ -346,6 +346,16 @@ export default function App() {
     }
   }, [location.pathname]);
 
+  // Reindirizzamento automatico dai vecchi domini tecnici al dominio ufficiale newvolleyacademy.it
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (
+      window.location.hostname === 'new-volley-academy.web.app' || 
+      window.location.hostname === 'new-volley-academy.firebaseapp.com'
+    )) {
+      window.location.replace(`https://newvolleyacademy.it${window.location.pathname}${window.location.search}${window.location.hash}`);
+    }
+  }, []);
+
   // Scroll automatico in cima allo schermo ad ogni cambio rotta o navigazione
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
