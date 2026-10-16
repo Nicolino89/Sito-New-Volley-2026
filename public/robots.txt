@@ -1,5 +1,17 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /login
 
+User-agent: Googlebot
+Allow: /
+Disallow: /admin
+Disallow: /login
+
+User-agent: Googlebot-Image
+Allow: /
+Disallow: /admin
+
+# Host & Sitemap declaration for Search Engines
+Host: https://newvolleyacademy.it
 Sitemap: https://newvolleyacademy.it/sitemap.xml

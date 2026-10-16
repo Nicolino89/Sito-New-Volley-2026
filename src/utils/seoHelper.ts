@@ -42,12 +42,23 @@ export function updatePageMeta({
     setMeta('name', 'description', description);
   }
 
-  // 3. Open Graph Tags
+  // 3. Canonical Link Tag & Normalized Public URL
+  const rawUrl = url || window.location.href;
+  const canonicalUrl = rawUrl.replace(/https:\/\/[^/]*\.web\.app/gi, 'https://newvolleyacademy.it').split('?')[0].split('#')[0];
+  let canonicalEl = document.querySelector('link[rel="canonical"]');
+  if (!canonicalEl) {
+    canonicalEl = document.createElement('link');
+    canonicalEl.setAttribute('rel', 'canonical');
+    document.head.appendChild(canonicalEl);
+  }
+  canonicalEl.setAttribute('href', canonicalUrl);
+
+  // 4. Open Graph Tags
   setMeta('property', 'og:title', formattedTitle);
   setMeta('property', 'og:type', type);
   if (description) setMeta('property', 'og:description', description);
   if (image) setMeta('property', 'og:image', image);
-  setMeta('property', 'og:url', url || window.location.href);
+  setMeta('property', 'og:url', canonicalUrl);
 
   // 4. Twitter Card Tags
   setMeta('name', 'twitter:title', formattedTitle);

@@ -63,27 +63,51 @@
     <meta name="twitter:description" content="Sito ufficiale della New Volley Academy Forlì. Roster, classifiche FIPAV, calendari gare e news." />
     <meta name="twitter:image" content="/og-image.jpg" />
 
+    <link rel="canonical" href="https://newvolleyacademy.it/" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+
     <!-- Schema.org JSON-LD Structured Data for Google -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "SportsTeam",
-      "name": "New Volley Academy Forlì",
-      "sport": "Volleyball",
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": "Forlì",
-        "addressRegion": "FC",
-        "postalCode": "47121",
-        "addressCountry": "IT"
-      },
-      "url": "https://newvolleyacademy.it",
-      "logo": "https://newvolleyacademy.it/og-image.jpg",
-      "description": "Società di pallavolo femminile e maschile a Forlì: Serie D, settore giovanile e camp estivi.",
-      "memberOf": {
-        "@type": "SportsOrganization",
-        "name": "FIPAV - Federazione Italiana Pallavolo"
-      }
+      "@graph": [
+        {
+          "@type": "SportsClub",
+          "@id": "https://newvolleyacademy.it/#organization",
+          "name": "New Volley Academy Forlì",
+          "alternateName": ["NVA Forlì", "Le Pantere NVA", "New Volley Academy"],
+          "sport": "Volleyball",
+          "url": "https://newvolleyacademy.it",
+          "logo": "https://newvolleyacademy.it/og-image.jpg",
+          "image": "https://newvolleyacademy.it/og-image.jpg",
+          "description": "Società di pallavolo femminile e maschile a Forlì: Serie D, campionati territoriali FIPAV e CSI, settore giovanile e camp estivi.",
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Via Maroncelli",
+            "addressLocality": "Forlì",
+            "addressRegion": "FC",
+            "postalCode": "47121",
+            "addressCountry": "IT"
+          },
+          "telephone": "+39 351 321 0332",
+          "email": "info@newvolleyacademy.it",
+          "memberOf": {
+            "@type": "SportsOrganization",
+            "name": "FIPAV - Federazione Italiana Pallavolo"
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://newvolleyacademy.it/#website",
+          "url": "https://newvolleyacademy.it",
+          "name": "New Volley Academy Forlì | Le Pantere",
+          "publisher": {
+            "@id": "https://newvolleyacademy.it/#organization"
+          },
+          "inLanguage": "it-IT"
+        }
+      ]
     }
     </script>
   </head>
