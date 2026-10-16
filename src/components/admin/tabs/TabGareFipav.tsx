@@ -28,7 +28,8 @@ import {
   RigaClassifica, 
   updateSquadraFipavData,
   updateProssimaGara,
-  ProssimaGara
+  ProssimaGara,
+  getGenereSquadra
 } from '../../../firebase-societa';
 import { scrapeFipavFullData, parseFipavHtml, sanitizeLuogoDisplay } from '../../../utils/fipavScraper';
 
@@ -260,7 +261,7 @@ export default function TabGareFipav({
       // Update Prossima Gara if next unplayed match changed on Serie D
       const upcoming = updatedList.find(p => !p.terminata);
       if (upcoming && activeTeam.nome_squadra.toLowerCase().includes('serie d')) {
-        const isMaschile = activeTeam.nome_squadra.toLowerCase().includes('masch');
+        const isMaschile = getGenereSquadra(activeTeam) === 'M';
         const payload: ProssimaGara = {
           id: isMaschile ? 'serie_d_maschile' : 'serie_d_femminile',
           categoria: isMaschile ? 'Serie D Maschile' : 'Serie D Femminile',
@@ -377,7 +378,7 @@ export default function TabGareFipav({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pt-1">
           {squadreAll.map(sq => {
             const isSelected = sq.id === selectedTeamId;
-            const isFemminile = (sq.nome_squadra || '').toLowerCase().includes('femminile') || (sq as any)?.gender === 'F';
+            const gender = getGenereSquadra(sq);
             const matchesCount = sq.partite?.length || 0;
             const standingsCount = sq.classifica?.length || 0;
 
@@ -394,11 +395,13 @@ export default function TabGareFipav({
                 <div className="space-y-1">
                   <div className="flex items-center justify-between gap-1">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                      isFemminile 
+                      gender === 'F' 
                         ? isSelected ? 'bg-pink-900/80 text-pink-200' : 'bg-pink-100 text-pink-800'
-                        : isSelected ? 'bg-blue-900/80 text-blue-200' : 'bg-blue-100 text-blue-800'
+                        : gender === 'MISTO'
+                          ? isSelected ? 'bg-purple-900/80 text-purple-200' : 'bg-purple-100 text-purple-800'
+                          : isSelected ? 'bg-blue-900/80 text-blue-200' : 'bg-blue-100 text-blue-800'
                     }`}>
-                      {isFemminile ? '♀ Femminile' : '♂ Maschile'}
+                      {gender === 'F' ? '♀ Femminile' : gender === 'MISTO' ? '👥 Misto' : '♂ Maschile'}
                     </span>
                     <span className={`text-[10px] font-mono ${isSelected ? 'text-zinc-400' : 'text-zinc-500'}`}>
                       {sq.stagione}

@@ -38,6 +38,8 @@ import {
   caricaBlobSuStorage,
   formatRuoloGiocatore,
   CARICHE_STAFF_DEFAULT,
+  getGenereSquadra,
+  GenereSquadra,
   db
 } from '../../../firebase-societa';
 import { collection, getDocs } from 'firebase/firestore';
@@ -97,6 +99,7 @@ export default function TabSquadre({
     nome_squadra: '',
     stagione: '2025/2026',
     campionato: '',
+    genere: 'F' as GenereSquadra,
     allenatore_primo: '',
     allenatore_secondo: '',
     dirigente: '',
@@ -534,6 +537,7 @@ export default function TabSquadre({
         nome_squadra: squadraForm.nome_squadra.trim(),
         stagione: squadraForm.stagione.trim() || '2025/2026',
         campionato: squadraForm.campionato.trim(),
+        genere: squadraForm.genere,
         allenatori: {
           primo: squadraForm.allenatore_primo.trim() || 'Coach NVA',
           ...(squadraForm.allenatore_secondo.trim() ? { secondo: squadraForm.allenatore_secondo.trim() } : {}),
@@ -555,6 +559,7 @@ export default function TabSquadre({
         nome_squadra: '',
         stagione: '2025/2026',
         campionato: '',
+        genere: 'F',
         allenatore_primo: '',
         allenatore_secondo: '',
         dirigente: '',
@@ -575,9 +580,11 @@ export default function TabSquadre({
   const handleSaveSquadDetails = async () => {
     if (!activeSquad || !editingSquadData) return;
     try {
+      const targetGender: GenereSquadra = editingSquadData.genere || (editingSquadData as any).gender || getGenereSquadra(editingSquadData as RosaSquadra);
       const updated: RosaSquadra = { 
         ...activeSquad, 
         ...editingSquadData,
+        genere: targetGender,
         ruoli_staff: {
           primo: (editingSquadData.ruoli_staff?.primo || activeSquad.ruoli_staff?.primo || '1° Allenatore').trim(),
           secondo: (editingSquadData.ruoli_staff?.secondo || activeSquad.ruoli_staff?.secondo || '2° Allenatore').trim(),
@@ -838,6 +845,20 @@ export default function TabSquadre({
                 <span className="bg-brand-yellow text-black font-semibold text-xs px-2.5 py-0.5 rounded uppercase">
                   {activeSquad.stagione}
                 </span>
+                {(() => {
+                  const g = getGenereSquadra(activeSquad);
+                  return (
+                    <span className={`text-xs px-2.5 py-0.5 rounded uppercase font-semibold border ${
+                      g === 'F' 
+                        ? 'bg-pink-950/80 text-pink-300 border-pink-700/50' 
+                        : g === 'MISTO'
+                          ? 'bg-purple-950/80 text-purple-300 border-purple-700/50'
+                          : 'bg-blue-950/80 text-blue-300 border-blue-700/50'
+                    }`}>
+                      {g === 'F' ? '♀ Femminile' : g === 'MISTO' ? '👥 Misto' : '♂ Maschile'}
+                    </span>
+                  );
+                })()}
                 <span className="bg-zinc-800 text-zinc-300 text-xs px-2.5 py-0.5 rounded uppercase border border-zinc-700">
                   {activeSquad.campionato}
                 </span>
@@ -859,6 +880,7 @@ export default function TabSquadre({
               <button
                 onClick={() => setEditingSquadData({
                   ...activeSquad,
+                  genere: activeSquad.genere || (activeSquad as any).gender || getGenereSquadra(activeSquad),
                   ruoli_staff: {
                     primo: activeSquad.ruoli_staff?.primo || '1° Allenatore',
                     secondo: activeSquad.ruoli_staff?.secondo || '2° Allenatore',
@@ -924,6 +946,21 @@ export default function TabSquadre({
                       <option value="SERIE_D">Serie D (In Evidenza)</option>
                       <option value="CAMPIONATI_SENIOR">Campionati Senior (1° Div / 2° Div)</option>
                       <option value="GIOVANILI">Settore Giovanile (Under 13 - Under 18)</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-zinc-600 text-xs font-semibold uppercase flex items-center justify-between">
+                      <span>Settore / Genere *</span>
+                      <span className="text-[10px] text-amber-600 font-mono font-bold">Scelta Badge Squadra</span>
+                    </label>
+                    <select
+                      className="w-full bg-zinc-50 border border-zinc-300 rounded-xl p-2.5 text-sm font-medium text-zinc-900 focus:bg-white focus:border-amber-400 focus:outline-none"
+                      value={editingSquadData.genere || (editingSquadData as any).gender || getGenereSquadra(editingSquadData as RosaSquadra)}
+                      onChange={e => setEditingSquadData({ ...editingSquadData, genere: e.target.value as GenereSquadra })}
+                    >
+                      <option value="F">♀ Femminile (Rosa)</option>
+                      <option value="M">♂ Maschile (Blu)</option>
+                      <option value="MISTO">👥 Misto (Viola)</option>
                     </select>
                   </div>
                   {/* 1° MEMBRO STAFF */}
@@ -1597,6 +1634,21 @@ export default function TabSquadre({
                     </select>
                   </div>
                   <div className="space-y-1">
+                    <label className="text-zinc-600 text-xs font-semibold uppercase flex items-center justify-between">
+                      <span>Settore / Genere *</span>
+                      <span className="text-[10px] text-amber-600 font-mono font-bold">Scelta Badge Squadra</span>
+                    </label>
+                    <select
+                      className="w-full bg-zinc-50 border border-zinc-300 rounded-xl p-2.5 text-xs font-medium text-zinc-900 focus:bg-white focus:border-amber-400 focus:outline-none"
+                      value={squadraForm.genere}
+                      onChange={e => setSquadraForm({ ...squadraForm, genere: e.target.value as GenereSquadra })}
+                    >
+                      <option value="F">♀ Femminile (Rosa)</option>
+                      <option value="M">♂ Maschile (Blu)</option>
+                      <option value="MISTO">👥 Misto (Viola)</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
                     <label className="text-zinc-600 text-xs font-semibold uppercase">1° Allenatore</label>
                     <input
                       type="text"
@@ -1672,9 +1724,25 @@ export default function TabSquadre({
                       <span className="bg-zinc-900 text-brand-yellow font-bold text-[10px] px-2 py-0.5 rounded uppercase">
                         {team.stagione}
                       </span>
-                      <span className="bg-amber-100 text-amber-900 font-semibold text-[10px] px-2 py-0.5 rounded uppercase">
-                        {team.category || 'SERIE_D'}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {(() => {
+                          const g = getGenereSquadra(team);
+                          return (
+                            <span className={`font-semibold text-[10px] px-2 py-0.5 rounded uppercase border ${
+                              g === 'F' 
+                                ? 'bg-pink-50 border-pink-200 text-pink-700' 
+                                : g === 'MISTO'
+                                  ? 'bg-purple-50 border-purple-200 text-purple-700'
+                                  : 'bg-blue-50 border-blue-200 text-blue-700'
+                            }`}>
+                              {g === 'F' ? '♀ Femminile' : g === 'MISTO' ? '👥 Misto' : '♂ Maschile'}
+                            </span>
+                          );
+                        })()}
+                        <span className="bg-amber-100 text-amber-900 font-semibold text-[10px] px-2 py-0.5 rounded uppercase">
+                          {team.category || 'SERIE_D'}
+                        </span>
+                      </div>
                     </div>
 
                     <h4 className="text-lg font-bold text-zinc-950 group-hover:text-amber-600 transition-colors leading-snug">

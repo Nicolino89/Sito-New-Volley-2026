@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RosaSquadra } from '../firebase-societa';
+import { RosaSquadra, getGenereSquadra, isSquadraFemminile, isSquadraMaschile } from '../firebase-societa';
 import { Trophy, Users, ChevronRight, HelpCircle, Shield, Sparkles, ArrowRight, History } from 'lucide-react';
 
 interface SquadreProps {
@@ -24,16 +24,9 @@ export default function Squadre({ squadre }: SquadreProps) {
       }) 
     : [];
   
-  // Distinguish Male / Female based on name or gender property
-  const isFemminile = (s: RosaSquadra) => {
-    const nameLower = (s?.nome_squadra || '').toLowerCase();
-    return nameLower.includes('femminile') || nameLower.includes(' fem') || (s as any)?.gender === 'F' || (s as any)?.genere === 'F';
-  };
-  
-  const isMaschile = (s: RosaSquadra) => {
-    const nameLower = (s?.nome_squadra || '').toLowerCase();
-    return nameLower.includes('maschile') || nameLower.includes(' mas') || (s as any)?.gender === 'M' || (s as any)?.genere === 'M';
-  };
+  // Distinguish Male / Female based on explicit setting or smart name/championship detection
+  const isFemminile = (s: RosaSquadra) => isSquadraFemminile(s);
+  const isMaschile = (s: RosaSquadra) => isSquadraMaschile(s);
 
   // Filter Serie D teams
   const serieDTeams = safeSquadre.filter(s => s?.category === 'SERIE_D' || (s?.nome_squadra || '').toUpperCase().includes('SERIE D'));
@@ -61,7 +54,8 @@ export default function Squadre({ squadre }: SquadreProps) {
     return cat === 'GIOVANILI' || name.includes('UNDER') || name.includes('MINIVOLLEY');
   });
 
-  const renderSerieDCard = (team: RosaSquadra | undefined, label: string, gender: 'M' | 'F') => {
+  const renderSerieDCard = (team: RosaSquadra | undefined, label: string, forcedGender?: 'M' | 'F' | 'MISTO') => {
+    const gender = team ? getGenereSquadra(team) : (forcedGender || 'F');
     const imageUrl = team ? (team.foto_copertina_url || (team as any).imageUrl) : null;
     const hasImage = imageUrl && imageUrl.trim() !== '';
 
@@ -299,7 +293,7 @@ export default function Squadre({ squadre }: SquadreProps) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {seniorTeams.map(team => {
                     const playersCount = team.id_atleti?.length || 0;
-                    const genderLetter = isFemminile(team) ? 'F' : 'M';
+                    const genderLetter = getGenereSquadra(team);
                     return (
                       <div
                         key={team.id}
@@ -311,9 +305,11 @@ export default function Squadre({ squadre }: SquadreProps) {
                             <span className={`inline-block text-[10px] font-bold font-inter px-2.5 py-0.5 rounded-md uppercase border ${
                               genderLetter === 'F' 
                                 ? 'bg-pink-50 border-pink-200 text-pink-700' 
-                                : 'bg-blue-50 border-blue-200 text-blue-700'
+                                : genderLetter === 'MISTO'
+                                  ? 'bg-purple-50 border-purple-200 text-purple-700'
+                                  : 'bg-blue-50 border-blue-200 text-blue-700'
                             }`}>
-                              {genderLetter === 'F' ? '♀ Femminile' : '♂ Maschile'}
+                              {genderLetter === 'F' ? '♀ Femminile' : genderLetter === 'MISTO' ? '👥 Misto' : '♂ Maschile'}
                             </span>
                             <span className="text-[11px] font-mono font-semibold text-slate-400">{team?.stagione || '2026/2027'}</span>
                           </div>
@@ -365,7 +361,7 @@ export default function Squadre({ squadre }: SquadreProps) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {giovaniliTeams.map(team => {
                     const playersCount = team?.id_atleti?.length || 0;
-                    const genderLetter = isFemminile(team) ? 'F' : 'M';
+                    const genderLetter = getGenereSquadra(team);
                     return (
                       <div
                         key={team?.id || Math.random()}
@@ -377,9 +373,11 @@ export default function Squadre({ squadre }: SquadreProps) {
                             <span className={`inline-block text-[10px] font-bold font-inter px-2.5 py-0.5 rounded-md uppercase border ${
                               genderLetter === 'F' 
                                 ? 'bg-pink-50 border-pink-200 text-pink-700' 
-                                : 'bg-blue-50 border-blue-200 text-blue-700'
+                                : genderLetter === 'MISTO'
+                                  ? 'bg-purple-50 border-purple-200 text-purple-700'
+                                  : 'bg-blue-50 border-blue-200 text-blue-700'
                             }`}>
-                              {genderLetter === 'F' ? '♀ Femminile' : '♂ Maschile'}
+                              {genderLetter === 'F' ? '♀ Femminile' : genderLetter === 'MISTO' ? '👥 Misto' : '♂ Maschile'}
                             </span>
                             <span className="text-[11px] font-mono font-semibold text-slate-400">{team?.stagione || '2026/2027'}</span>
                           </div>

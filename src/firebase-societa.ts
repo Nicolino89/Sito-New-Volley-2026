@@ -325,6 +325,58 @@ export interface RosaSquadra {
   coverPositionY?: number;
   nome_visualizzato_gare?: string; // Nome personalizzato mostrato nelle partite (es. "Serie D Femminile" o "SALFEP Volley Academy")
   squadra_fipav_ufficiale?: string; // Nome esatto della squadra societaria nel girone FIPAV (es. "SALFEP VOLLEY ACADEMY FORLI'")
+  genere?: 'F' | 'M' | 'MISTO'; // Settore/Genere della squadra: Femminile, Maschile o Misto
+  gender?: 'F' | 'M' | 'MISTO'; // Alias retrocompatibile
+}
+
+export type GenereSquadra = 'F' | 'M' | 'MISTO';
+
+/**
+ * Determina in modo accurato e tollerante il settore/genere di una squadra ('F' | 'M' | 'MISTO').
+ * Priorità:
+ * 1. Campo esplicito 'genere' o 'gender' impostato nel CMS.
+ * 2. Analisi intelligente regex del nome squadra e del campionato.
+ * 3. Default 'F' per la New Volley Academy.
+ */
+export function getGenereSquadra(s?: Partial<RosaSquadra> | null): GenereSquadra {
+  if (!s) return 'F';
+  const explicit = (s.genere || (s as any).gender || '').toString().trim().toUpperCase();
+  if (explicit === 'F' || explicit === 'FEMMINILE') return 'F';
+  if (explicit === 'M' || explicit === 'MASCHILE') return 'M';
+  if (explicit === 'MISTO' || explicit === 'MIXED') return 'MISTO';
+
+  const name = (s.nome_squadra || '').trim();
+  const camp = (s.campionato || '').trim();
+  const text = `${name} ${camp}`.toLowerCase();
+
+  const isExplicitFemale = 
+    /\b(femminile|femminili|donne|ragazze)\b/i.test(text) ||
+    /(?:^|[\s\/\-\(_])(?:f|fem|femm)(?:$|[\s\/\-\)_])/i.test(name) ||
+    /(?:^|[\s\/\-\(_])(?:f|fem|femm)(?:$|[\s\/\-\)_])/i.test(camp);
+
+  const isExplicitMale = 
+    /\b(maschile|maschili|uomini|ragazzi)\b/i.test(text) ||
+    /(?:^|[\s\/\-\(_])(?:m|mas|masc)(?:$|[\s\/\-\)_])/i.test(name) ||
+    /(?:^|[\s\/\-\(_])(?:m|mas|masc)(?:$|[\s\/\-\)_])/i.test(camp);
+
+  const isExplicitMisto =
+    /\b(misto|misti|mixed)\b/i.test(text);
+
+  if (isExplicitFemale && !isExplicitMale) return 'F';
+  if (isExplicitMale && !isExplicitFemale) return 'M';
+  if (isExplicitMisto) return 'MISTO';
+
+  if (/\b(minivolley|s3)\b/i.test(text)) return 'MISTO';
+
+  return 'F';
+}
+
+export function isSquadraFemminile(s?: Partial<RosaSquadra> | null): boolean {
+  return getGenereSquadra(s) === 'F';
+}
+
+export function isSquadraMaschile(s?: Partial<RosaSquadra> | null): boolean {
+  return getGenereSquadra(s) === 'M';
 }
 
 /**
@@ -860,7 +912,8 @@ const DEFAULT_SQUADRE: RosaSquadra[] = [
       { pos: 6, squadra: "Ravenna Volley Club", punti: 0, giocate: 3, vinte: 0, perse: 3, setVinti: 1, setPersi: 9 }
     ],
     foto_copertina_url: "https://images.unsplash.com/photo-1571008887538-b36bb32f4571?w=800&auto=format&fit=crop&q=80",
-    category: "SERIE_D"
+    category: "SERIE_D",
+    genere: "F"
   },
   {
     id: "sq_02",
@@ -878,7 +931,8 @@ const DEFAULT_SQUADRE: RosaSquadra[] = [
       { avversario: "Castrocaro Volley", data: "2026-06-15", ora: "20:30", set_vinti: 2, set_persi: 3, casa: true, terminata: true }
     ],
     foto_copertina_url: "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=800&auto=format&fit=crop&q=80",
-    category: "CAMPIONATI_SENIOR"
+    category: "CAMPIONATI_SENIOR",
+    genere: "F"
   },
   {
     id: "sq_03",
@@ -890,7 +944,8 @@ const DEFAULT_SQUADRE: RosaSquadra[] = [
     },
     id_atleti: ["gio_06", "gio_07"],
     sponsor_abbinato_id: "spon_02",
-    category: "GIOVANILI"
+    category: "GIOVANILI",
+    genere: "F"
   },
   {
     id: "sq_04",
@@ -923,7 +978,8 @@ const DEFAULT_SQUADRE: RosaSquadra[] = [
       { pos: 5, squadra: "Zinella Bologna", punti: 0, giocate: 3, vinte: 0, perse: 3, setVinti: 2, setPersi: 9 }
     ],
     foto_copertina_url: "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=800&auto=format&fit=crop&q=80",
-    category: "SERIE_D"
+    category: "SERIE_D",
+    genere: "M"
   }
 ];
 

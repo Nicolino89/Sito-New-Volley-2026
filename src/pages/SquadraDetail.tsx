@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { RosaSquadra, Giocatore, getStoricoGiocatore, RecordStoricoCarriera, formatRuoloGiocatore, db, isDemoMode } from '../firebase-societa';
+import { RosaSquadra, Giocatore, getStoricoGiocatore, RecordStoricoCarriera, formatRuoloGiocatore, getGenereSquadra, db, isDemoMode } from '../firebase-societa';
 import { collection, getDocs, query } from 'firebase/firestore';
 import { 
   ArrowLeft, 
@@ -327,14 +327,8 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
     );
   }
 
-  // Distinguish Male / Female based on team name, championship or gender property
-  const isFemminile = (s?: RosaSquadra) => {
-    if (!s) return false;
-    const nameLower = (s.nome_squadra || '').toLowerCase();
-    const campLower = (s.campionato || '').toLowerCase();
-    return nameLower.includes('femminile') || nameLower.includes(' fem') || campLower.includes('femminile') || (s as any)?.gender === 'F' || (s as any)?.genere === 'F';
-  };
-  const genderLetter = isFemminile(team) ? 'F' : 'M';
+  // Distinguish Male / Female / Misto based on explicit setting or smart name/championship detection
+  const genderLetter = getGenereSquadra(team);
 
   // Identifica se la squadra è Minivolley / Volley S3 (per nascondere altezza e numero di maglia)
   const isMinivolley = Boolean(
@@ -388,9 +382,11 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
             <span className={`inline-flex items-center gap-1 text-[10px] font-black font-mono px-2.5 py-1 rounded-md uppercase border ${
               genderLetter === 'F' 
                 ? 'bg-pink-950/60 border-pink-500/30 text-pink-400' 
-                : 'bg-blue-950/60 border-blue-500/30 text-blue-400'
+                : genderLetter === 'MISTO'
+                  ? 'bg-purple-950/60 border-purple-500/30 text-purple-400'
+                  : 'bg-blue-950/60 border-blue-500/30 text-blue-400'
             }`}>
-              {genderLetter === 'F' ? '♀ Femminile' : '♂ Maschile'}
+              {genderLetter === 'F' ? '♀ Femminile' : genderLetter === 'MISTO' ? '👥 Misto' : '♂ Maschile'}
             </span>
           </div>
 
