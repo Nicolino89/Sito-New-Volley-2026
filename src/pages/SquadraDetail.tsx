@@ -677,11 +677,29 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                             }`}>
                               {match.casa ? 'In Casa' : 'Trasferta'}
                             </span>
-                            {match.luogo && (
-                              <span className="text-[10px] text-zinc-400 font-mono flex items-center gap-1">
-                                <MapPin className="w-3 h-3 text-zinc-400" /> {sanitizeLuogoDisplay(match.luogo, match.casa)}
-                              </span>
-                            )}
+                            {match.luogo && (() => {
+                              const displayLuogo = sanitizeLuogoDisplay(match.luogo, match.casa);
+                              const mapUrl = (match as any).link_mappa?.trim()
+                                ? (match as any).link_mappa.trim()
+                                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                    match.luogo.toLowerCase().includes('forlì') ? match.luogo : `${match.luogo}, Forlì`
+                                  )}`;
+                              return (
+                                <a
+                                  href={mapUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[10px] text-zinc-500 hover:text-amber-600 font-mono flex items-center gap-1 transition-colors group cursor-pointer"
+                                  title="Apri su Google Maps"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MapPin className="w-3 h-3 text-zinc-400 group-hover:text-amber-600" />
+                                  <span className="underline decoration-zinc-300 underline-offset-2 group-hover:decoration-amber-600">
+                                    {displayLuogo}
+                                  </span>
+                                </a>
+                              );
+                            })()}
                           </div>
                           
                           <h3 className="text-lg font-barlow font-bold uppercase tracking-wide text-zinc-950">

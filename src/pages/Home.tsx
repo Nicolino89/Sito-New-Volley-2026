@@ -911,12 +911,41 @@ export default function Home({
                     </div>
                   </div>
 
-                  {/* Match Footer Info */}
+                  {/* Match Footer Info con Link Diretto a Google Maps */}
                   <div className="pt-3 border-t border-zinc-800 flex items-center justify-between text-[11px] text-zinc-400">
-                    <div className="flex items-center gap-1.5 truncate mr-2">
-                      <MapPin className="w-3.5 h-3.5 text-[#FFE600] flex-shrink-0" />
-                      <span className="truncate">{sanitizeLuogoDisplay(activeGara?.luogo, activeGara?.casa ?? true)}</span>
-                    </div>
+                    {(() => {
+                      const displayLuogo = sanitizeLuogoDisplay(activeGara?.luogo, activeGara?.casa ?? true);
+                      const rawMapLink = (activeGara as any)?.link_mappa?.trim();
+                      const mapUrl = rawMapLink
+                        ? rawMapLink
+                        : (activeGara?.luogo ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                            activeGara.luogo.toLowerCase().includes('forlì') ? activeGara.luogo : `${activeGara.luogo}, Forlì`
+                          )}` : null);
+
+                      if (mapUrl) {
+                        return (
+                          <a
+                            href={mapUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 truncate mr-2 text-zinc-300 hover:text-brand-yellow transition-colors group cursor-pointer"
+                            title="Apri indicazioni stradali su Google Maps"
+                          >
+                            <MapPin className="w-3.5 h-3.5 text-[#FFE600] flex-shrink-0 group-hover:scale-110 transition-transform" />
+                            <span className="truncate underline decoration-zinc-700 underline-offset-2 group-hover:decoration-brand-yellow font-medium">
+                              {displayLuogo}
+                            </span>
+                            <ExternalLink className="w-2.5 h-2.5 opacity-60 flex-shrink-0 text-zinc-400 group-hover:text-brand-yellow" />
+                          </a>
+                        );
+                      }
+                      return (
+                        <div className="flex items-center gap-1.5 truncate mr-2">
+                          <MapPin className="w-3.5 h-3.5 text-[#FFE600] flex-shrink-0" />
+                          <span className="truncate">{displayLuogo}</span>
+                        </div>
+                      );
+                    })()}
                     <span className="font-bold text-zinc-300 flex-shrink-0">
                       {activeGara?.giornata || "1ª Giornata"}
                     </span>
@@ -1068,6 +1097,34 @@ export default function Home({
                   I Nostri Partner
                 </h3>
               </div>
+
+              {/* PULSANTE CTA: DIVENTA NOSTRO PARTNER */}
+              <Link
+                to="/sponsor#diventa-partner"
+                className="group block relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-950 via-zinc-900 to-black p-4 sm:p-5 border-2 border-[#FFE600] shadow-md hover:shadow-xl transition-all duration-300"
+              >
+                <div className="flex items-center justify-between gap-3 relative z-10">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-barlow font-black tracking-widest uppercase bg-[#FFE600] text-black px-2 py-0.5 rounded shadow-sm">
+                        PER LE AZIENDE
+                      </span>
+                      <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase">
+                        Stagione 2026/2027
+                      </span>
+                    </div>
+                    <h4 className="text-base sm:text-lg font-barlow font-bold text-white uppercase tracking-wide group-hover:text-[#FFE600] transition-colors flex items-center gap-1.5">
+                      Diventa Partner delle Pantere
+                    </h4>
+                    <p className="text-xs text-zinc-400 font-inter line-clamp-2">
+                      Unisci il tuo marchio alla nostra crescita: divise da gara, palazzetti ed eventi giovanili d'eccellenza.
+                    </p>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-[#FFE600] text-black flex items-center justify-center shrink-0 group-hover:translate-x-1.5 transition-transform shadow-md">
+                    <ArrowRight className="w-5 h-5 font-bold" />
+                  </div>
+                </div>
+              </Link>
 
               {/* LEVEL 1: MAIN SPONSORS */}
               <div className="space-y-3" id="main-sponsors-section">
@@ -1754,6 +1811,21 @@ export default function Home({
                             onChange={(e) => handleScoreboardLiveUpdate(activeMatchCategoryText, 'luogo', e.target.value)}
                             className="w-full bg-zinc-950 border border-zinc-800 focus:border-brand-yellow text-xs rounded p-2 focus:outline-none text-white font-sans"
                             placeholder="PalaNove, Forlì"
+                          />
+                        </div>
+
+                        {/* Google Maps Link (Opzionale) */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] uppercase tracking-wider font-bold text-zinc-400 font-mono">Link Google Maps (Opzionale):</label>
+                            <span className="text-[9px] text-zinc-500 font-mono">Se vuoto calcola automatico</span>
+                          </div>
+                          <input 
+                            type="text"
+                            value={(match as any).link_mappa || ''}
+                            onChange={(e) => handleScoreboardLiveUpdate(activeMatchCategoryText, 'link_mappa', e.target.value)}
+                            className="w-full bg-zinc-950 border border-zinc-800 focus:border-brand-yellow text-xs rounded p-2 focus:outline-none text-white font-sans"
+                            placeholder="es. https://maps.app.goo.gl/... o vuoto"
                           />
                         </div>
 

@@ -117,6 +117,7 @@ export interface ProssimaGara {
   casa: boolean;
   punti_nva: number | null;
   punti_avversario: number | null;
+  link_mappa?: string;
 }
 
 /**
@@ -277,6 +278,7 @@ export interface PartitaCampionato {
   avversario: string;
   casa: boolean;
   luogo?: string; // es. "Palasport Comunale, Forlì"
+  link_mappa?: string; // URL personalizzato Google Maps o Waze
   risultato?: string; // es. "3 - 1" o vuoto se da disputare
   setNva?: number | null;
   setAvversario?: number | null;
@@ -4432,3 +4434,210 @@ export async function deleteInstagramPost(id: string): Promise<void> {
 export async function toggleVisibilityInstagramPost(id: string, visibile: boolean): Promise<void> {
   await saveInstagramPost({ id, visibile });
 }
+
+// =========================================================================
+// PAGINA RICERCA SPONSOR & RICHIESTE PARTNERSHIP
+// =========================================================================
+
+export interface SponsorPageConfig {
+  id?: string;
+  titoloHero: string;
+  sottotitoloHero: string;
+  mantra: string;
+  descrizioneIntro: string;
+  brochurePdfUrl?: string;
+  emailReferenteSponsor: string;
+  telefonoReferenteSponsor: string;
+  nomeReferenteSponsor: string;
+  // Statistiche in evidenza
+  numeroAtleti: string;
+  numeroGruppi: string;
+  numeroPartite: string;
+  numeroStaff: string;
+  numeroEventi: string;
+  numeroFamiglie: string;
+}
+
+export const DEFAULT_SPONSOR_PAGE_CONFIG: SponsorPageConfig = {
+  titoloHero: "PLAY WITH US",
+  sottotitoloHero: "Unisciti alle Pantere. Fai crescere il tuo brand legandolo all'energia, ai valori e alla passione del volley a Forlì e in tutta la Romagna.",
+  mantra: "Tutti devono poter giocare a pallavolo",
+  descrizioneIntro: "New Volley Academy è molto più di una società sportiva: è una comunità che unisce eccellenza tecnica, inclusione sociale e grande visibilità. Dalla Serie D Regionale fino ai campioni del domani nel minivolley, offriamo alle aziende partner un palcoscenico dinamico, credibile e ad alto impatto umano.",
+  emailReferenteSponsor: "sponsor@newvolleyacademy.it",
+  telefonoReferenteSponsor: "+39 351 321 0332",
+  nomeReferenteSponsor: "Segreteria & Relazioni Esterne NVA",
+  brochurePdfUrl: "",
+  numeroAtleti: "387+",
+  numeroGruppi: "10+",
+  numeroPartite: "280+",
+  numeroStaff: "20+",
+  numeroEventi: "10",
+  numeroFamiglie: "500+"
+};
+
+export interface RichiestaSponsor {
+  id: string;
+  nomeAzienda: string;
+  referente: string;
+  telefono: string;
+  email: string;
+  categoriaInteresse: string;
+  messaggio?: string;
+  dataRichiesta: string;
+  stato: 'nuovo' | 'contattato' | 'completato';
+  noteInterne?: string;
+}
+
+const SPONSOR_CONFIG_CACHE_KEY = 'nva_sponsor_page_config_cache';
+const RICHIESTE_SPONSOR_CACHE_KEY = 'nva_richieste_sponsor_cache';
+
+export async function getSponsorPageConfig(): Promise<SponsorPageConfig> {
+  const collectionName = 'configurazioni';
+  const docId = 'sponsor_page';
+
+  if (isDemoMode) {
+    const local = getLocalData<SponsorPageConfig>(SPONSOR_CONFIG_CACHE_KEY, DEFAULT_SPONSOR_PAGE_CONFIG);
+    return local;
+  }
+
+  try {
+    const docRef = doc(db, collectionName, docId);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      const data = snap.data() as Partial<SponsorPageConfig>;
+      const merged = { ...DEFAULT_SPONSOR_PAGE_CONFIG, ...data };
+      setLocalData(SPONSOR_CONFIG_CACHE_KEY, merged);
+      return merged;
+    } else {
+      return DEFAULT_SPONSOR_PAGE_CONFIG;
+    }
+  } catch (err) {
+    console.warn("Errore getSponsorPageConfig, utilizzo fallback cache:", err);
+    return getLocalData<SponsorPageConfig>(SPONSOR_CONFIG_CACHE_KEY, DEFAULT_SPONSOR_PAGE_CONFIG);
+  }
+}
+
+export async function updateSponsorPageConfig(config: Partial<SponsorPageConfig>): Promise<void> {
+  const collectionName = 'configurazioni';
+  const docId = 'sponsor_page';
+
+  const current = await getSponsorPageConfig();
+  const merged: SponsorPageConfig = { ...current, ...config };
+
+  setLocalData(SPONSOR_CONFIG_CACHE_KEY, merged);
+
+  if (isDemoMode) return;
+
+  try {
+    const docRef = doc(db, collectionName, docId);
+    await setDoc(docRef, merged, { merge: true });
+  } catch (err) {
+    console.error("Errore updateSponsorPageConfig:", err);
+    throw err;
+  }
+}
+
+export async function inviaRichiestaSponsor(richiesta: Omit<RichiestaSponsor, 'id' | 'dataRichiesta' | 'stato'>): Promise<string> {
+  const collectionName = 'richieste_sponsor';
+  const nuovaRichiesta: RichiestaSponsor = {
+    ...richiesta,
+    id: `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    dataRichiesta: new Date().toISOString(),
+    stato: 'nuovo'
+  };
+
+  // Salva subito in cache locale
+  const cached = getLocalData<RichiestaSponsor[]>(RICHIESTE_SPONSOR_CACHE_KEY, []);
+  setLocalData(RICHIESTE_SPONSOR_CACHE_KEY, [nuovaRichiesta, ...cached]);
+
+  if (isDemoMode) {
+    return nuovaRichiesta.id;
+  }
+
+  try {
+    const colRef = collection(db, collectionName);
+    const docAdded = await addDoc(colRef, {
+      ...nuovaRichiesta,
+      createdAt: serverTimestamp ? serverTimestamp() : new Date()
+    });
+    return docAdded.id;
+  } catch (err) {
+    console.error("Errore inviaRichiestaSponsor:", err);
+    // Anche se firestore fallisce o è offline, abbiamo salvato in locale
+    return nuovaRichiesta.id;
+  }
+}
+
+export async function getRichiesteSponsor(): Promise<RichiestaSponsor[]> {
+  const collectionName = 'richieste_sponsor';
+  if (isDemoMode) {
+    return getLocalData<RichiestaSponsor[]>(RICHIESTE_SPONSOR_CACHE_KEY, []);
+  }
+
+  try {
+    const colRef = collection(db, collectionName);
+    const q = query(colRef, orderBy('dataRichiesta', 'desc'));
+    const snapshot = await getDocs(q);
+    const list: RichiestaSponsor[] = [];
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      list.push({
+        id: docSnap.id,
+        nomeAzienda: data.nomeAzienda || '',
+        referente: data.referente || '',
+        telefono: data.telefono || '',
+        email: data.email || '',
+        categoriaInteresse: data.categoriaInteresse || 'Generale',
+        messaggio: data.messaggio || '',
+        dataRichiesta: data.dataRichiesta || new Date().toISOString(),
+        stato: data.stato || 'nuovo',
+        noteInterne: data.noteInterne || ''
+      });
+    });
+
+    setLocalData(RICHIESTE_SPONSOR_CACHE_KEY, list);
+    return list;
+  } catch (err) {
+    console.warn("Errore getRichiesteSponsor, recupero da local cache:", err);
+    return getLocalData<RichiestaSponsor[]>(RICHIESTE_SPONSOR_CACHE_KEY, []);
+  }
+}
+
+export async function updateStatoRichiestaSponsor(id: string, stato: 'nuovo' | 'contattato' | 'completato', noteInterne?: string): Promise<void> {
+  const collectionName = 'richieste_sponsor';
+
+  // Aggiorna cache locale
+  const cached = getLocalData<RichiestaSponsor[]>(RICHIESTE_SPONSOR_CACHE_KEY, []);
+  const updated = cached.map(r => r.id === id ? { ...r, stato, ...(noteInterne !== undefined ? { noteInterne } : {}) } : r);
+  setLocalData(RICHIESTE_SPONSOR_CACHE_KEY, updated);
+
+  if (isDemoMode) return;
+
+  try {
+    const docRef = doc(db, collectionName, id);
+    const updateData: any = { stato };
+    if (noteInterne !== undefined) updateData.noteInterne = noteInterne;
+    await updateDoc(docRef, updateData);
+  } catch (err) {
+    console.error("Errore updateStatoRichiestaSponsor:", err);
+    throw err;
+  }
+}
+
+export async function eliminaRichiestaSponsor(id: string): Promise<void> {
+  const collectionName = 'richieste_sponsor';
+
+  const cached = getLocalData<RichiestaSponsor[]>(RICHIESTE_SPONSOR_CACHE_KEY, []);
+  setLocalData(RICHIESTE_SPONSOR_CACHE_KEY, cached.filter(r => r.id !== id));
+
+  if (isDemoMode) return;
+
+  try {
+    const docRef = doc(db, collectionName, id);
+    await deleteDoc(docRef);
+  } catch (err) {
+    console.error("Errore eliminaRichiestaSponsor:", err);
+    throw err;
+  }
+}
+

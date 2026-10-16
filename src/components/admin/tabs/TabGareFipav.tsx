@@ -268,6 +268,7 @@ export default function TabGareFipav({
           avversario: upcoming.avversario,
           data_ora: `${upcoming.data} ${upcoming.ora}`,
           luogo: upcoming.luogo || 'PalaMaroncelli, Forlì',
+          link_mappa: upcoming.link_mappa || '',
           giornata: upcoming.giornata,
           casa: upcoming.casa,
           punti_nva: null,
@@ -1103,6 +1104,20 @@ export default function TabGareFipav({
                     placeholder="es. PalaMaroncelli, Forlì"
                     value={editingMatch.luogo || ''}
                     onChange={(e) => setEditingMatch({ ...editingMatch, luogo: e.target.value })}
+                    className="w-full bg-zinc-50 border border-zinc-300 rounded-xl p-2.5 text-xs font-medium text-zinc-900"
+                  />
+                </div>
+
+                <div className="space-y-1 sm:col-span-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-zinc-600 text-xs font-semibold uppercase">Link Google Maps (Opzionale)</label>
+                    <span className="text-[10px] text-zinc-400">Se vuoto, la mappa viene cercata in automatico</span>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="https://maps.app.goo.gl/... o vuoto"
+                    value={editingMatch.link_mappa || ''}
+                    onChange={(e) => setEditingMatch({ ...editingMatch, link_mappa: e.target.value })}
                     className="w-full bg-zinc-50 border border-zinc-300 rounded-xl p-2.5 text-xs font-medium text-zinc-900"
                   />
                 </div>
