@@ -30,7 +30,7 @@ export function formatWhatsAppMessage(article: ShareArticleData): string {
     `📰 *${article.titolo.toUpperCase()}*\n\n` +
     `${cleanSnippet}\n\n` +
     `👉 *Leggi l'articolo completo sul sito:*\n${url}\n\n` +
-    `#NewVolleyAcademy #PantereDellaBassa 💛🖤`
+    `#NewVolleyAcademy #LePantere 💛🖤`
   );
 }
 
@@ -41,7 +41,7 @@ export function formatInstagramCaption(article: ShareArticleData): string {
     `📰 ${article.titolo.toUpperCase()}\n\n` +
     `${article.testo.slice(0, 280)}...\n\n` +
     `🔗 Leggi l'articolo completo e guarda tutte le foto al link in bio oppure su:\n${url}\n\n` +
-    `#NewVolleyAcademy #NVA #VolleyForli #Pallavolo #PantereDellaBassa #SerieD #FIPAV #PallavoloFemminile #PallavoloMaschile`
+    `#NewVolleyAcademy #NVA #VolleyForli #Pallavolo #LePantere #SerieD #FIPAV #PallavoloFemminile #PallavoloMaschile`
   );
 }
 

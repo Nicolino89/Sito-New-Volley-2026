@@ -1161,7 +1161,7 @@ export default function Home({
                         value={societaSettings?.navbarSubtitleDraft ?? ''}
                         onChange={(e) => handleSettingsLiveUpdate('navbarSubtitleDraft', e.target.value)}
                         className="w-full bg-zinc-950 border border-zinc-800 focus:border-brand-yellow text-xs rounded p-2 focus:outline-none text-white font-sans"
-                        placeholder="Le Pantere della Bassa"
+                        placeholder="Le Pantere • Forlì"
                       />
                     </div>
                   )}

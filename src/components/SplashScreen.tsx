@@ -58,7 +58,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ logoUrl }) => {
             NEW VOLLEY ACADEMY
           </h1>
           <p className="text-[11px] md:text-xs font-inter font-semibold tracking-[0.25em] text-brand-yellow uppercase">
-            LE PANTERE DELLA BASSA • FORLÌ
+            LE PANTERE • FORLÌ
           </p>
         </motion.div>
 

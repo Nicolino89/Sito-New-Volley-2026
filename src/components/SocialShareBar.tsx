@@ -154,7 +154,7 @@ export default function SocialShareBar({
             </button>
           </div>
           <p className="text-slate-300 text-[11px] leading-relaxed">
-            La didascalia completa con testo, link e hashtag societari (<b>#NewVolleyAcademy #PantereDellaBassa</b>) è stata copiata!
+            La didascalia completa con testo, link e hashtag societari (<b>#NewVolleyAcademy #LePantere</b>) è stata copiata!
           </p>
           <div className="flex flex-wrap gap-2 pt-1">
             <a
