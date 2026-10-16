@@ -57,7 +57,7 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
     updatePageMeta({
       title: 'Voltex Academy Summer Camp - Alta Specializzazione Volley by Valentina Diouf',
       description: 'Scopri il Voltex Academy Summer Camp con Valentina Diouf: camp estivo di alta specializzazione tecnica e mental coaching per giovani atleti. Iscrizioni aperte!',
-      image: 'https://new-volley-academy.web.app/images/voltex/voltex-riccione-cover.jpg',
+      image: 'https://newvolleyacademy.it/images/voltex/voltex-riccione-cover.jpg',
       url: 'https://newvolleyacademy.it/voltex'
     });
 

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { NewsBlog, RosaSquadra } from '../firebase-societa';
 import { updatePageMeta } from '../utils/seoHelper';
+import { getArticlePublicUrl } from '../utils/socialShare';
 
 import SocialShareBar from '../components/SocialShareBar';
 
@@ -91,12 +92,14 @@ export default function News({ newsAll, squadreAll = [] }: NewsProps) {
         title: `${singleArticle.titolo} | Notizie`,
         description: singleArticle.testo.slice(0, 160),
         image: singleArticle.foto_copertina_url,
+        url: getArticlePublicUrl(singleArticle),
         type: 'article'
       });
     } else {
       updatePageMeta({
         title: 'Archivio Notizie & Comunicati | New Volley Academy',
-        description: 'Tutte le ultime notizie, i risultati delle partite e i comunicati ufficiali della New Volley Academy Forlì.'
+        description: 'Tutte le ultime notizie, i risultati delle partite e i comunicati ufficiali della New Volley Academy Forlì.',
+        url: 'https://newvolleyacademy.it/news'
       });
     }
   }, [singleArticle?.id]);

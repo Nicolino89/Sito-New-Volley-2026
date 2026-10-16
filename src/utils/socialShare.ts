@@ -16,7 +16,7 @@ export interface ShareArticleData {
 
 export function getArticlePublicUrl(article: ShareArticleData): string {
   const slug = slugify(article.titolo || 'articolo');
-  return `https://new-volley-academy.web.app/news/${slug}`;
+  return `https://newvolleyacademy.it/news/${slug}`;
 }
 
 export function formatWhatsAppMessage(article: ShareArticleData): string {
