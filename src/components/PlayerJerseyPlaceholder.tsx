@@ -24,7 +24,18 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
   // Colori divisa: Maglia classica (Nera con dettagli Giallo Brand) vs Maglia Libero (Giallo Brand con dettagli Neri)
   const jerseyBg = isLibero ? '#fcfe00' : '#141416';
   const jerseyAccent = isLibero ? '#09090b' : '#fcfe00';
-  const textFill = isLibero ? '#09090b' : '#e4e4e7';
+  const textFill = isLibero ? '#09090b' : '#ffffff';
+
+  // Calcolo dinamico dimensione e scaling del cognome per massimo risalto grafico atletico
+  const getCognomeFontSize = (len: number) => {
+    if (len <= 5) return '15.5'; // es. FIORE, NERI
+    if (len <= 7) return '14';   // es. SEVERI, GAROIA
+    if (len <= 9) return '12.5'; // es. VERSARI, ZANOTTI
+    if (len <= 11) return '11';  // es. VALMAGGI
+    return '9.5';
+  };
+  const cognomeFontSize = getCognomeFontSize(displayCognome.length);
+  const shouldLimitLength = displayCognome.length > 9;
 
   // Identificativo univoco per pattern e gradienti SVG
   const uid = `${displayNum || 'pantera'}-${displayCognome.replace(/[^a-zA-Z0-9]/g, '')}`;
@@ -213,25 +224,31 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
           </text>
         </g>
 
-        {/* Dicitura Cognome Atleta sopra al petto */}
+        {/* Dicitura Cognome Atleta ad alto impatto visivo atletico */}
         <text
           x="100"
-          y="74"
+          y="63.5"
           textAnchor="middle"
+          dominantBaseline="central"
           fill={textFill}
-          fontSize={displayCognome.length > 12 ? "7" : displayCognome.length > 8 ? "8" : "9.5"}
-          fontFamily="system-ui, sans-serif"
-          fontWeight="800"
-          letterSpacing="1"
+          fontSize={cognomeFontSize}
+          fontFamily="Barlow Condensed, Bebas Neue, Anton, Impact, sans-serif"
+          fontWeight="900"
+          letterSpacing="1.2"
+          textLength={shouldLimitLength ? "74" : undefined}
+          lengthAdjust={shouldLimitLength ? "spacingAndGlyphs" : undefined}
+          style={{
+            filter: isLibero ? 'none' : 'drop-shadow(0px 2px 4px rgba(0,0,0,0.95))'
+          }}
         >
           {displayCognome}
         </text>
 
         {/* Barra del Capitano sotto al cognome se designato capitano */}
         {isCapitano && (
-          <g transform="translate(82, 80)">
-            <rect x="0" y="0" width="36" height="3" rx="1" fill="#fcfe00" />
-            <rect x="0.5" y="0.5" width="35" height="2" rx="0.5" fill="#eab308" />
+          <g transform="translate(80, 73.5)">
+            <rect x="0" y="0" width="40" height="2.8" rx="1" fill="#fcfe00" />
+            <rect x="0.5" y="0.5" width="39" height="1.8" rx="0.5" fill="#eab308" />
           </g>
         )}
 
@@ -241,9 +258,9 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
           <image
             href="/images/pantera-hero.png"
             x="54"
-            y="79"
+            y="81"
             width="92"
-            height="116"
+            height="114"
             preserveAspectRatio="xMidYMid meet"
             style={{
               mixBlendMode: isLibero ? 'multiply' : 'normal',
@@ -254,9 +271,9 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
           {/* Sfumatura orizzontale: fonde dolcemente i lati nel nero della maglia */}
           <rect
             x="53"
-            y="78"
+            y="80"
             width="94"
-            height="118"
+            height="116"
             fill={`url(#pantherFadeX-${uid})`}
             pointerEvents="none"
           />
@@ -264,9 +281,9 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
           {/* Sfumatura verticale: fonde dolcemente top e bottom nel nero della maglia */}
           <rect
             x="53"
-            y="78"
+            y="80"
             width="94"
-            height="118"
+            height="116"
             fill={`url(#pantherFadeY-${uid})`}
             pointerEvents="none"
           />

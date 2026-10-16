@@ -539,10 +539,11 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
 
                     <div className="p-4 flex-grow space-y-2 flex flex-col justify-between">
                       <div>
-                        <h4 className="text-base font-inter font-semibold tracking-wide text-zinc-950 uppercase leading-tight flex items-center gap-1.5 flex-wrap">
-                          {player.nome} {player.cognome}
+                        <h4 className="text-base tracking-wide text-zinc-950 uppercase leading-tight flex items-baseline gap-1.5 flex-wrap">
+                          <span className="font-semibold text-zinc-500 text-xs sm:text-sm">{player.nome}</span>
+                          <span className="font-black font-barlow text-lg sm:text-xl text-zinc-950 tracking-wide">{player.cognome}</span>
                           {team.capitano_id === player.id && (
-                            <span className="inline-block text-[9px] bg-brand-yellow text-black font-inter px-2 py-0.5 rounded font-semibold uppercase tracking-wider">
+                            <span className="inline-block text-[9px] bg-brand-yellow text-black font-inter px-2 py-0.5 rounded font-bold uppercase tracking-wider ml-auto self-center">
                               (C) CAPITANO
                             </span>
                           )}
@@ -926,8 +927,9 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                   )}
                   <div>
                     <span className="text-[10px] font-inter font-semibold text-zinc-400 block uppercase tracking-widest">SCHEDA ATLETA</span>
-                    <h3 className="text-xl font-inter font-semibold tracking-wide text-zinc-900 uppercase">
-                      {selectedPlayer.nome} {selectedPlayer.cognome}
+                    <h3 className="text-xl tracking-wide text-zinc-900 uppercase flex items-baseline gap-2 flex-wrap">
+                      <span className="font-semibold text-zinc-500 text-sm sm:text-base">{selectedPlayer.nome}</span>
+                      <span className="font-black font-barlow text-2xl sm:text-3xl text-zinc-950 tracking-wide">{selectedPlayer.cognome}</span>
                     </h3>
                   </div>
                 </div>
