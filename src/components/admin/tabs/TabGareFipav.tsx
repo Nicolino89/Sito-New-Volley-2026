@@ -327,8 +327,28 @@ export default function TabGareFipav({
         classifica,
         partite: updatedList
       });
+
+      // Aggiorna anche la Prossima Gara sulla Home se la prima gara è terminata
+      const upcoming = updatedList.find(p => !p.terminata);
+      if (upcoming && activeTeam.nome_squadra.toLowerCase().includes('serie d')) {
+        const isMaschile = getGenereSquadra(activeTeam) === 'M';
+        const payload: ProssimaGara = {
+          id: isMaschile ? 'serie_d_maschile' : 'serie_d_femminile',
+          categoria: isMaschile ? 'Serie D Maschile' : 'Serie D Femminile',
+          avversario: upcoming.avversario,
+          data_ora: `${upcoming.data} ${upcoming.ora}`,
+          luogo: upcoming.luogo || 'PalaMaroncelli, Forlì',
+          link_mappa: upcoming.link_mappa || '',
+          giornata: upcoming.giornata,
+          casa: upcoming.casa,
+          punti_nva: null,
+          punti_avversario: null
+        };
+        await updateProssimaGara(payload);
+      }
+
       await loadAllData();
-      showToast("Risultato gara aggiornato!", "success");
+      showToast("Risultato gara e Prossima Partita sulla Home aggiornati!", "success");
     } catch (e) {
       showToast("Errore aggiornamento risultato.", "error");
     }
