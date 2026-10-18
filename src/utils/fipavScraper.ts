@@ -486,3 +486,100 @@ export async function scrapeFipavFullData(
 
   return result;
 }
+
+/**
+ * Unisce in modo intelligente il calendario esistente con le gare in arrivo da FIPAV.
+ * Protegge:
+ * 1. Risultati inseriti a mano o gare concluse se FIPAV riporta ancora la gara non omologata o '-'
+ * 2. Posizioni personalizzate / link google maps
+ * 3. Tutte le gare precedenti se l'utente incolla solo una porzione parziale del campionato o solo la classifica
+ */
+export function mergePartite(
+  currentList: PartitaCampionato[] = [],
+  incomingList: PartitaCampionato[] = []
+): PartitaCampionato[] {
+  if (!incomingList || incomingList.length === 0) {
+    return currentList || [];
+  }
+
+  if (!currentList || currentList.length === 0) {
+    return incomingList;
+  }
+
+  const cleanGiornata = (g?: string) => (g || '').replace(/[^0-9]/g, '');
+
+  const findMatch = (incoming: PartitaCampionato, incomingIdx: number) => {
+    const inNum = cleanGiornata(incoming.giornata);
+    if (inNum) {
+      const match = currentList.find(c => cleanGiornata(c.giornata) === inNum);
+      if (match) return match;
+    }
+    if (incoming.avversario) {
+      const inAdv = incoming.avversario.toLowerCase().trim();
+      const match = currentList.find(c => {
+        const cAdv = (c.avversario || '').toLowerCase().trim();
+        return cAdv && (cAdv.includes(inAdv) || inAdv.includes(cAdv));
+      });
+      if (match) return match;
+    }
+    if (currentList.length === incomingList.length && currentList[incomingIdx]) {
+      return currentList[incomingIdx];
+    }
+    return null;
+  };
+
+  const merged: PartitaCampionato[] = incomingList.map((incoming, idx) => {
+    const existing = findMatch(incoming, idx);
+    if (!existing) return incoming;
+
+    const incomingHasResult =
+      incoming.terminata &&
+      Boolean(incoming.risultato && incoming.risultato.trim() !== '-' && incoming.risultato.trim() !== '');
+
+    const existingHasResult =
+      existing.terminata ||
+      (existing.setNva !== null && existing.setNva !== undefined) ||
+      Boolean(existing.risultato && existing.risultato.trim() !== '-' && existing.risultato.trim() !== '');
+
+    if (existingHasResult && !incomingHasResult) {
+      return {
+        ...incoming,
+        id: existing.id || incoming.id,
+        risultato: existing.risultato,
+        setNva: existing.setNva,
+        setAvversario: existing.setAvversario,
+        parzialiSet: existing.parzialiSet || incoming.parzialiSet,
+        terminata: true,
+        link_mappa: existing.link_mappa || incoming.link_mappa,
+        luogo: existing.luogo || incoming.luogo,
+        note: existing.note || incoming.note
+      };
+    }
+
+    return {
+      ...incoming,
+      id: existing.id || incoming.id,
+      link_mappa: existing.link_mappa || incoming.link_mappa,
+      luogo: (incoming.luogo && incoming.luogo !== 'Palasport') ? incoming.luogo : (existing.luogo || incoming.luogo),
+      note: existing.note || incoming.note
+    };
+  });
+
+  if (currentList.length > incomingList.length) {
+    for (const existing of currentList) {
+      const alreadyInMerged = merged.some(m => {
+        const eNum = cleanGiornata(existing.giornata);
+        const mNum = cleanGiornata(m.giornata);
+        if (eNum && mNum && eNum === mNum) return true;
+        if (existing.id && m.id && existing.id === m.id) return true;
+        return false;
+      });
+      if (!alreadyInMerged) {
+        merged.push(existing);
+      }
+    }
+  }
+
+  return merged;
+}
+

@@ -31,7 +31,7 @@ import {
   ProssimaGara,
   getGenereSquadra
 } from '../../../firebase-societa';
-import { scrapeFipavFullData, parseFipavHtml, sanitizeLuogoDisplay } from '../../../utils/fipavScraper';
+import { scrapeFipavFullData, parseFipavHtml, sanitizeLuogoDisplay, mergePartite } from '../../../utils/fipavScraper';
 
 
 interface TabGareFipavProps {
@@ -133,27 +133,43 @@ export default function TabGareFipav({
       
       const res = await scrapeFipavFullData(fipavUrl, activeTeam.nome_squadra, squadraFipavUfficiale);
       
-      setClassifica(res.classifica);
-      setPartite(res.partite);
+      const newClassifica = res.classifica.length > 0 ? res.classifica : classifica;
+      const mergedPartite = mergePartite(partite, res.partite);
+
+      setClassifica(newClassifica);
+      setPartite(mergedPartite);
 
       // Auto-save immediately to database
       await updateSquadraFipavData(activeTeam.id, {
         fipav_url: fipavUrl,
         nome_visualizzato_gare: nomeVisualizzatoGare || activeTeam.nome_squadra,
         squadra_fipav_ufficiale: squadraFipavUfficiale,
-        classifica: res.classifica,
-        partite: res.partite,
+        classifica: newClassifica,
+        partite: mergedPartite,
         tipo_classifica: 'FIPAV_SYNC',
         link_esterno_classifica: fipavUrl
       } as any);
 
-      // If next match was found and is Serie D, update Prossima Gara on Homepage
-      if (res.prossimaGara && activeTeam.nome_squadra.toLowerCase().includes('serie d')) {
-        await updateProssimaGara(res.prossimaGara);
+      // Aggiorna anche la Prossima Gara sulla Homepage con la prima non disputata
+      const upcoming = mergedPartite.find(p => !p.terminata);
+      if (upcoming && activeTeam.nome_squadra.toLowerCase().includes('serie d')) {
+        const isMaschile = getGenereSquadra(activeTeam) === 'M';
+        await updateProssimaGara({
+          id: isMaschile ? 'serie_d_maschile' : 'serie_d_femminile',
+          categoria: isMaschile ? 'Serie D Maschile' : 'Serie D Femminile',
+          avversario: upcoming.avversario,
+          data_ora: `${upcoming.data} ${upcoming.ora}`,
+          luogo: upcoming.luogo || 'PalaMaroncelli, Forlì',
+          link_mappa: upcoming.link_mappa || '',
+          giornata: upcoming.giornata,
+          casa: upcoming.casa,
+          punti_nva: null,
+          punti_avversario: null
+        });
       }
 
       await loadAllData();
-      showToast(`Classifica (${res.classifica.length} squadre) e Calendario (${res.partite.length} gare) sincronizzati e salvati con successo!`, "success");
+      showToast(`Classifica (${newClassifica.length} squadre) e Calendario (${mergedPartite.length} gare) sincronizzati proteggendo i risultati esistenti!`, "success");
     } catch (err: any) {
       console.error(err);
       showToast(err.message || "Errore durante la sincronizzazione da FIPAV.", "error");
@@ -167,7 +183,7 @@ export default function TabGareFipav({
   const [pastedHtml, setPastedHtml] = useState('');
 
   // Handle Pasted HTML / Source Extraction
-  const handleImportPastedHtml = async () => {
+  const handleImportPastedHtml = async (onlyClassifica: boolean = false) => {
     if (!pastedHtml.trim()) {
       showToast("Incolla prima il codice sorgente o il testo della pagina FIPAV.", "error");
       return;
@@ -178,27 +194,69 @@ export default function TabGareFipav({
         showToast("Nessun dato riconosciuto nel testo incollato. Assicurati di copiare la pagina o la tabella del campionato.", "error");
         return;
       }
-      setClassifica(res.classifica);
-      setPartite(res.partite);
+
+      if (onlyClassifica) {
+        if (res.classifica.length === 0) {
+          showToast("Nessuna classifica trovata nel testo incollato. Se vuoi aggiornare anche le gare, clicca 'Aggiorna Tutto'.", "error");
+          return;
+        }
+        setClassifica(res.classifica);
+        await updateSquadraFipavData(activeTeam.id, {
+          fipav_url: fipavUrl || activeTeam.fipav_url,
+          nome_visualizzato_gare: nomeVisualizzatoGare || activeTeam.nome_squadra,
+          squadra_fipav_ufficiale: squadraFipavUfficiale,
+          classifica: res.classifica,
+          partite: partite, // Calendario esistente intatto!
+          tipo_classifica: 'FIPAV_SYNC',
+          link_esterno_classifica: fipavUrl || activeTeam.fipav_url
+        } as any);
+
+        await loadAllData();
+        setShowHtmlPaste(false);
+        setPastedHtml('');
+        showToast(`Classifica aggiornata (${res.classifica.length} squadre)! Il calendario e tutti i risultati esistenti sono rimasti invariati.`, "success");
+        return;
+      }
+
+      // Aggiornamento completo con Merge Intelligente
+      const newClassifica = res.classifica.length > 0 ? res.classifica : classifica;
+      const mergedPartite = mergePartite(partite, res.partite);
+
+      setClassifica(newClassifica);
+      setPartite(mergedPartite);
 
       await updateSquadraFipavData(activeTeam.id, {
         fipav_url: fipavUrl || activeTeam.fipav_url,
         nome_visualizzato_gare: nomeVisualizzatoGare || activeTeam.nome_squadra,
         squadra_fipav_ufficiale: squadraFipavUfficiale,
-        classifica: res.classifica,
-        partite: res.partite,
+        classifica: newClassifica,
+        partite: mergedPartite,
         tipo_classifica: 'FIPAV_SYNC',
         link_esterno_classifica: fipavUrl || activeTeam.fipav_url
       } as any);
 
-      if (res.prossimaGara && activeTeam.nome_squadra.toLowerCase().includes('serie d')) {
-        await updateProssimaGara(res.prossimaGara);
+      // Aggiorna la Prossima Gara sulla Home con la prima non disputata
+      const upcoming = mergedPartite.find(p => !p.terminata);
+      if (upcoming && activeTeam.nome_squadra.toLowerCase().includes('serie d')) {
+        const isMaschile = getGenereSquadra(activeTeam) === 'M';
+        await updateProssimaGara({
+          id: isMaschile ? 'serie_d_maschile' : 'serie_d_femminile',
+          categoria: isMaschile ? 'Serie D Maschile' : 'Serie D Femminile',
+          avversario: upcoming.avversario,
+          data_ora: `${upcoming.data} ${upcoming.ora}`,
+          luogo: upcoming.luogo || 'PalaMaroncelli, Forlì',
+          link_mappa: upcoming.link_mappa || '',
+          giornata: upcoming.giornata,
+          casa: upcoming.casa,
+          punti_nva: null,
+          punti_avversario: null
+        });
       }
 
       await loadAllData();
       setShowHtmlPaste(false);
       setPastedHtml('');
-      showToast(`Estratte con successo ${res.classifica.length} squadre in classifica e ${res.partite.length} gare in calendario!`, "success");
+      showToast(`Dati sincronizzati con successo: Classifica (${newClassifica.length} squadre) e Calendario (${mergedPartite.length} gare unite proteggendo i risultati)!`, "success");
     } catch (err: any) {
       showToast(`Errore parsing: ${err.message}`, "error");
     }
@@ -860,22 +918,37 @@ export default function TabGareFipav({
                           placeholder="Incolla qui l'HTML o il testo copiato dalla pagina del campionato..."
                           className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-xs font-mono text-zinc-200 focus:outline-none focus:border-brand-yellow"
                         />
-                        <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setShowHtmlPaste(false)}
-                            className="px-3 py-1.5 text-xs text-zinc-400 hover:text-white"
-                          >
-                            Annulla
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleImportPastedHtml}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-wider shadow cursor-pointer transition-all flex items-center gap-1.5"
-                          >
-                            <Check className="w-4 h-4" />
-                            Estrai e Salva Subito su Squadra
-                          </button>
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-2 border-t border-zinc-800">
+                          <span className="text-[10px] text-zinc-400">
+                            🛡️ I risultati manuali, le partite terminate e i link Google Maps sono automaticamente protetti.
+                          </span>
+                          <div className="flex items-center justify-end gap-2 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => setShowHtmlPaste(false)}
+                              className="px-3 py-1.5 text-xs text-zinc-400 hover:text-white"
+                            >
+                              Annulla
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleImportPastedHtml(true)}
+                              className="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 font-bold px-3 py-2 rounded-xl text-xs uppercase tracking-wider shadow cursor-pointer transition-all flex items-center gap-1.5"
+                              title="Aggiorna esclusivamente la tabella classifica senza toccare le gare esistenti"
+                            >
+                              <Trophy className="w-4 h-4 text-emerald-400" />
+                              <span>Aggiorna Solo Classifica</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleImportPastedHtml(false)}
+                              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-wider shadow cursor-pointer transition-all flex items-center gap-1.5"
+                              title="Aggiorna sia la classifica che il calendario preservando tutti i punteggi manuali inseriti"
+                            >
+                              <Check className="w-4 h-4" />
+                              <span>Aggiorna Tutto (Gare + Classifica)</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}
