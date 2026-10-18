@@ -18,7 +18,10 @@ import {
   Star,
   Award,
   Crown,
-  ChevronDown
+  ChevronDown,
+  UserCheck,
+  Link as LinkIcon,
+  Briefcase
 } from 'lucide-react';
 import { 
   SquadraStorica, 
@@ -28,8 +31,16 @@ import {
   deleteStoricoSquadra,
   RosaSquadra, 
   Giocatore,
-  formatRuoloGiocatore
+  formatRuoloGiocatore,
+  db
 } from '../../../firebase-societa';
+import { 
+  collection, 
+  getDocs, 
+  getDoc, 
+  doc, 
+  updateDoc 
+} from 'firebase/firestore';
 import { compressImage, IMAGE_PRESETS } from '../../../utils/imageCompressor';
 
 interface TabArchivioSquadreProps {
@@ -49,6 +60,9 @@ export default function TabArchivioSquadre({
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filtroStagione, setFiltroStagione] = useState('TUTTE');
+
+  // Elenco Allenatori e Staff censiti per cronostoria automatica
+  const [staffList, setStaffList] = useState<Array<{ id: string; nomeCognome: string; qualificaTecnica?: string; fotoUrl?: string }>>([]);
 
   // Modal creazione / modifica
   const [modalOpen, setModalOpen] = useState(false);
@@ -82,7 +96,29 @@ export default function TabArchivioSquadre({
 
   useEffect(() => {
     caricaDati();
+    loadStaffList();
   }, []);
+
+  const loadStaffList = async () => {
+    try {
+      const snap = await getDocs(collection(db, 'staff_profili'));
+      const list: Array<{ id: string; nomeCognome: string; qualificaTecnica?: string; fotoUrl?: string }> = [];
+      snap.forEach(d => {
+        const data = d.data();
+        if (data.nomeCognome) {
+          list.push({
+            id: d.id,
+            nomeCognome: data.nomeCognome,
+            qualificaTecnica: data.qualificaTecnica || '',
+            fotoUrl: data.foto?.url || data.fotoUrl || ''
+          });
+        }
+      });
+      setStaffList(list);
+    } catch (err) {
+      console.error("Errore caricamento staff per archivio:", err);
+    }
+  };
 
   const caricaDati = async () => {
     try {
@@ -297,7 +333,47 @@ export default function TabArchivioSquadre({
     try {
       setIsSubmitting(true);
       await saveStoricoSquadra(formData, editingId || undefined);
-      showToast(editingId ? "Formazione storica aggiornata!" : "Formazione registrata nell'archivio!", "success");
+
+      // Sincronizza automaticamente la cronostoria degli allenatori in staff_profili
+      const syncCoachHistory = async (coachName: string, roleLabel: string) => {
+        if (!coachName || !coachName.trim()) return;
+        const cTrimmed = coachName.trim().toLowerCase();
+        const matched = staffList.find(s => s.nomeCognome.trim().toLowerCase() === cTrimmed);
+        if (matched && matched.id) {
+          try {
+            const coachRef = doc(db, 'staff_profili', matched.id);
+            const coachSnap = await getDoc(coachRef);
+            if (coachSnap.exists()) {
+              const data = coachSnap.data();
+              const history: Array<any> = Array.isArray(data.storicoCarriera) ? [...data.storicoCarriera] : [];
+              const exists = history.some(h => 
+                h.anno === formData.stagione && 
+                (h.ruolo || '').toLowerCase().includes(formData.nome_squadra.toLowerCase())
+              );
+              if (!exists) {
+                history.unshift({
+                  anno: formData.stagione,
+                  societa: 'New Volley Academy',
+                  ruolo: `${roleLabel} (${formData.nome_squadra})`,
+                  risultato: formData.traguardo || '-'
+                });
+                await updateDoc(coachRef, { storicoCarriera: history });
+              }
+            }
+          } catch (err) {
+            console.warn("Errore sincronizzazione cronostoria coach:", err);
+          }
+        }
+      };
+
+      if (formData.allenatori?.primo) {
+        await syncCoachHistory(formData.allenatori.primo, '1° Allenatore');
+      }
+      if (formData.allenatori?.secondo) {
+        await syncCoachHistory(formData.allenatori.secondo, '2° Allenatore');
+      }
+
+      showToast(editingId ? "Formazione storica aggiornata e cronostoria staff collegata!" : "Formazione registrata e collegata alla cronostoria allenatori!", "success");
       setModalOpen(false);
       await caricaDati();
     } catch (err) {
@@ -503,11 +579,11 @@ export default function TabArchivioSquadre({
       {/* MODAL CREAZIONE / MODIFICA SQUADRA STORICA                                */}
       {/* ========================================================================= */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 space-y-6 shadow-2xl border border-zinc-200 my-8">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-3xl w-full shadow-2xl border border-zinc-200 my-auto sm:my-6 flex flex-col max-h-[92vh] overflow-hidden animate-fade-in">
             
-            {/* Header Modal */}
-            <div className="flex items-center justify-between border-b border-zinc-200 pb-4">
+            {/* Header Modal - Sticky in alto */}
+            <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4 bg-white sticky top-0 z-20 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-amber-400/20 text-amber-800">
                   <History className="w-5 h-5 text-amber-600" />
@@ -522,41 +598,45 @@ export default function TabArchivioSquadre({
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setModalOpen(false)}
                 className="p-2 rounded-full hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 cursor-pointer"
+                title="Chiudi form"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* SELETTORE RAPIDO: CLONA DA SQUADRA IN CORSO (SE NON IN EDITING) */}
-            {!editingId && squadreAll.length > 0 && (
-              <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-bold text-amber-900 uppercase font-barlow flex items-center gap-1.5">
-                    <Archive className="w-4 h-4 text-amber-600" />
-                    <span>Clona con 1 Click da Squadra in Corso</span>
-                  </p>
-                  <p className="text-[11px] text-amber-800 font-inter">
-                    Precompila subito nome, foto, coach e atleti della rosa selezionata.
-                  </p>
-                </div>
-                <select
-                  value={selectedSquadraDaClonare}
-                  onChange={e => handleClonaDaSquadraInCorso(e.target.value)}
-                  className="bg-white border border-amber-300 rounded-xl px-3 py-1.5 text-xs font-mono text-zinc-800 focus:outline-none font-bold"
-                >
-                  <option value="">-- Seleziona una squadra --</option>
-                  {squadreAll.map(sq => (
-                    <option key={sq.id} value={sq.id}>
-                      {sq.nome_squadra} ({sq.stagione || 'Stagione in corso'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <form onSubmit={handleSave} className="space-y-6">
+            {/* Form scrollabile con sticky footer */}
+            <form onSubmit={handleSave} className="flex flex-col flex-1 overflow-hidden">
+              <div className="overflow-y-auto px-6 py-5 flex-1 space-y-6">
+                
+                {/* SELETTORE RAPIDO: CLONA DA SQUADRA IN CORSO (SE NON IN EDITING) */}
+                {!editingId && squadreAll.length > 0 && (
+                  <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold text-amber-900 uppercase font-barlow flex items-center gap-1.5">
+                        <Archive className="w-4 h-4 text-amber-600" />
+                        <span>Clona con 1 Click da Squadra in Corso</span>
+                      </p>
+                      <p className="text-[11px] text-amber-800 font-inter">
+                        Precompila subito nome, foto, coach e atleti della rosa selezionata.
+                      </p>
+                    </div>
+                    <select
+                      value={selectedSquadraDaClonare}
+                      onChange={e => handleClonaDaSquadraInCorso(e.target.value)}
+                      className="bg-white border border-amber-300 rounded-xl px-3 py-1.5 text-xs font-mono text-zinc-800 focus:outline-none font-bold"
+                    >
+                      <option value="">-- Seleziona una squadra --</option>
+                      {squadreAll.map(sq => (
+                        <option key={sq.id} value={sq.id}>
+                          {sq.nome_squadra} ({sq.stagione || 'Stagione in corso'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               
               {/* RIGA 1: Nome Squadra, Stagione, Categoria */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -736,53 +816,164 @@ export default function TabArchivioSquadre({
                 </div>
               </div>
 
-              {/* RIGA 4: STAFF TECNICO */}
-              <div className="space-y-2 bg-zinc-50 p-4 rounded-2xl border border-zinc-200">
-                <label className="text-xs font-mono font-bold uppercase text-zinc-700 flex items-center gap-1.5">
-                  <Award className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Staff Tecnico dell'Epoca</span>
-                </label>
+              {/* RIGA 4: STAFF TECNICO & CRONOSTORIA ALLENATORI */}
+              <div className="space-y-3 bg-zinc-50 p-4 rounded-2xl border border-zinc-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <label className="text-xs font-mono font-bold uppercase text-zinc-700 flex items-center gap-1.5">
+                      <Award className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Staff Tecnico dell'Epoca &amp; Cronostoria</span>
+                    </label>
+                    <p className="text-[11px] text-zinc-500 font-inter">
+                      Collega gli allenatori dall'Anagrafica Staff per aggiornare automaticamente la loro carriera e i link interni.
+                    </p>
+                  </div>
+                  {staffList.length > 0 && (
+                    <span className="text-[10px] bg-amber-100/80 text-amber-800 px-2.5 py-1 rounded-lg font-mono font-bold flex items-center gap-1 w-fit">
+                      <LinkIcon className="w-3 h-3 text-amber-600" />
+                      <span>{staffList.length} Profili Staff Collegabili</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Datalist per autocompletamento veloce */}
+                <datalist id="staff-allenatori-datalist">
+                  {staffList.map(s => (
+                    <option key={s.id} value={s.nomeCognome}>
+                      {s.qualificaTecnica ? `${s.nomeCognome} (${s.qualificaTecnica})` : s.nomeCognome}
+                    </option>
+                  ))}
+                </datalist>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <span className="text-[10px] font-mono uppercase text-zinc-500 block mb-1">1° Allenatore</span>
+                  {/* 1° Allenatore */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono uppercase text-zinc-600 font-bold block">1° Allenatore</span>
+                      {staffList.some(s => s.nomeCognome.trim().toLowerCase() === (formData.allenatori?.primo || '').trim().toLowerCase()) && (
+                        <span className="text-[9px] text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded font-bold font-mono">
+                          ✓ Collegato
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Quick select dropdown */}
+                    {staffList.length > 0 && (
+                      <select
+                        onChange={e => {
+                          if (e.target.value) {
+                            setFormData(prev => ({
+                              ...prev,
+                              allenatori: { ...prev.allenatori, primo: e.target.value }
+                            }));
+                          }
+                        }}
+                        className="w-full bg-amber-50/70 border border-amber-200 rounded-lg px-2 py-1 text-[11px] text-amber-900 font-mono cursor-pointer"
+                        value=""
+                      >
+                        <option value="">⚡ Scegli da Staff...</option>
+                        {staffList.map(s => (
+                          <option key={s.id} value={s.nomeCognome}>
+                            {s.nomeCognome} {s.qualificaTecnica ? `(${s.qualificaTecnica})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+
                     <input
                       type="text"
+                      list="staff-allenatori-datalist"
                       placeholder="Nome 1° Coach"
                       value={formData.allenatori?.primo || ''}
                       onChange={e => setFormData({
                         ...formData,
                         allenatori: { ...formData.allenatori, primo: e.target.value }
                       })}
-                      className="w-full bg-white border border-zinc-200 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900"
+                      className="w-full bg-white border border-zinc-200 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 font-medium"
                     />
                   </div>
 
-                  <div>
-                    <span className="text-[10px] font-mono uppercase text-zinc-500 block mb-1">2° Allenatore</span>
+                  {/* 2° Allenatore */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono uppercase text-zinc-600 font-bold block">2° Allenatore</span>
+                      {staffList.some(s => s.nomeCognome.trim().toLowerCase() === (formData.allenatori?.secondo || '').trim().toLowerCase()) && (
+                        <span className="text-[9px] text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded font-bold font-mono">
+                          ✓ Collegato
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Quick select dropdown */}
+                    {staffList.length > 0 && (
+                      <select
+                        onChange={e => {
+                          if (e.target.value) {
+                            setFormData(prev => ({
+                              ...prev,
+                              allenatori: { ...prev.allenatori, secondo: e.target.value }
+                            }));
+                          }
+                        }}
+                        className="w-full bg-amber-50/70 border border-amber-200 rounded-lg px-2 py-1 text-[11px] text-amber-900 font-mono cursor-pointer"
+                        value=""
+                      >
+                        <option value="">⚡ Scegli da Staff...</option>
+                        {staffList.map(s => (
+                          <option key={s.id} value={s.nomeCognome}>
+                            {s.nomeCognome} {s.qualificaTecnica ? `(${s.qualificaTecnica})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+
                     <input
                       type="text"
+                      list="staff-allenatori-datalist"
                       placeholder="Nome 2° Coach"
                       value={formData.allenatori?.secondo || ''}
                       onChange={e => setFormData({
                         ...formData,
                         allenatori: { ...formData.allenatori, secondo: e.target.value }
                       })}
-                      className="w-full bg-white border border-zinc-200 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900"
+                      className="w-full bg-white border border-zinc-200 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 font-medium"
                     />
                   </div>
 
-                  <div>
-                    <span className="text-[10px] font-mono uppercase text-zinc-500 block mb-1">Dirigente</span>
+                  {/* Dirigente */}
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-mono uppercase text-zinc-600 font-bold block">Dirigente</span>
+                    {staffList.length > 0 && (
+                      <select
+                        onChange={e => {
+                          if (e.target.value) {
+                            setFormData(prev => ({
+                              ...prev,
+                              allenatori: { ...prev.allenatori, dirigente: e.target.value }
+                            }));
+                          }
+                        }}
+                        className="w-full bg-amber-50/70 border border-amber-200 rounded-lg px-2 py-1 text-[11px] text-amber-900 font-mono cursor-pointer"
+                        value=""
+                      >
+                        <option value="">⚡ Scegli da Staff...</option>
+                        {staffList.map(s => (
+                          <option key={s.id} value={s.nomeCognome}>
+                            {s.nomeCognome}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                     <input
                       type="text"
+                      list="staff-allenatori-datalist"
                       placeholder="Nome Dirigente"
                       value={formData.allenatori?.dirigente || ''}
                       onChange={e => setFormData({
                         ...formData,
                         allenatori: { ...formData.allenatori, dirigente: e.target.value }
                       })}
-                      className="w-full bg-white border border-zinc-200 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900"
+                      className="w-full bg-white border border-zinc-200 rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 font-medium"
                     />
                   </div>
                 </div>
@@ -952,9 +1143,10 @@ export default function TabArchivioSquadre({
                   ))}
                 </div>
               </div>
+            </div>
 
-              {/* Bottoni Footer Modal */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-zinc-200">
+            {/* Bottoni Footer Modal - Sticky in basso */}
+              <div className="flex items-center justify-end gap-3 px-6 py-3.5 border-t border-zinc-200 bg-zinc-50 sticky bottom-0 z-20 shrink-0">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
@@ -965,7 +1157,7 @@ export default function TabArchivioSquadre({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs uppercase font-barlow tracking-wider px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
+                  className="bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs uppercase font-barlow tracking-wider px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50 transition-all"
                 >
                   <Save className="w-4 h-4" />
                   <span>{isSubmitting ? "Salvataggio..." : "Salva Formazione"}</span>

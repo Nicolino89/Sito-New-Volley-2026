@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Shield, 
   MapPin, 
@@ -152,6 +153,7 @@ const CarouselHero = ({ carosello }: { carosello?: { foto: Array<{ url: string; 
 };
 
 export default function Societa({ societaInfo, societaConfig }: SocietaProps) {
+  const navigate = useNavigate();
   const [staffProfili, setStaffProfili] = useState<Record<string, StaffProfilo>>({});
   const [selectedProfilo, setSelectedProfilo] = useState<StaffProfilo | null>(null);
   const [loadingProfili, setLoadingProfili] = useState(true);
@@ -725,7 +727,22 @@ export default function Societa({ societaInfo, societaConfig }: SocietaProps) {
                                 {row.anno}
                               </td>
                               <td className="p-3 font-semibold text-zinc-200">
-                                {row.societa}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span>{row.societa}</span>
+                                  {(row.societa.toLowerCase().includes('new volley') || row.societa.toLowerCase().includes('nva')) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedProfilo(null);
+                                        navigate('/squadre-archivio');
+                                      }}
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#FFE600]/10 text-[#FFE600] hover:bg-[#FFE600]/25 border border-[#FFE600]/30 text-[9px] font-mono font-bold uppercase transition-colors cursor-pointer"
+                                      title="Consulta l'Archivio Storico Squadre"
+                                    >
+                                      Archivio ↗
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                               <td className="p-3 text-zinc-300">
                                 {row.ruolo}

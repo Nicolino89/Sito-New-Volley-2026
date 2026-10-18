@@ -24,7 +24,9 @@ import {
   User,
   Activity,
   TrendingUp,
-  ShieldCheck
+  ShieldCheck,
+  Briefcase,
+  Link as LinkIcon
 } from 'lucide-react';
 import { 
   SquadraStorica, 
@@ -34,8 +36,10 @@ import {
   Giocatore,
   getStoricoGiocatore,
   RecordStoricoCarriera,
-  formatRuoloGiocatore
+  formatRuoloGiocatore,
+  db
 } from '../firebase-societa';
+import { collection, getDocs } from 'firebase/firestore';
 import { updatePageMeta } from '../utils/seoHelper';
 
 interface SquadreArchivioProps {
@@ -62,6 +66,30 @@ export default function SquadreArchivio({ squadreInCorso, giocatori }: SquadreAr
   // Lightbox Foto di Squadra a Tutto Schermo
   const [lightboxData, setLightboxData] = useState<{ squadra: SquadraStorica; index: number } | null>(null);
 
+  // Elenco profili staff per collegamenti interni e cronostoria allenatori
+  const [staffList, setStaffList] = useState<Array<{
+    id: string;
+    nomeCognome: string;
+    qualificaTecnica?: string;
+    palmares?: string;
+    fotoUrl?: string;
+    storicoCarriera?: Array<{ anno: string; societa: string; ruolo: string; risultato?: string }>;
+  }>>([]);
+
+  // Modal Cronostoria Coach
+  const [selectedCoachModal, setSelectedCoachModal] = useState<{
+    nome: string;
+    coach?: {
+      id: string;
+      nomeCognome: string;
+      qualificaTecnica?: string;
+      palmares?: string;
+      fotoUrl?: string;
+      storicoCarriera?: Array<{ anno: string; societa: string; ruolo: string; risultato?: string }>;
+    };
+    squadreAllenate: SquadraStorica[];
+  } | null>(null);
+
   useEffect(() => {
     updatePageMeta({
       title: "Archivio Storico Squadre | New Volley Academy Forlì",
@@ -74,13 +102,59 @@ export default function SquadreArchivio({ squadreInCorso, giocatori }: SquadreAr
   const caricaArchivio = async () => {
     try {
       setLoading(true);
-      const data = await getStoricoSquadreAll();
+      const [data, staffSnap] = await Promise.all([
+        getStoricoSquadreAll(),
+        getDocs(collection(db, 'staff_profili'))
+      ]);
       setSquadreStoriche(data);
+
+      const staff: any[] = [];
+      staffSnap.forEach(d => {
+        const item = d.data();
+        if (item.nomeCognome) {
+          staff.push({
+            id: d.id,
+            nomeCognome: item.nomeCognome,
+            qualificaTecnica: item.qualificaTecnica || '',
+            palmares: item.palmares || '',
+            fotoUrl: item.foto?.url || item.fotoUrl || '',
+            storicoCarriera: item.storicoCarriera || []
+          });
+        }
+      });
+      setStaffList(staff);
     } catch (e) {
       console.error("Errore caricamento archivio storico squadre:", e);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSelectCoach = (coachName: string) => {
+    if (!coachName || !coachName.trim()) return;
+    const cleanName = coachName.trim().toLowerCase();
+
+    // Trova riscontro in staffList
+    const staffMatch = staffList.find(s => {
+      const sName = s.nomeCognome.trim().toLowerCase();
+      return sName === cleanName || sName.includes(cleanName) || cleanName.includes(sName);
+    });
+
+    // Trova tutte le squadre storiche collegate a questo allenatore
+    const squadreAllenate = squadreStoriche.filter(sq => {
+      const p = (sq.allenatori?.primo || '').trim().toLowerCase();
+      const s = (sq.allenatori?.secondo || '').trim().toLowerCase();
+      const d = (sq.allenatori?.dirigente || '').trim().toLowerCase();
+      return (p && (p === cleanName || p.includes(cleanName) || cleanName.includes(p))) ||
+             (s && (s === cleanName || s.includes(cleanName) || cleanName.includes(s))) ||
+             (d && (d === cleanName || d.includes(cleanName) || cleanName.includes(d)));
+    });
+
+    setSelectedCoachModal({
+      nome: coachName,
+      coach: staffMatch,
+      squadreAllenate
+    });
   };
 
   // Estrai tutte le stagioni uniche ordinate decrescenti
@@ -317,8 +391,10 @@ export default function SquadreArchivio({ squadreInCorso, giocatori }: SquadreAr
                 squadra={squadra} 
                 squadreInCorso={squadreInCorso}
                 giocatori={giocatori}
+                staffList={staffList}
                 onOpenLightbox={(idx) => setLightboxData({ squadra, index: idx ?? 0 })}
                 onSelectPlayer={(gio, curTeam) => setSelectedPlayerModal({ giocatore: gio, teamAttuale: curTeam })}
+                onSelectCoach={handleSelectCoach}
               />
             ))}
           </div>
@@ -354,6 +430,16 @@ export default function SquadreArchivio({ squadreInCorso, giocatori }: SquadreAr
         )}
       </AnimatePresence>
 
+      {/* MODAL CRONOSTORIA ALLENATORE / STAFF TECNICO */}
+      <AnimatePresence>
+        {selectedCoachModal && (
+          <ModalCronostoriaCoach 
+            data={selectedCoachModal}
+            onClose={() => setSelectedCoachModal(null)}
+          />
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }
@@ -366,8 +452,17 @@ interface CardSquadraStoricaProps {
   squadra: SquadraStorica;
   squadreInCorso?: RosaSquadra[];
   giocatori?: Giocatore[];
+  staffList?: Array<{
+    id: string;
+    nomeCognome: string;
+    qualificaTecnica?: string;
+    palmares?: string;
+    fotoUrl?: string;
+    storicoCarriera?: Array<{ anno: string; societa: string; ruolo: string; risultato?: string }>;
+  }>;
   onOpenLightbox: (fotoIndex?: number) => void;
   onSelectPlayer: (giocatore: Giocatore, teamAttuale: RosaSquadra | null) => void;
+  onSelectCoach?: (coachName: string) => void;
 }
 
 function findRegisteredPlayer(
@@ -423,8 +518,10 @@ function CardSquadraStorica({
   squadra, 
   squadreInCorso, 
   giocatori, 
+  staffList,
   onOpenLightbox, 
-  onSelectPlayer 
+  onSelectPlayer,
+  onSelectCoach
 }: CardSquadraStoricaProps) {
   const [tabAttivo, setTabAttivo] = useState<'roster' | 'cronistoria'>('roster');
   const [currentFotoIndex, setCurrentFotoIndex] = useState(0);
@@ -605,22 +702,29 @@ function CardSquadraStorica({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
                 {squadra.allenatori?.primo && (
-                  <div className="bg-zinc-900/90 border border-zinc-800 p-2.5 rounded-xl">
-                    <span className="text-[10px] text-zinc-500 block uppercase">1° Allenatore</span>
-                    <strong className="text-white text-xs">{squadra.allenatori.primo}</strong>
-                  </div>
+                  <CoachPill
+                    titolo="1° Allenatore"
+                    nome={squadra.allenatori.primo}
+                    staffList={staffList}
+                    onSelectCoach={onSelectCoach}
+                  />
                 )}
                 {squadra.allenatori?.secondo && (
-                  <div className="bg-zinc-900/90 border border-zinc-800 p-2.5 rounded-xl">
-                    <span className="text-[10px] text-zinc-500 block uppercase">2° Allenatore</span>
-                    <strong className="text-zinc-300 text-xs">{squadra.allenatori.secondo}</strong>
-                  </div>
+                  <CoachPill
+                    titolo="2° Allenatore"
+                    nome={squadra.allenatori.secondo}
+                    staffList={staffList}
+                    onSelectCoach={onSelectCoach}
+                  />
                 )}
                 {squadra.allenatori?.dirigente && (
-                  <div className="bg-zinc-900/90 border border-zinc-800 p-2.5 rounded-xl sm:col-span-2">
-                    <span className="text-[10px] text-zinc-500 block uppercase">Dirigente Accompagnatore</span>
-                    <strong className="text-zinc-300 text-xs">{squadra.allenatori.dirigente}</strong>
-                  </div>
+                  <CoachPill
+                    titolo="Dirigente Accompagnatore"
+                    nome={squadra.allenatori.dirigente}
+                    staffList={staffList}
+                    onSelectCoach={onSelectCoach}
+                    colSpan2
+                  />
                 )}
               </div>
             </div>
@@ -1173,6 +1277,289 @@ function DrawerAtletaStorico({ giocatore, teamAttuale, onClose }: DrawerAtletaSt
 
         </div>
 
+      </motion.div>
+    </div>
+  );
+}
+
+// ============================================================================
+// COMPONENTE: BOTTONE INTERATTIVO PER LO STAFF TECNICO (COLLEGAMENTO CRONOSTORIA)
+// ============================================================================
+function CoachPill({
+  titolo,
+  nome,
+  staffList,
+  onSelectCoach,
+  colSpan2
+}: {
+  titolo: string;
+  nome: string;
+  staffList?: Array<{
+    id: string;
+    nomeCognome: string;
+    qualificaTecnica?: string;
+    palmares?: string;
+    fotoUrl?: string;
+    storicoCarriera?: Array<{ anno: string; societa: string; ruolo: string; risultato?: string }>;
+  }>;
+  onSelectCoach?: (nome: string) => void;
+  colSpan2?: boolean;
+}) {
+  const match = staffList?.find(s => {
+    const sn = s.nomeCognome.trim().toLowerCase();
+    const n = nome.trim().toLowerCase();
+    return sn === n || sn.includes(n) || n.includes(sn);
+  });
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelectCoach?.(nome)}
+      className={`text-left p-2.5 rounded-xl border transition-all cursor-pointer group/coach flex items-center justify-between gap-2 ${
+        match 
+          ? 'bg-zinc-900/90 border-amber-400/40 hover:border-amber-400 hover:bg-zinc-850 shadow-sm' 
+          : 'bg-zinc-900/70 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-850'
+      } ${colSpan2 ? 'sm:col-span-2' : ''}`}
+      title={`Clicca per vedere la cronostoria di ${nome}`}
+    >
+      <div className="flex items-center gap-2.5 min-w-0">
+        <div className="w-8 h-8 rounded-lg overflow-hidden bg-zinc-800 border border-zinc-700/80 flex items-center justify-center shrink-0">
+          {match?.fotoUrl ? (
+            <img src={match.fotoUrl} alt={nome} className="w-full h-full object-cover" />
+          ) : (
+            <User className="w-4 h-4 text-zinc-500 group-hover/coach:text-amber-400 transition-colors" />
+          )}
+        </div>
+        <div className="min-w-0">
+          <span className="text-[10px] text-zinc-500 block uppercase font-mono">{titolo}</span>
+          <strong className="text-white text-xs truncate block group-hover/coach:text-amber-300 transition-colors">
+            {nome}
+          </strong>
+        </div>
+      </div>
+
+      <div className="shrink-0 flex items-center gap-1 text-[10px] font-mono text-zinc-500 group-hover/coach:text-amber-400 transition-colors">
+        {match ? (
+          <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-300 border border-amber-400/30 text-[9px] font-bold">
+            Staff NVA ↗
+          </span>
+        ) : (
+          <span className="text-[10px]">Cronostoria ↗</span>
+        )}
+      </div>
+    </button>
+  );
+}
+
+// ============================================================================
+// COMPONENTE: MODAL CRONOSTORIA COACH / ALLENATORE
+// ============================================================================
+function ModalCronostoriaCoach({
+  data,
+  onClose
+}: {
+  data: {
+    nome: string;
+    coach?: {
+      id: string;
+      nomeCognome: string;
+      qualificaTecnica?: string;
+      palmares?: string;
+      fotoUrl?: string;
+      storicoCarriera?: Array<{ anno: string; societa: string; ruolo: string; risultato?: string }>;
+    };
+    squadreAllenate: SquadraStorica[];
+  };
+  onClose: () => void;
+}) {
+  const navigate = useNavigate();
+  const { nome, coach, squadreAllenate } = data;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="absolute inset-0 bg-black/85 backdrop-blur-md cursor-pointer"
+      />
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 20 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+        className="relative z-10 w-full max-w-2xl bg-zinc-950 border border-amber-400/40 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[88vh]"
+      >
+        {/* Sticky Header */}
+        <div className="p-5 sm:p-6 border-b border-zinc-800 bg-zinc-900/80 flex items-start justify-between gap-4 shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-zinc-900 border-2 border-amber-400/50 shadow-lg flex items-center justify-center shrink-0">
+              {coach?.fotoUrl ? (
+                <img src={coach.fotoUrl} alt={nome} className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-8 h-8 sm:w-10 sm:h-10 text-zinc-600" />
+              )}
+            </div>
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300 text-[10px] font-mono font-bold uppercase tracking-wider">
+                <Briefcase className="w-3 h-3" />
+                <span>Profilo Tecnico &amp; Cronostoria</span>
+              </span>
+              <h3 className="text-xl sm:text-2xl font-black font-barlow uppercase tracking-tight text-white">
+                {coach?.nomeCognome || nome}
+              </h3>
+              {coach?.qualificaTecnica ? (
+                <p className="text-xs font-mono text-zinc-300">
+                  🎖️ {coach.qualificaTecnica}
+                </p>
+              ) : (
+                <p className="text-xs font-mono text-zinc-500">
+                  Tecnico / Staff New Volley Academy
+                </p>
+              )}
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors cursor-pointer border border-zinc-700 shrink-0"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Scrollable Body */}
+        <div className="overflow-y-auto p-5 sm:p-6 space-y-6 flex-1">
+          {/* Palmares se presente */}
+          {coach?.palmares && coach.palmares.trim() !== '' && (
+            <div className="bg-amber-400/5 border border-amber-400/20 p-4 rounded-2xl space-y-2">
+              <h4 className="text-xs font-bold font-mono uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-amber-400" />
+                <span>Palmarès &amp; Riconoscimenti</span>
+              </h4>
+              <p className="text-xs text-zinc-300 leading-relaxed font-inter whitespace-pre-line">
+                {coach.palmares}
+              </p>
+            </div>
+          )}
+
+          {/* Squadre Storiche Allenate in NVA */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+              <h4 className="text-xs font-bold font-mono uppercase tracking-widest text-white flex items-center gap-2">
+                <Award className="w-4 h-4 text-amber-400" />
+                <span>Formazioni Storiche Allenate in NVA ({squadreAllenate.length})</span>
+              </h4>
+              <span className="text-[10px] font-mono text-zinc-500">Archivio Ufficiale</span>
+            </div>
+
+            {squadreAllenate.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {squadreAllenate.map((sq) => {
+                  const isPrimo = (sq.allenatori?.primo || '').toLowerCase().includes(nome.toLowerCase());
+                  const isSecondo = (sq.allenatori?.secondo || '').toLowerCase().includes(nome.toLowerCase());
+                  const ruoloSvolto = isPrimo ? '1° Allenatore' : isSecondo ? '2° Allenatore' : 'Staff Tecnico';
+
+                  return (
+                    <div
+                      key={sq.id}
+                      className="p-3.5 rounded-2xl bg-zinc-900/80 border border-zinc-800/90 hover:border-amber-400/40 transition-colors space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-amber-400 font-bold bg-amber-400/10 px-2 py-0.5 rounded-md">
+                          Stagione {sq.stagione}
+                        </span>
+                        <span className="text-[10px] font-mono text-zinc-400 font-semibold uppercase">
+                          {ruoloSvolto}
+                        </span>
+                      </div>
+                      <div>
+                        <h5 className="text-sm font-bold font-barlow uppercase text-white truncate">
+                          {sq.nome_squadra}
+                        </h5>
+                        <p className="text-xs font-mono text-zinc-400">
+                          {sq.categoria}
+                        </p>
+                      </div>
+                      {sq.traguardo && (
+                        <div className="inline-flex items-center gap-1.5 text-[11px] font-mono text-amber-300 bg-black/40 px-2 py-0.5 rounded border border-amber-400/20">
+                          <Trophy className="w-3 h-3 text-amber-400 shrink-0" />
+                          <span className="truncate">{sq.traguardo}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-zinc-500 font-mono italic">
+                Nessuna squadra associata a questo nominativo nell'archivio storico digitale.
+              </p>
+            )}
+          </div>
+
+          {/* Storico Carriera Completo (se censito nel profilo Staff) */}
+          {coach?.storicoCarriera && coach.storicoCarriera.length > 0 && (
+            <div className="space-y-3 pt-2">
+              <h4 className="text-xs font-bold font-mono uppercase tracking-widest text-white flex items-center gap-2 border-b border-zinc-800 pb-2">
+                <History className="w-4 h-4 text-amber-400" />
+                <span>Cronostoria &amp; Carriera Completa</span>
+              </h4>
+
+              <div className="overflow-x-auto border border-zinc-800 rounded-2xl">
+                <table className="w-full text-left text-xs text-zinc-300">
+                  <thead className="bg-zinc-900 text-zinc-400 font-mono text-[10px] uppercase border-b border-zinc-800">
+                    <tr>
+                      <th className="p-2.5">Anno</th>
+                      <th className="p-2.5">Società</th>
+                      <th className="p-2.5">Ruolo</th>
+                      <th className="p-2.5">Risultato</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-900">
+                    {coach.storicoCarriera.map((c, idx) => (
+                      <tr key={idx} className="hover:bg-zinc-900/40">
+                        <td className="p-2.5 font-mono font-bold text-white text-[11px]">{c.anno}</td>
+                        <td className="p-2.5 font-semibold text-zinc-200">{c.societa}</td>
+                        <td className="p-2.5 text-zinc-400">{c.ruolo}</td>
+                        <td className="p-2.5 font-mono text-amber-400 font-bold text-[11px]">{c.risultato || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Sticky Footer */}
+        <div className="p-4 bg-zinc-900/90 border-t border-zinc-800 flex items-center justify-between gap-3 shrink-0">
+          {coach ? (
+            <button
+              onClick={() => {
+                onClose();
+                navigate('/societa');
+              }}
+              className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-amber-400 hover:text-amber-300 cursor-pointer"
+            >
+              <span>Vedi scheda completa nello Staff Societario</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <span className="text-[11px] font-mono text-zinc-500">
+              Profilo non ancora collegato all'organigramma attivo
+            </span>
+          )}
+
+          <button
+            onClick={onClose}
+            className="px-5 py-2 rounded-xl bg-amber-400 hover:bg-yellow-400 text-black font-barlow font-bold text-xs uppercase tracking-wider cursor-pointer transition-colors shadow-md ml-auto"
+          >
+            Chiudi
+          </button>
+        </div>
       </motion.div>
     </div>
   );
