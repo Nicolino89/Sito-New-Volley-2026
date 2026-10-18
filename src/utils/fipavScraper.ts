@@ -31,6 +31,9 @@ export function isNvaTeam(name: string, customOfficialName?: string): boolean {
   }
 
   // Strict NVA identifiers (prevents matching other clubs containing "Academy" or "Volley")
+  // Exclude opponent club "SAMMA PROJECT SALFEP FC"
+  if (n.includes('samma')) return false;
+
   return (
     n.includes('new volley') ||
     n.includes('new-volley') ||
@@ -38,7 +41,7 @@ export function isNvaTeam(name: string, customOfficialName?: string): boolean {
     n.startsWith('nva ') ||
     n.endsWith(' nva') ||
     n.includes(' nva ') ||
-    (n.includes('salfep') && n.includes('forli'))
+    (n.includes('salfep') && (n.includes('forli') || n.includes('academy') || n.includes('nva')))
   );
 }
 
@@ -226,6 +229,47 @@ export function parseFipavHtml(
             setPersi,
             isMyTeam
           });
+        }
+      }
+    }
+  }
+
+  // Strategy C: Plain-Text / Tabular Text Fallback (when user copies directly from rendered webpage text)
+  if (classifica.length === 0 && html) {
+    const lines = html.split(/[\r\n]+/);
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      // Tab-separated or multi-space separated tokens
+      const parts = trimmed.split(/\t+| {2,}/).map(cleanString).filter(Boolean);
+      if (parts.length >= 3) {
+        const firstNum = parseInt(parts[0].replace(/[^\d]/g, ''), 10);
+        if (!isNaN(firstNum) && firstNum > 0 && firstNum <= 30) {
+          const teamName = parts[1];
+          const points = parseInt(parts[2].replace(/[^\d]/g, ''), 10);
+          if (teamName && teamName.length >= 2 && !isNaN(points) && !teamName.toLowerCase().includes('squadra')) {
+            const giocate = parts[3] ? parseInt(parts[3].replace(/[^\d]/g, ''), 10) || 0 : 0;
+            const vinte = parts[4] ? parseInt(parts[4].replace(/[^\d]/g, ''), 10) || 0 : 0;
+            const perse = parts[5] ? parseInt(parts[5].replace(/[^\d]/g, ''), 10) || 0 : 0;
+            const setVinti = parts[6] ? parseInt(parts[6].replace(/[^\d]/g, ''), 10) || 0 : 0;
+            const setPersi = parts[7] ? parseInt(parts[7].replace(/[^\d]/g, ''), 10) || 0 : 0;
+
+            const isMyTeam = customOfficialName && customOfficialName.trim()
+              ? (cleanString(teamName).toLowerCase() === customOfficialName.toLowerCase().trim() || isNvaTeam(teamName, customOfficialName))
+              : isNvaTeam(teamName, myTeamName);
+
+            classifica.push({
+              pos: firstNum,
+              squadra: teamName,
+              punti: points,
+              giocate,
+              vinte,
+              perse,
+              setVinti,
+              setPersi,
+              isMyTeam
+            });
+          }
         }
       }
     }
