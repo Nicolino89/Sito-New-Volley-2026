@@ -87,7 +87,7 @@ export default function TabGareFipav({
   }, [activeTeam?.id]);
 
   useEffect(() => {
-    if (editingMatch) {
+    if (editingMatch || showHtmlPaste) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -95,7 +95,7 @@ export default function TabGareFipav({
     return () => {
       document.body.style.overflow = '';
     };
-  }, [editingMatch]);
+  }, [editingMatch, showHtmlPaste]);
 
   // Handle selecting which team in the standings is the official club team
   const handleSelectOfficialTeam = async (teamName: string) => {
@@ -573,6 +573,16 @@ export default function TabGareFipav({
 
                   <div className="flex items-center gap-2 flex-wrap">
                     <button
+                      type="button"
+                      onClick={() => setShowHtmlPaste(true)}
+                      className="bg-zinc-900 hover:bg-black text-brand-yellow font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 shadow border border-zinc-750 cursor-pointer transition-all"
+                      title="Sincronizza calendario e classifica incollando il codice sorgente FIPAV"
+                    >
+                      <Code className="w-4 h-4 text-brand-yellow" />
+                      <span>📋 Sincronizza / Incolla da FIPAV</span>
+                    </button>
+
+                    <button
                       onClick={handleOpenNewMatch}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 shadow cursor-pointer transition-all"
                     >
@@ -790,12 +800,12 @@ export default function TabGareFipav({
                       <div className="flex items-center gap-2 flex-wrap">
                         <button
                           type="button"
-                          onClick={() => setShowHtmlPaste(!showHtmlPaste)}
-                          className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-1.5 uppercase tracking-wider border border-zinc-700 cursor-pointer transition-all"
+                          onClick={() => setShowHtmlPaste(true)}
+                          className="bg-zinc-800 hover:bg-zinc-700 text-brand-yellow font-bold px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-1.5 uppercase tracking-wider border border-zinc-700 cursor-pointer transition-all"
                           title="Se il link è protetto da firewall, incolla il sorgente della pagina per importare in 1 secondo"
                         >
                           <Code className="w-3.5 h-3.5 text-brand-yellow" />
-                          <span>{showHtmlPaste ? 'Chiudi Incolla' : '📋 Incolla Sorgente'}</span>
+                          <span>📋 Incolla Sorgente FIPAV</span>
                         </button>
 
                         <button
@@ -898,60 +908,26 @@ export default function TabGareFipav({
                       )}
                     </div>
 
-                    {/* EXPANDABLE PASTE HTML BOX (100% RELIABLE ZERO FIREWALL BLOCK) */}
-                    {showHtmlPaste && (
-                      <div className="p-4 bg-zinc-950 border border-brand-yellow/50 rounded-xl space-y-3 animate-fade-in">
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs font-bold text-brand-yellow uppercase flex items-center gap-1.5">
-                            <FileText className="w-4 h-4" />
-                            Importazione Rapida da Sorgente Pagina FIPAV / CRER
-                          </span>
-                          <span className="text-[11px] text-zinc-400">Zero dipendenza da server o proxy</span>
-                        </div>
-                        <p className="text-[11px] text-zinc-300 leading-relaxed">
-                          Apri la pagina FIPAV nel browser, premi <b>Ctrl+U</b> (o tasto destro &rarr; <i>Visualizza sorgente pagina</i>), premi <b>Ctrl+A</b>, <b>Ctrl+C</b> e incolla qui sotto:
+                    {/* QUICK SYNC SOURCE BANNER */}
+                    <div className="p-4 bg-zinc-950 border border-zinc-800 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                      <div className="space-y-0.5">
+                        <span className="font-bold text-brand-yellow flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                          <Code className="w-4 h-4" />
+                          Importazione Rapida via Codice Sorgente FIPAV (Ctrl+U)
+                        </span>
+                        <p className="text-zinc-400 text-xs">
+                          Se la sincronizzazione automatica dal server è protetta da firewall, copia e incolla direttamente il sorgente per aggiornare sia le gare che la classifica in 1 click.
                         </p>
-                        <textarea
-                          rows={5}
-                          value={pastedHtml}
-                          onChange={(e) => setPastedHtml(e.target.value)}
-                          placeholder="Incolla qui l'HTML o il testo copiato dalla pagina del campionato..."
-                          className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-xs font-mono text-zinc-200 focus:outline-none focus:border-brand-yellow"
-                        />
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-2 border-t border-zinc-800">
-                          <span className="text-[10px] text-zinc-400">
-                            🛡️ I risultati manuali, le partite terminate e i link Google Maps sono automaticamente protetti.
-                          </span>
-                          <div className="flex items-center justify-end gap-2 flex-wrap">
-                            <button
-                              type="button"
-                              onClick={() => setShowHtmlPaste(false)}
-                              className="px-3 py-1.5 text-xs text-zinc-400 hover:text-white"
-                            >
-                              Annulla
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleImportPastedHtml(true)}
-                              className="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 font-bold px-3 py-2 rounded-xl text-xs uppercase tracking-wider shadow cursor-pointer transition-all flex items-center gap-1.5"
-                              title="Aggiorna esclusivamente la tabella classifica senza toccare le gare esistenti"
-                            >
-                              <Trophy className="w-4 h-4 text-emerald-400" />
-                              <span>Aggiorna Solo Classifica</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleImportPastedHtml(false)}
-                              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-wider shadow cursor-pointer transition-all flex items-center gap-1.5"
-                              title="Aggiorna sia la classifica che il calendario preservando tutti i punteggi manuali inseriti"
-                            >
-                              <Check className="w-4 h-4" />
-                              <span>Aggiorna Tutto (Gare + Classifica)</span>
-                            </button>
-                          </div>
-                        </div>
                       </div>
-                    )}
+                      <button
+                        type="button"
+                        onClick={() => setShowHtmlPaste(true)}
+                        className="bg-brand-yellow hover:bg-yellow-400 text-black font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider shadow cursor-pointer transition-all flex items-center gap-1.5 shrink-0"
+                      >
+                        <Code className="w-4 h-4" />
+                        <span>Apri Finestra Incolla Sorgente</span>
+                      </button>
+                    </div>
 
 
                     {/* Synchronized Standings Table Preview */}
@@ -1301,6 +1277,121 @@ export default function TabGareFipav({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+ 
+      {/* ========================================================================= */}
+      {/* MODAL INCOLLA SORGENTE FIPAV / CRER (ACCESSIBILE DA TUTTE LE SCHEDE) */}
+      {/* ========================================================================= */}
+      {showHtmlPaste && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-950 border border-brand-yellow/40 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-white">
+            <div className="flex justify-between items-start border-b border-zinc-800 pb-3">
+              <div>
+                <span className="text-[10px] font-bold text-brand-yellow uppercase tracking-wider font-mono">
+                  {activeTeam?.nome_squadra} • Sincronizzazione Campionato
+                </span>
+                <h3 className="text-base font-bold text-white flex items-center gap-2 mt-0.5">
+                  <Code className="w-5 h-5 text-brand-yellow" />
+                  Sincronizzazione da Sorgente FIPAV / CRER
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowHtmlPaste(false)}
+                className="text-zinc-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-3.5 space-y-2 text-xs">
+                <p className="text-zinc-200 font-semibold">
+                  Come aggiornare in 3 passaggi:
+                </p>
+                <ol className="list-decimal list-inside space-y-1 text-zinc-300">
+                  <li>
+                    Apri la pagina del campionato su FIPAV o CRER{' '}
+                    {fipavUrl && (
+                      <a
+                        href={fipavUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-brand-yellow hover:underline ml-1 font-semibold"
+                      >
+                        (Apri Link <ExternalLink className="w-3 h-3" />)
+                      </a>
+                    )}
+                  </li>
+                  <li>Nel browser premi <b>Ctrl + U</b> (o tasto destro &rarr; <i>Visualizza sorgente pagina</i>)</li>
+                  <li>Premi <b>Ctrl + A</b> (seleziona tutto), poi <b>Ctrl + C</b> (copia) e incolla nel riquadro qui sotto:</li>
+                </ol>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs">
+                  <label className="font-bold text-zinc-300 uppercase tracking-wider text-[11px]">
+                    Codice Sorgente HTML o Testo della Pagina:
+                  </label>
+                  {pastedHtml && (
+                    <span className="text-emerald-400 font-mono text-[11px]">
+                      ✓ {pastedHtml.length.toLocaleString('it-IT')} caratteri incollati
+                    </span>
+                  )}
+                </div>
+                <textarea
+                  rows={8}
+                  value={pastedHtml}
+                  onChange={(e) => setPastedHtml(e.target.value)}
+                  placeholder="Incolla qui il codice sorgente (inizia con <!DOCTYPE html> o <html...)..."
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-xs font-mono text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-brand-yellow"
+                />
+              </div>
+
+              <div className="p-3 bg-zinc-900/60 border border-zinc-800 rounded-xl text-[11px] text-zinc-400 space-y-1">
+                <p className="flex items-center gap-1.5 text-zinc-300 font-medium">
+                  <Shield className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span><b>Protezione Intelligente:</b> I risultati manuali, le partite già giocate e i link Google Maps inseriti vengono preservati automaticamente.</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Pulsanti Azione */}
+            <div className="pt-3 border-t border-zinc-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setShowHtmlPaste(false)}
+                className="px-4 py-2 text-xs font-medium text-zinc-400 hover:text-white transition-colors cursor-pointer text-center"
+              >
+                Annulla
+              </button>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleImportPastedHtml(true)}
+                  disabled={!pastedHtml.trim()}
+                  className="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider shadow cursor-pointer transition-all flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Aggiorna esclusivamente la tabella classifica senza toccare le gare esistenti"
+                >
+                  <Trophy className="w-4 h-4 text-emerald-400" />
+                  <span>Aggiorna Solo Classifica</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleImportPastedHtml(false)}
+                  disabled={!pastedHtml.trim()}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-900/30 cursor-pointer transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Aggiorna sia la classifica che il calendario gare in un click"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Aggiorna Tutto (Gare + Classifica)</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
