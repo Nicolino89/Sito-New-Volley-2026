@@ -70,6 +70,10 @@ export default function TabGareFipav({
   const [editingMatch, setEditingMatch] = useState<PartitaCampionato | null>(null);
   const [isNewMatch, setIsNewMatch] = useState(false);
 
+  // HTML Paste Modal State
+  const [showHtmlPaste, setShowHtmlPaste] = useState(false);
+  const [pastedHtml, setPastedHtml] = useState('');
+
   // Sync state when active team changes
   useEffect(() => {
     if (activeTeam) {
@@ -178,9 +182,6 @@ export default function TabGareFipav({
     }
   };
 
-  // HTML Paste Fallback State
-  const [showHtmlPaste, setShowHtmlPaste] = useState(false);
-  const [pastedHtml, setPastedHtml] = useState('');
 
   // Handle Pasted HTML / Source Extraction
   const handleImportPastedHtml = async (onlyClassifica: boolean = false) => {
