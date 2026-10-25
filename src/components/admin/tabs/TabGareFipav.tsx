@@ -208,7 +208,7 @@ export default function TabGareFipav({
       // Auto-populate external URL if detected from HTML and currently empty
       if (res.detectedUrl) {
         if (!fipavUrl) setFipavUrl(res.detectedUrl);
-        if (!linkEsternoClassifica) setLinkEsternoClassifica(res.detectedUrl);
+        if (!linkEsterno) setLinkEsterno(res.detectedUrl);
       }
 
       if (mode === 'ONLY_GARE') {
@@ -227,7 +227,7 @@ export default function TabGareFipav({
           partite: mergedPartite,
           classifica: activeTeam.classifica || classifica, // Non tocca la classifica!
           tipo_classifica: (activeTeam as any).tipo_classifica || tipoClassifica || 'LINK_ESTERNO',
-          link_esterno_classifica: linkEsternoClassifica || fipavUrl || res.detectedUrl || activeTeam.fipav_url
+          link_esterno_classifica: linkEsterno || fipavUrl || res.detectedUrl || activeTeam.fipav_url
         } as any);
 
         await loadAllData();
@@ -250,7 +250,7 @@ export default function TabGareFipav({
           classifica: res.classifica,
           partite: partite, // Calendario esistente intatto!
           tipo_classifica: 'FIPAV_SYNC',
-          link_esterno_classifica: fipavUrl || res.detectedUrl || activeTeam.fipav_url
+          link_esterno_classifica: linkEsterno || fipavUrl || res.detectedUrl || activeTeam.fipav_url
         } as any);
 
         await loadAllData();
@@ -280,7 +280,7 @@ export default function TabGareFipav({
         classifica: newClassifica,
         partite: mergedPartite,
         tipo_classifica: targetTipoClassifica,
-        link_esterno_classifica: linkEsternoClassifica || fipavUrl || res.detectedUrl || activeTeam.fipav_url
+        link_esterno_classifica: linkEsterno || fipavUrl || res.detectedUrl || activeTeam.fipav_url
       } as any);
 
       // Aggiorna la Prossima Gara sulla Home con la prima non disputata
