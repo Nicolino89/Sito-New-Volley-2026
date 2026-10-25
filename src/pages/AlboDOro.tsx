@@ -733,6 +733,17 @@ interface ModalProps {
 function ModalDettaglioGiocatrice({ atleta, tuttiAtleti, giocatori = [], squadre = [], onClose }: ModalProps) {
   const [copied, setCopied] = useState(false);
 
+  // Supporto tasto Esc per chiudere la scheda
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   // Trova l'eventuale atleta registrato nella rosa ufficiale
   const linkedPlayer = React.useMemo(() => {
     if (atleta.giocatoreId) {
@@ -821,7 +832,10 @@ function ModalDettaglioGiocatrice({ atleta, tuttiAtleti, giocatori = [], squadre
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-[#07080b] flex flex-col justify-between select-none safe-bottom">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-[#07080b] flex flex-col justify-between select-none safe-bottom cursor-default"
+    >
       
       {/* ========================================================================= */}
       {/* TUTTO LO SFONDO: FOTOGRAFIA DELL'ATLETA ALLARGATA & SFOCATA (O PALAZZETTO) */}
@@ -867,7 +881,10 @@ function ModalDettaglioGiocatrice({ atleta, tuttiAtleti, giocatori = [], squadre
       {/* ========================================================================= */}
       {/* BARRA SUPERIORE DI CONTROLLO & NAVIGAZIONE RAPIDA */}
       {/* ========================================================================= */}
-      <header className="sticky top-0 z-30 w-full px-4 sm:px-8 py-3.5 backdrop-blur-xl bg-black/60 border-b border-white/10 flex items-center justify-between">
+      <header 
+        onClick={(e) => e.stopPropagation()}
+        className="sticky top-0 z-30 w-full px-4 sm:px-8 py-3.5 backdrop-blur-xl bg-black/85 border-b border-white/10 flex items-center justify-between"
+      >
         <button
           onClick={onClose}
           className="flex items-center gap-2 text-xs sm:text-sm font-barlow font-bold uppercase tracking-wider text-zinc-300 hover:text-[#FFE600] transition-colors cursor-pointer group"
@@ -907,7 +924,7 @@ function ModalDettaglioGiocatrice({ atleta, tuttiAtleti, giocatori = [], squadre
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           
           {/* COLONNA SINISTRA: FOTO DELLA GIOCATRICE IN PRIMO PIANO (SENZA CORNICE DI LEGNO NÉ PASSEPARTOUT) */}
-          <div className="lg:col-span-5 flex flex-col items-center">
+          <div onClick={(e) => e.stopPropagation()} className="lg:col-span-5 flex flex-col items-center">
             <div className="relative w-full max-w-[360px] group">
               
               {/* Effetto faretto oro soffuso posteriore */}
@@ -944,7 +961,7 @@ function ModalDettaglioGiocatrice({ atleta, tuttiAtleti, giocatori = [], squadre
           </div>
 
           {/* COLONNA DESTRA: NOME GIGANTESCO & BACHECA PALMARÈS (MULTI-VITTORIE) */}
-          <div className="lg:col-span-7 space-y-6 text-left">
+          <div onClick={(e) => e.stopPropagation()} className="lg:col-span-7 space-y-6 text-left">
             
             {/* Intestazione Atleta */}
             <div className="space-y-2">
@@ -1100,7 +1117,10 @@ function ModalDettaglioGiocatrice({ atleta, tuttiAtleti, giocatori = [], squadre
       </main>
 
       {/* FOOTER DI CHIUSURA SCHEDA */}
-      <footer className="relative z-20 py-4 text-center text-xs text-zinc-500 font-mono border-t border-white/10 backdrop-blur-md bg-black/40">
+      <footer 
+        onClick={(e) => e.stopPropagation()}
+        className="relative z-20 py-4 text-center text-xs text-zinc-500 font-mono border-t border-white/10 backdrop-blur-md bg-black/40"
+      >
         <p>New Volley Academy Forlì • Hall of Fame &amp; Palmarès Ufficiale</p>
       </footer>
 
@@ -1333,6 +1353,23 @@ function ModalDettaglioOspite({ ospite, onClose }: ModalDettaglioOspiteProps) {
     }
   };
 
+  // Supporto tasto Esc per chiudere la scheda
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (fullscreenPhoto) {
+          setFullscreenPhoto(null);
+        } else if (zoomMomento) {
+          setZoomMomento(false);
+        } else {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose, fullscreenPhoto, zoomMomento]);
+
   // Codice univoco pass realistico basato su ID o nome
   const passCode = React.useMemo(() => {
     const raw = (ospite.id || ospite.nome).replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6);
@@ -1340,7 +1377,10 @@ function ModalDettaglioOspite({ ospite, onClose }: ModalDettaglioOspiteProps) {
   }, [ospite.id, ospite.nome, ospite.anno]);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-[#0a0c10] flex flex-col justify-between select-none safe-bottom">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-[#0a0c10] flex flex-col justify-between select-none safe-bottom cursor-default"
+    >
       
       {/* ========================================================================= */}
       {/* SFONDO DINAMICO D'ONORE: FIAMME VIVE E FUMO DORATO FOTOREALISTICO ORIGINALE */}
@@ -1369,9 +1409,12 @@ function ModalDettaglioOspite({ ospite, onClose }: ModalDettaglioOspiteProps) {
       </div>
 
       {/* ========================================================================= */}
-      {/* HEADER: CONSOLE VIP PASS CHIARA & CRISTALLINA                              */}
+      {/* HEADER: CONSOLE VIP PASS CHIARA & CRISTALLINA (STICKY: SEMPRE VISIBILE IN ALTO) */}
       {/* ========================================================================= */}
-      <header className="relative z-30 w-full px-4 sm:px-8 py-3.5 flex items-center justify-between border-b border-white/10 backdrop-blur-xl bg-black/60 shadow-lg text-white">
+      <header 
+        onClick={(e) => e.stopPropagation()}
+        className="sticky top-0 z-30 w-full px-4 sm:px-8 py-3.5 flex items-center justify-between border-b border-white/10 backdrop-blur-xl bg-black/85 shadow-lg text-white"
+      >
         
         {/* Pulsante Torna ai Totem */}
         <button
@@ -1429,7 +1472,10 @@ function ModalDettaglioOspite({ ospite, onClose }: ModalDettaglioOspiteProps) {
         {/* ========================================================================= */}
         {/* BANNER DI TESTA: NERO, TITANIO & ORO AD ALTO IMPATTO TRIDIMENSIONALE      */}
         {/* ========================================================================= */}
-        <div className="relative p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-[#141620] via-[#0e1017] to-[#090a0f] border-2 border-amber-400 shadow-[0_20px_50px_rgba(0,0,0,0.45),0_0_35px_rgba(245,158,11,0.2)] overflow-hidden text-white">
+        <div 
+          onClick={(e) => e.stopPropagation()}
+          className="relative p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-[#141620] via-[#0e1017] to-[#090a0f] border-2 border-amber-400 shadow-[0_20px_50px_rgba(0,0,0,0.45),0_0_35px_rgba(245,158,11,0.2)] overflow-hidden text-white"
+        >
           
           {/* Filigrana tipografica ARENA di sfondo */}
           <div className="absolute right-4 -bottom-6 pointer-events-none select-none text-white/[0.04] font-black font-barlow uppercase text-7xl sm:text-9xl tracking-tighter">
@@ -1510,7 +1556,7 @@ function ModalDettaglioOspite({ ospite, onClose }: ModalDettaglioOspiteProps) {
           {/* ======================================================================= */}
           {/* COLONNA SINISTRA (lg:col-span-5): IL TOTEM MONUMENTALE DA PALAZZETTO (CAROSELLO) */}
           {/* ======================================================================= */}
-          <div className="lg:col-span-5 flex flex-col items-center w-full">
+          <div onClick={(e) => e.stopPropagation()} className="lg:col-span-5 flex flex-col items-center w-full">
             <div className="relative w-full max-w-[400px] rounded-3xl overflow-hidden bg-gradient-to-b from-[#181a24] via-[#0e1017] to-[#07080b] border-2 border-amber-400 shadow-[0_25px_60px_rgba(0,0,0,0.55),0_0_35px_rgba(245,158,11,0.3)] group">
               
               {/* Testata Metallica con Staffa e Rivetti Industriali */}
@@ -1645,7 +1691,7 @@ function ModalDettaglioOspite({ ospite, onClose }: ModalDettaglioOspiteProps) {
           {/* ======================================================================= */}
           {/* COLONNA DESTRA (lg:col-span-7): COURTSIDE DOSSIER, CITAZIONE & FOTO CAMPO */}
           {/* ======================================================================= */}
-          <div className="lg:col-span-7 space-y-6">
+          <div onClick={(e) => e.stopPropagation()} className="lg:col-span-7 space-y-6">
             
             {/* SCHEDA 1: OCCASIONE DEL PASSAGGIO / PARTECIPAZIONI AGLI EVENTI */}
             {(() => {
@@ -1818,7 +1864,10 @@ function ModalDettaglioOspite({ ospite, onClose }: ModalDettaglioOspiteProps) {
       {/* ========================================================================= */}
       {/* FOOTER DEL PASS STAGE                                                     */}
       {/* ========================================================================= */}
-      <footer className="relative z-20 py-4 text-center text-xs text-zinc-500 font-mono border-t border-white/10 bg-[#06070a]/90 backdrop-blur-md">
+      <footer 
+        onClick={(e) => e.stopPropagation()}
+        className="relative z-20 py-4 text-center text-xs text-zinc-500 font-mono border-t border-white/10 bg-[#06070a]/90 backdrop-blur-md"
+      >
         <p>New Volley Academy Forlì • Grandi Personalità &amp; Campioni della Pallavolo</p>
       </footer>
 
@@ -1864,7 +1913,7 @@ function ModalDettaglioOspite({ ospite, onClose }: ModalDettaglioOspiteProps) {
           onClick={() => setZoomMomento(false)}
           className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 cursor-pointer"
         >
-          <div className="relative max-w-5xl max-h-[90vh] rounded-3xl overflow-hidden border-2 border-amber-400 shadow-2xl">
+          <div className="relative max-w-5xl max-h-[90vh] rounded-3xl overflow-hidden border-2 border-amber-400 shadow-2xl" onClick={e => e.stopPropagation()}>
             <img 
               src={ospite.fotoMomentoUrl} 
               alt={`Momento ${ospite.nome}`}
