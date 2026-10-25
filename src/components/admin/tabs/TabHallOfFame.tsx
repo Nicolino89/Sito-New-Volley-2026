@@ -22,7 +22,8 @@ import {
   Camera,
   Layers,
   Star,
-  Check
+  Check,
+  Images
 } from 'lucide-react';
 import { 
   AtletaPremiato, 
@@ -43,7 +44,8 @@ import {
   addOspiteIllustre,
   updateOspiteIllustre,
   deleteOspiteIllustre,
-  formatRuoloGiocatore
+  formatRuoloGiocatore,
+  getAllFotoOspite
 } from '../../../firebase-societa';
 import { compressImage, IMAGE_PRESETS } from '../../../utils/imageCompressor';
 
@@ -104,6 +106,7 @@ export default function TabHallOfFame({
   const [editingOspiteId, setEditingOspiteId] = useState<string | null>(null);
   const [savingOspite, setSavingOspite] = useState(false);
   const [uploadingFotoOspite, setUploadingFotoOspite] = useState(false);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
   const [formOspite, setFormOspite] = useState<Omit<OspiteIllustre, 'id'>>({
     nome: '',
     ruoloTitolo: '',
@@ -113,6 +116,7 @@ export default function TabHallOfFame({
     testoPassaggio: '',
     testoIspirazione: '',
     fotoUrl: '',
+    fotoGallery: [],
     fotoPositionY: 30,
     fotoPositionX: 50,
     descrizione: '',
@@ -537,6 +541,7 @@ export default function TabHallOfFame({
       testoPassaggio: '',
       testoIspirazione: '',
       fotoUrl: '',
+      fotoGallery: [],
       fotoPositionY: 30,
       fotoPositionX: 50,
       descrizione: '',
@@ -551,6 +556,10 @@ export default function TabHallOfFame({
   const handleOpenEditOspite = (item: OspiteIllustre) => {
     setEditingOspiteId(item.id);
     const parsedEventi = getEventiOspite(item);
+    const allPhotos = getAllFotoOspite(item);
+    const mainPhoto = item.fotoUrl || allPhotos[0] || '';
+    const otherPhotos = allPhotos.filter(u => u !== mainPhoto);
+
     setFormOspite({
       nome: item.nome || '',
       ruoloTitolo: item.ruoloTitolo || '',
@@ -559,7 +568,8 @@ export default function TabHallOfFame({
       eventiPartecipazione: parsedEventi.length > 0 ? parsedEventi : [{ anno: item.anno || '', evento: item.occasione || '' }],
       testoPassaggio: item.testoPassaggio || '',
       testoIspirazione: item.testoIspirazione || '',
-      fotoUrl: item.fotoUrl || '',
+      fotoUrl: mainPhoto,
+      fotoGallery: otherPhotos,
       fotoPositionY: item.fotoPositionY ?? 30,
       fotoPositionX: item.fotoPositionX ?? 50,
       descrizione: item.descrizione || '',
@@ -645,6 +655,94 @@ export default function TabHallOfFame({
     }
   };
 
+  const handleFotoGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingGallery(true);
+    showToast(`Caricamento e compressione di ${files.length} foto in corso...`, "info");
+
+    const newUrls: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        let blobToUpload: Blob = file;
+        try {
+          const compResult = await compressImage(file, IMAGE_PRESETS.ATLETA);
+          blobToUpload = compResult.blob;
+        } catch (compErr) {
+          console.warn("Compressione foto galleria fallita:", compErr);
+        }
+
+        const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const storagePromise = caricaBlobSuStorage(blobToUpload, `ospiti_illustri/gallery/${Date.now()}_${i}_${cleanName}.webp`);
+        const timeoutPromise = new Promise<string>((_, reject) => 
+          setTimeout(() => reject(new Error("Timeout upload foto galleria")), 10000)
+        );
+
+        const url = await Promise.race([storagePromise, timeoutPromise]);
+        newUrls.push(url);
+      } catch (err) {
+        console.warn("Upload Storage fallito, uso Base64 locale:", err);
+        try {
+          const reader = new FileReader();
+          const dataUrl = await new Promise<string>((resolve) => {
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          });
+          newUrls.push(dataUrl);
+        } catch {}
+      }
+    }
+
+    if (newUrls.length > 0) {
+      setFormOspite(prev => {
+        // Se non c'è ancora una foto principale, assegna la prima come principale
+        if (!prev.fotoUrl) {
+          const [first, ...rest] = newUrls;
+          return {
+            ...prev,
+            fotoUrl: first,
+            fotoGallery: [...(prev.fotoGallery || []), ...rest]
+          };
+        }
+        return {
+          ...prev,
+          fotoGallery: [...(prev.fotoGallery || []), ...newUrls]
+        };
+      });
+      showToast(`${newUrls.length} ${newUrls.length === 1 ? 'foto aggiunta' : 'foto aggiunte'} alla galleria dell'ospite!`, "success");
+    }
+
+    setUploadingGallery(false);
+    if (e.target) e.target.value = '';
+  };
+
+  const handleSetFotoPrincipale = (targetUrl: string) => {
+    setFormOspite(prev => {
+      const oldPrimary = prev.fotoUrl;
+      const currentGallery = prev.fotoGallery || [];
+      const updatedGallery = currentGallery.filter(u => u !== targetUrl);
+      if (oldPrimary && oldPrimary !== targetUrl && !updatedGallery.includes(oldPrimary)) {
+        updatedGallery.unshift(oldPrimary);
+      }
+      return {
+        ...prev,
+        fotoUrl: targetUrl,
+        fotoGallery: updatedGallery
+      };
+    });
+    showToast("Foto impostata come Principale (mostrata nella schermata d'onore)!", "success");
+  };
+
+  const handleRemoveFotoGallery = (targetUrl: string) => {
+    setFormOspite(prev => ({
+      ...prev,
+      fotoGallery: (prev.fotoGallery || []).filter(u => u !== targetUrl)
+    }));
+    showToast("Foto rimossa dalla galleria.", "info");
+  };
+
   const handleSaveOspite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formOspite.nome.trim() || !formOspite.ruoloTitolo.trim()) {
@@ -652,11 +750,11 @@ export default function TabHallOfFame({
       return;
     }
     if (!formOspite.fotoUrl) {
-      showToast("Carica una foto per l'ospite illustre.", "error");
+      showToast("Carica almeno una foto per l'ospite illustre.", "error");
       return;
     }
-    if (uploadingFotoOspite) {
-      showToast("Attendi il completamento del caricamento della foto...", "info");
+    if (uploadingFotoOspite || uploadingGallery) {
+      showToast("Attendi il completamento del caricamento delle foto...", "info");
       return;
     }
 
@@ -674,6 +772,8 @@ export default function TabHallOfFame({
       } catch (e) {}
     }
 
+    const cleanGallery = (formOspite.fotoGallery || []).filter(u => u && u.trim() && u !== finalFotoUrl);
+
     const eventiValidi = (formOspite.eventiPartecipazione || []).filter(e => e.anno?.trim() || e.evento?.trim());
     const fallbackAnno = eventiValidi.map(e => e.anno?.trim()).filter(Boolean).join(' - ') || formOspite.anno || '2024';
     const fallbackOccasione = eventiValidi.map(e => e.evento?.trim()).filter(Boolean).join(' - ') || formOspite.occasione || 'Ospite NVA';
@@ -683,7 +783,8 @@ export default function TabHallOfFame({
       eventiPartecipazione: eventiValidi,
       anno: fallbackAnno,
       occasione: fallbackOccasione,
-      fotoUrl: finalFotoUrl
+      fotoUrl: finalFotoUrl,
+      fotoGallery: cleanGallery
     };
 
     try {
@@ -1917,89 +2018,177 @@ export default function TabHallOfFame({
                 </div>
               </div>
 
-              {/* Sezione Foto con Upload rapido e Regolazione X/Y */}
+              {/* Sezione Foto con Upload Principale, Galleria Carosello e Regolazione X/Y */}
               <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-2xl space-y-4">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-zinc-200/80 pb-3">
                   <div>
                     <h4 className="text-xs font-mono font-bold uppercase text-zinc-900 flex items-center gap-1.5">
-                      <Camera className="w-3.5 h-3.5 text-amber-500" />
-                      <span>Foto del Quadro Ospite *</span>
+                      <Camera className="w-4 h-4 text-amber-500" />
+                      <span>Foto Principale &amp; Galleria Carosello *</span>
                     </h4>
-                    <p className="text-[11px] text-zinc-500">Ottimizzazione WebP automatica ad alta velocità.</p>
+                    <p className="text-[11px] text-zinc-500 mt-0.5">
+                      La <strong>Foto Principale</strong> compare nella pagina generale. Aprendo la scheda, tutte le foto formeranno il <strong>carosello</strong>.
+                    </p>
                   </div>
-                  <label className="cursor-pointer bg-zinc-950 hover:bg-amber-400 text-white hover:text-black font-bold text-xs uppercase px-4 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5">
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>{uploadingFotoOspite ? "Caricamento..." : "Carica Foto"}</span>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={handleFotoOspiteUpload}
-                      disabled={uploadingFotoOspite}
-                    />
-                  </label>
+                  
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Pulsante Carica/Sostituisci Foto Principale */}
+                    <label className="cursor-pointer bg-zinc-950 hover:bg-amber-400 text-white hover:text-black font-bold text-xs uppercase px-3.5 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>{uploadingFotoOspite ? "Caricamento..." : "Cambia Principale"}</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={handleFotoOspiteUpload}
+                        disabled={uploadingFotoOspite || uploadingGallery}
+                      />
+                    </label>
+
+                    {/* Pulsante Aggiungi Altre Foto per il Carosello */}
+                    <label className="cursor-pointer bg-amber-400 hover:bg-yellow-400 text-black font-bold text-xs uppercase px-3.5 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 border border-amber-500">
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>{uploadingGallery ? "Caricamento..." : "Aggiungi Foto"}</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        multiple 
+                        className="hidden" 
+                        onChange={handleFotoGalleryUpload}
+                        disabled={uploadingFotoOspite || uploadingGallery}
+                      />
+                    </label>
+                  </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center gap-5">
-                  {/* Anteprima Quadro */}
-                  <div className="w-28 aspect-[3/4] bg-[#16171b] p-1.5 rounded-lg border-2 border-amber-400/40 shadow-md shrink-0 relative overflow-hidden flex items-center justify-center">
-                    {formOspite.fotoUrl ? (
-                      <div className="w-full h-full bg-black/60 rounded overflow-hidden relative">
-                        <img 
-                          src={formOspite.fotoUrl} 
-                          alt="Anteprima Ospite" 
-                          className="w-full h-full object-cover"
-                          style={{
-                            objectPosition: `${formOspite.fotoPositionX ?? 50}% ${formOspite.fotoPositionY ?? 30}%`
-                          }}
+                {/* FOTO PRINCIPALE (IN EVIDENZA CON BADGE E SLIDER INQUADRATURA) */}
+                <div className="bg-white p-3.5 rounded-xl border-2 border-amber-400/60 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-400 text-black font-mono font-black text-[10px] uppercase shadow-xs">
+                      <Star className="w-3 h-3 fill-black" />
+                      FOTO PRINCIPALE (COPERTINA DELLA SCHEDA)
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-500">Visibile nel totem pubblico</span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-5">
+                    {/* Anteprima Totem Principale */}
+                    <div className="w-28 aspect-[3/4] bg-[#16171b] p-1.5 rounded-lg border-2 border-amber-400 shadow-md shrink-0 relative overflow-hidden flex items-center justify-center">
+                      {formOspite.fotoUrl ? (
+                        <div className="w-full h-full bg-black/60 rounded overflow-hidden relative">
+                          <img 
+                            src={formOspite.fotoUrl} 
+                            alt="Foto Principale Ospite" 
+                            className="w-full h-full object-cover"
+                            style={{
+                              objectPosition: `${formOspite.fotoPositionX ?? 50}% ${formOspite.fotoPositionY ?? 30}%`
+                            }}
+                          />
+                          {uploadingFotoOspite && (
+                            <div className="absolute inset-0 bg-black/70 backdrop-blur-xs flex flex-col items-center justify-center text-white gap-2 p-2">
+                              <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                              <span className="text-[10px] font-mono text-amber-400 font-bold uppercase">Caricamento...</span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-center p-3 text-zinc-400 space-y-1">
+                          <User className="w-8 h-8 mx-auto stroke-1" />
+                          <span className="text-[10px] font-mono">Nessuna foto</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Slider Centratura della Principale */}
+                    <div className="flex-1 w-full space-y-3">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs font-mono">
+                          <span className="text-zinc-600">Altezza Inquadratura (Y):</span>
+                          <span className="font-bold text-amber-600">{formOspite.fotoPositionY ?? 30}%</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="100" 
+                          value={formOspite.fotoPositionY ?? 30}
+                          onChange={e => setFormOspite({ ...formOspite, fotoPositionY: Number(e.target.value) })}
+                          className="w-full accent-amber-500 cursor-pointer"
                         />
-                        {uploadingFotoOspite && (
-                          <div className="absolute inset-0 bg-black/70 backdrop-blur-xs flex flex-col items-center justify-center text-white gap-2 p-2">
-                            <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-                            <span className="text-[10px] font-mono text-amber-400 font-bold uppercase">Caricamento...</span>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs font-mono">
+                          <span className="text-zinc-600">Centratura Orizzontale (X):</span>
+                          <span className="font-bold text-amber-600">{formOspite.fotoPositionX ?? 50}%</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="100" 
+                          value={formOspite.fotoPositionX ?? 50}
+                          onChange={e => setFormOspite({ ...formOspite, fotoPositionX: Number(e.target.value) })}
+                          className="w-full accent-amber-500 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ALTRE FOTO DELLA GALLERIA (CAROSELLO) */}
+                <div className="space-y-2 pt-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold uppercase text-zinc-700 flex items-center gap-1.5">
+                      <Images className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Altre Foto nel Carosello ({(formOspite.fotoGallery || []).length})</span>
+                    </span>
+                    <span className="text-[11px] text-zinc-500">
+                      Clicca su "Imposta Principale" per promuovere una foto
+                    </span>
+                  </div>
+
+                  {(formOspite.fotoGallery && formOspite.fotoGallery.length > 0) ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3 pt-1">
+                      {formOspite.fotoGallery.map((url, gIdx) => (
+                        <div 
+                          key={gIdx}
+                          className="group relative rounded-xl overflow-hidden border border-zinc-200 bg-zinc-900 aspect-[3/4] flex flex-col justify-between shadow-xs"
+                        >
+                          <img 
+                            src={url} 
+                            alt={`Gallery ${gIdx + 1}`} 
+                            className="w-full h-full object-cover" 
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 opacity-90 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-between">
+                            <div className="flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFotoGallery(url)}
+                                className="p-1 rounded-md bg-black/60 hover:bg-red-600 text-white transition-colors cursor-pointer"
+                                title="Rimuovi foto"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleSetFotoPrincipale(url)}
+                              className="w-full py-1 px-1.5 rounded bg-amber-400 hover:bg-yellow-300 text-black text-[9px] font-mono font-black uppercase tracking-wider text-center transition-all cursor-pointer shadow"
+                            >
+                              Imposta Principale
+                            </button>
                           </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-center p-3 text-zinc-400 space-y-1">
-                        <User className="w-8 h-8 mx-auto stroke-1" />
-                        <span className="text-[10px] font-mono">Nessuna foto</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Slider Centratura */}
-                  <div className="flex-1 w-full space-y-3">
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs font-mono">
-                        <span className="text-zinc-600">Altezza Inquadratura (Y):</span>
-                        <span className="font-bold text-amber-600">{formOspite.fotoPositionY ?? 30}%</span>
-                      </div>
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="100" 
-                        value={formOspite.fotoPositionY ?? 30}
-                        onChange={e => setFormOspite({ ...formOspite, fotoPositionY: Number(e.target.value) })}
-                        className="w-full accent-amber-500 cursor-pointer"
-                      />
+                        </div>
+                      ))}
                     </div>
-
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs font-mono">
-                        <span className="text-zinc-600">Centratura Orizzontale (X):</span>
-                        <span className="font-bold text-amber-600">{formOspite.fotoPositionX ?? 50}%</span>
-                      </div>
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="100" 
-                        value={formOspite.fotoPositionX ?? 50}
-                        onChange={e => setFormOspite({ ...formOspite, fotoPositionX: Number(e.target.value) })}
-                        className="w-full accent-amber-500 cursor-pointer"
-                      />
+                  ) : (
+                    <div className="text-center py-6 px-4 bg-white border border-dashed border-zinc-300 rounded-xl space-y-1">
+                      <Images className="w-6 h-6 text-zinc-400 mx-auto" />
+                      <p className="text-xs text-zinc-600 font-medium">Nessuna foto secondaria aggiunta.</p>
+                      <p className="text-[11px] text-zinc-400">
+                        Usa il tasto "Aggiungi Foto" in alto per caricare altri scatti. Verranno sfogliati a carosello quando l'utente apre la scheda!
+                      </p>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 

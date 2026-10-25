@@ -10,6 +10,7 @@ import {
   X, 
   Share2, 
   ChevronRight, 
+  ChevronLeft,
   Maximize2, 
   Medal, 
   Flame,
@@ -36,7 +37,8 @@ import {
   EventoOspite,
   getEventiOspite,
   getAnniOspite,
-  getOspitiIllustriAll
+  getOspitiIllustriAll,
+  getAllFotoOspite
 } from '../firebase-societa';
 import { updatePageMeta } from '../utils/seoHelper';
 
@@ -1199,6 +1201,18 @@ function TotemOspiteArena({ ospite, filtroAnno, onClick }: TotemOspiteArenaProps
                   <span className="hidden sm:inline">Top Guest</span>
                 </span>
               )}
+              {(() => {
+                const totalPhotos = getAllFotoOspite(ospite).length;
+                if (totalPhotos > 1) {
+                  return (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-black/60 backdrop-blur-md border border-amber-400/40 text-amber-300 font-mono text-[10px] font-bold shadow-lg">
+                      <Camera className="w-3 h-3 text-amber-400" />
+                      <span>{totalPhotos} foto</span>
+                    </span>
+                  );
+                }
+                return null;
+              })()}
               <span className="px-2.5 py-1 rounded-full bg-black/45 backdrop-blur-md border border-white/20 text-zinc-100 font-mono text-[10px] font-bold shadow-lg">
                 {badgeAnnoText}
               </span>
@@ -1294,6 +1308,22 @@ interface ModalDettaglioOspiteProps {
 function ModalDettaglioOspite({ ospite, onClose }: ModalDettaglioOspiteProps) {
   const [copied, setCopied] = useState(false);
   const [zoomMomento, setZoomMomento] = useState(false);
+  const [activePhotoIdx, setActivePhotoIdx] = useState(0);
+  const [fullscreenPhoto, setFullscreenPhoto] = useState<string | null>(null);
+
+  const allPhotos = React.useMemo(() => getAllFotoOspite(ospite), [ospite]);
+  const hasMultiplePhotos = allPhotos.length > 1;
+  const currentPhoto = allPhotos[activePhotoIdx] || ospite.fotoUrl;
+
+  const handlePrevPhoto = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActivePhotoIdx(prev => (prev === 0 ? allPhotos.length - 1 : prev - 1));
+  };
+
+  const handleNextPhoto = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActivePhotoIdx(prev => (prev === allPhotos.length - 1 ? 0 : prev + 1));
+  };
 
   const handleShare = () => {
     if (navigator.clipboard) {
@@ -1478,10 +1508,10 @@ function ModalDettaglioOspite({ ospite, onClose }: ModalDettaglioOspiteProps) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* ======================================================================= */}
-          {/* COLONNA SINISTRA (lg:col-span-5): IL TOTEM MONUMENTALE DA PALAZZETTO     */}
+          {/* COLONNA SINISTRA (lg:col-span-5): IL TOTEM MONUMENTALE DA PALAZZETTO (CAROSELLO) */}
           {/* ======================================================================= */}
-          <div className="lg:col-span-5 flex flex-col items-center">
-            <div className="relative w-full max-w-[390px] rounded-3xl overflow-hidden bg-gradient-to-b from-[#181a24] via-[#0e1017] to-[#07080b] border-2 border-amber-400 shadow-[0_25px_60px_rgba(0,0,0,0.55),0_0_35px_rgba(245,158,11,0.3)]">
+          <div className="lg:col-span-5 flex flex-col items-center w-full">
+            <div className="relative w-full max-w-[400px] rounded-3xl overflow-hidden bg-gradient-to-b from-[#181a24] via-[#0e1017] to-[#07080b] border-2 border-amber-400 shadow-[0_25px_60px_rgba(0,0,0,0.55),0_0_35px_rgba(245,158,11,0.3)] group">
               
               {/* Testata Metallica con Staffa e Rivetti Industriali */}
               <div className="flex items-center justify-between px-5 py-3 bg-[#181a24] border-b border-white/10 text-white">
@@ -1492,33 +1522,87 @@ function ModalDettaglioOspite({ ospite, onClose }: ModalDettaglioOspiteProps) {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono font-bold text-zinc-400 bg-black/60 px-2 py-0.5 rounded border border-zinc-700">#OFFICIAL</span>
+                  {hasMultiplePhotos ? (
+                    <span className="text-[10px] font-mono font-bold text-amber-300 bg-black/70 px-2.5 py-0.5 rounded-full border border-amber-400/50 flex items-center gap-1">
+                      <Camera className="w-3 h-3 text-amber-400" />
+                      <span>{activePhotoIdx + 1} / {allPhotos.length}</span>
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-mono font-bold text-zinc-400 bg-black/60 px-2 py-0.5 rounded border border-zinc-700">#OFFICIAL</span>
+                  )}
                   <span className="w-2.5 h-2.5 rounded-full bg-zinc-500 border border-zinc-300 shadow-inner" />
                 </div>
               </div>
 
-              {/* Fotografia Verticale Cristallina (Stessa limpidezza della scheda esterna!) */}
-              <div className="relative h-[480px] sm:h-[530px] w-full overflow-hidden bg-zinc-950">
-                <img 
-                  src={ospite.fotoUrl} 
-                  alt={ospite.nome}
-                  className="w-full h-full object-cover"
-                  style={{
-                    objectPosition: `${ospite.fotoPositionX ?? 50}% ${ospite.fotoPositionY ?? 25}%`
-                  }}
-                />
+              {/* Fotografia Verticale Cristallina (Carosello se presenti più foto) */}
+              <div className="relative h-[480px] sm:h-[530px] w-full overflow-hidden bg-zinc-950 select-none">
+                <AnimatePresence mode="wait">
+                  <motion.img 
+                    key={activePhotoIdx}
+                    src={currentPhoto} 
+                    alt={`${ospite.nome} - Foto ${activePhotoIdx + 1}`}
+                    initial={{ opacity: 0.4, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0.4, scale: 1.02 }}
+                    transition={{ duration: 0.25 }}
+                    className="w-full h-full object-cover"
+                    style={{
+                      objectPosition: activePhotoIdx === 0 
+                        ? `${ospite.fotoPositionX ?? 50}% ${ospite.fotoPositionY ?? 25}%`
+                        : 'center 30%'
+                    }}
+                  />
+                </AnimatePresence>
 
-                {/* Sfumatura inferiore mirata ESCLUSIVAMENTE alla piastra d'identità in basso (dal 45% in giù, nessun alone scuro su volto, spalle e sfondo) */}
+                {/* Sfumatura inferiore mirata ESCLUSIVAMENTE alla piastra d'identità in basso */}
                 <div className="absolute bottom-0 inset-x-0 h-[48%] bg-gradient-to-t from-[#07080c] via-[#07080c]/80 via-65% to-transparent pointer-events-none" />
 
                 {/* Fascio di luce neon ambrato radente dal basso */}
                 <div className="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-amber-500/20 via-amber-400/5 to-transparent pointer-events-none" />
 
+                {/* Controlli di Navigazione Carosello (Freccia Sinistra / Destra) */}
+                {hasMultiplePhotos && (
+                  <>
+                    <button
+                      onClick={handlePrevPhoto}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-black/75 hover:bg-amber-400 hover:text-black text-white backdrop-blur-md border border-white/20 transition-all cursor-pointer shadow-xl hover:scale-110 active:scale-95"
+                      aria-label="Foto precedente"
+                      title="Foto precedente"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={handleNextPhoto}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-black/75 hover:bg-amber-400 hover:text-black text-white backdrop-blur-md border border-white/20 transition-all cursor-pointer shadow-xl hover:scale-110 active:scale-95"
+                      aria-label="Foto successiva"
+                      title="Foto successiva"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
+
+                {/* Tasto Ingrandisci / Fullscreen in alto a destra sulla foto */}
+                <button
+                  onClick={() => setFullscreenPhoto(currentPhoto)}
+                  className="absolute top-3 right-3 z-20 p-2 rounded-xl bg-black/60 hover:bg-black/90 text-white/80 hover:text-white backdrop-blur-md border border-white/20 transition-all cursor-pointer shadow-md hover:scale-105"
+                  title="Ingrandisci foto a tutto schermo"
+                >
+                  <Maximize2 className="w-4 h-4 text-amber-400" />
+                </button>
+
                 {/* Piastra d'identità scura integrata sul totem */}
-                <div className="absolute bottom-4 inset-x-4 p-4 rounded-2xl bg-black/85 backdrop-blur-md border border-amber-400/40 shadow-2xl space-y-1 text-white">
-                  <p className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold">
-                    Campione in Galleria
-                  </p>
+                <div className="absolute bottom-4 inset-x-4 p-4 rounded-2xl bg-black/85 backdrop-blur-md border border-amber-400/40 shadow-2xl space-y-1 text-white z-10">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold">
+                      Campione in Galleria
+                    </p>
+                    {hasMultiplePhotos && (
+                      <span className="text-[10px] font-mono text-zinc-400">
+                        {activePhotoIdx === 0 ? 'Foto Principale' : `Scatto #${activePhotoIdx + 1}`}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-base font-black font-barlow uppercase text-white truncate">
                     {ospite.nome}
                   </p>
@@ -1528,6 +1612,34 @@ function ModalDettaglioOspite({ ospite, onClose }: ModalDettaglioOspiteProps) {
               {/* Barra Neon a Pavimento */}
               <div className="h-2 w-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 shadow-[0_0_15px_#f59e0b]" />
             </div>
+
+            {/* Striscia Miniature / Indicatori di navigazione rapida se ci sono più foto */}
+            {hasMultiplePhotos && (
+              <div className="mt-3.5 w-full max-w-[400px] flex items-center justify-center gap-2 overflow-x-auto py-1 px-2 no-scrollbar">
+                {allPhotos.map((url, idx) => {
+                  const isActive = idx === activePhotoIdx;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setActivePhotoIdx(idx)}
+                      className={`relative w-14 h-14 rounded-xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer shadow-md ${
+                        isActive
+                          ? 'border-amber-400 scale-105 ring-2 ring-amber-400/50'
+                          : 'border-zinc-700 opacity-60 hover:opacity-100 hover:border-zinc-500'
+                      }`}
+                      title={idx === 0 ? "Foto Principale" : `Foto ${idx + 1}`}
+                    >
+                      <img src={url} alt={`Miniatura ${idx + 1}`} className="w-full h-full object-cover" />
+                      {idx === 0 && (
+                        <span className="absolute bottom-0 inset-x-0 bg-amber-400 text-black text-[8px] font-mono font-black text-center uppercase py-0.5 leading-none">
+                          TOP
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* ======================================================================= */}
@@ -1709,6 +1821,40 @@ function ModalDettaglioOspite({ ospite, onClose }: ModalDettaglioOspiteProps) {
       <footer className="relative z-20 py-4 text-center text-xs text-zinc-500 font-mono border-t border-white/10 bg-[#06070a]/90 backdrop-blur-md">
         <p>New Volley Academy Forlì • Grandi Personalità &amp; Campioni della Pallavolo</p>
       </footer>
+
+      {/* ========================================================================= */}
+      {/* MODAL LIGHTBOX PER INGRANDIRE LA FOTO DEL CAROSELLO                       */}
+      {/* ========================================================================= */}
+      <AnimatePresence>
+        {fullscreenPhoto && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setFullscreenPhoto(null)}
+            className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 cursor-zoom-out"
+          >
+            <div className="relative max-w-5xl max-h-[90vh] rounded-3xl overflow-hidden border-2 border-amber-400 shadow-2xl" onClick={e => e.stopPropagation()}>
+              <img 
+                src={fullscreenPhoto} 
+                alt={`${ospite.nome} - Ingrandimento`}
+                className="w-full h-full object-contain max-h-[85vh]"
+              />
+              <button
+                onClick={() => setFullscreenPhoto(null)}
+                className="absolute top-4 right-4 p-2.5 rounded-full bg-black/70 text-white hover:bg-amber-400 hover:text-black transition-colors cursor-pointer shadow-lg"
+                aria-label="Chiudi"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="absolute bottom-0 inset-x-0 p-3.5 bg-black/85 text-center text-xs font-mono text-zinc-300 border-t border-white/10 flex items-center justify-between px-6">
+                <span className="font-bold text-amber-400">{ospite.nome}</span>
+                <span className="text-zinc-400">Scatto in Alta Risoluzione • NVA Archive</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ========================================================================= */}
       {/* MODAL LIGHTBOX PER INGRANDIRE LA FOTO DEL MOMENTO SUL CAMPO               */}

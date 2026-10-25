@@ -3278,6 +3278,7 @@ export interface OspiteIllustre {
   testoPassaggio?: string; // Frase 1 personalizzabile (Occasione del passaggio)
   testoIspirazione?: string; // Frase 2 personalizzabile (Ispirazione per la società)
   fotoUrl: string;
+  fotoGallery?: string[]; // Galleria di foto aggiuntive per il carosello della scheda dettaglio
   fotoPositionY?: number;
   fotoPositionX?: number;
   descrizione?: string; // Aneddoto o racconto del passaggio
@@ -3359,6 +3360,44 @@ export function getAnniOspite(ospite: Partial<OspiteIllustre>): string[] {
   }
 
   return Array.from(anniSet);
+}
+
+/**
+ * Estrae tutte le foto associate a un Ospite Illustre:
+ * La foto principale (fotoUrl) seguita da tutte le foto della galleria (fotoGallery o legacy).
+ * Restituisce una lista deduplicata con la foto principale sempre al primo posto (indice 0).
+ */
+export function getAllFotoOspite(ospite?: Partial<OspiteIllustre> | null): string[] {
+  if (!ospite) return [];
+  const list: string[] = [];
+
+  // Foto principale
+  if (ospite.fotoUrl && typeof ospite.fotoUrl === 'string' && ospite.fotoUrl.trim()) {
+    list.push(ospite.fotoUrl.trim());
+  }
+
+  // Foto gallery
+  if (Array.isArray(ospite.fotoGallery)) {
+    ospite.fotoGallery.forEach(url => {
+      if (url && typeof url === 'string' && url.trim() && !list.includes(url.trim())) {
+        list.push(url.trim());
+      }
+    });
+  }
+
+  // Supporto retrocompatibile per gallery_foto o fotoMomentoUrl
+  if ((ospite as any).gallery_foto && Array.isArray((ospite as any).gallery_foto)) {
+    (ospite as any).gallery_foto.forEach((url: string) => {
+      if (url && typeof url === 'string' && url.trim() && !list.includes(url.trim())) {
+        list.push(url.trim());
+      }
+    });
+  }
+  if (ospite.fotoMomentoUrl && typeof ospite.fotoMomentoUrl === 'string' && ospite.fotoMomentoUrl.trim() && !list.includes(ospite.fotoMomentoUrl.trim())) {
+    list.push(ospite.fotoMomentoUrl.trim());
+  }
+
+  return list;
 }
 
 export async function getOspitiIllustriAll(): Promise<OspiteIllustre[]> {
