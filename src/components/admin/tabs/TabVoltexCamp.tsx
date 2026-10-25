@@ -1127,14 +1127,31 @@ export default function TabVoltexCamp({ showToast }: TabVoltexCampProps) {
               </div>
             </div>
 
-            <div>
-              <label className="text-xs font-bold text-slate-700 uppercase block mb-1">Testo Banner Annuncio</label>
-              <input
-                type="text"
-                value={config.testo_annuncio}
-                onChange={(e) => setConfig({ ...config, testo_annuncio: e.target.value })}
-                className="w-full text-xs p-2.5 rounded-lg border border-slate-300"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold text-slate-700 uppercase block mb-1">
+                  Testo Banner quando Iscrizioni APERTE
+                </label>
+                <input
+                  type="text"
+                  value={config.testo_annuncio || ''}
+                  onChange={(e) => setConfig({ ...config, testo_annuncio: e.target.value })}
+                  placeholder="Iscrizioni ancora aperte! Posti limitati..."
+                  className="w-full text-xs p-2.5 rounded-lg border border-slate-300"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-700 uppercase block mb-1">
+                  Testo Banner quando Iscrizioni CHIUSE
+                </label>
+                <input
+                  type="text"
+                  value={config.testo_annuncio_chiuso || ''}
+                  onChange={(e) => setConfig({ ...config, testo_annuncio_chiuso: e.target.value })}
+                  placeholder="Iscrizioni al Camp attualmente chiuse (in arrivo)..."
+                  className="w-full text-xs p-2.5 rounded-lg border border-slate-300"
+                />
+              </div>
             </div>
 
             <div>

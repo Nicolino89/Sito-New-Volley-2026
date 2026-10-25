@@ -2263,6 +2263,7 @@ export interface VoltexCampConfig {
   instagram_username: string;
   banner_attivo: boolean;
   testo_annuncio: string;
+  testo_annuncio_chiuso?: string;
   hero_image_url?: string;
   galleria_foto?: Array<{ url: string; caption?: string }>;
 }
@@ -2350,7 +2351,8 @@ export const DEFAULT_VOLTEX_CAMP_CONFIG: VoltexCampConfig = {
   contatti_whatsapp: "393400000000",
   instagram_username: "voltexcamp",
   banner_attivo: true,
-  testo_annuncio: "Iscrizioni ancora aperte! Posti limitati per garantire la massima qualità tecnica."
+  testo_annuncio: "Iscrizioni ancora aperte! Posti limitati per garantire la massima qualità tecnica.",
+  testo_annuncio_chiuso: "Iscrizioni al Camp attualmente chiuse (in arrivo). Compila il modulo sotto per richiedere informazioni e ricevere notifica prioritaria all'apertura!"
 };
 
 export async function getVoltexCampConfig(): Promise<VoltexCampConfig> {
@@ -2369,6 +2371,7 @@ export async function getVoltexCampConfig(): Promise<VoltexCampConfig> {
         iscrizioni_ricevute: data.iscrizioni_ricevute || [],
         richieste_info: data.richieste_info || [],
         iscrizioni_aperte: data.iscrizioni_aperte !== undefined ? data.iscrizioni_aperte : true,
+        testo_annuncio_chiuso: data.testo_annuncio_chiuso || DEFAULT_VOLTEX_CAMP_CONFIG.testo_annuncio_chiuso,
         hero_image_url: data.hero_image_url || DEFAULT_VOLTEX_CAMP_CONFIG.hero_image_url,
         galleria_foto: data.galleria_foto || DEFAULT_VOLTEX_CAMP_CONFIG.galleria_foto
       };

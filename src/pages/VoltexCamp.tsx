@@ -17,6 +17,7 @@ import {
   Loader2,
   AlertCircle
 } from 'lucide-react';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { 
   getVoltexCampConfig, 
   salvaIscrizioneVoltex, 
@@ -25,7 +26,9 @@ import {
   DEFAULT_VOLTEX_CAMP_CONFIG,
   VoltexIscrizione,
   VoltexRichiestaInfo,
-  SocietaInfo
+  SocietaInfo,
+  db,
+  isDemoMode
 } from '../firebase-societa';
 import { updatePageMeta } from '../utils/seoHelper';
 
@@ -76,6 +79,8 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
     });
 
     let mounted = true;
+
+    // Caricamento iniziale
     getVoltexCampConfig().then((data) => {
       if (mounted) {
         setConfig(data);
@@ -91,7 +96,33 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
     }).catch(() => {
       if (mounted) setLoading(false);
     });
-    return () => { mounted = false; };
+
+    // Real-time listener: qualsiasi cambio in Firestore (es. switch admin iscrizioni aperte/chiuse) si riflette istantaneamente a video
+    let unsubSnapshot: (() => void) | null = null;
+    if (!isDemoMode && db) {
+      try {
+        unsubSnapshot = onSnapshot(doc(db, 'camp_config', 'voltex_camp'), (docSnap) => {
+          if (docSnap.exists() && mounted) {
+            const liveData = docSnap.data() as VoltexCampConfig;
+            setConfig(prev => ({
+              ...prev,
+              ...liveData,
+              iscrizioni_aperte: liveData.iscrizioni_aperte !== undefined ? liveData.iscrizioni_aperte : true
+            }));
+            if (liveData.iscrizioni_aperte === false) {
+              setFormMode('info');
+            }
+          }
+        });
+      } catch (err) {
+        console.warn("Voltex onSnapshot listener:", err);
+      }
+    }
+
+    return () => { 
+      mounted = false; 
+      if (unsubSnapshot) unsubSnapshot();
+    };
   }, []);
 
   const handleSubmitInfo = async (e: React.FormEvent) => {
@@ -199,6 +230,9 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
     }
   };
 
+  const isIscrizioniChiuse = config.iscrizioni_aperte === false;
+  const isInfoMode = isIscrizioniChiuse || formMode === 'info';
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0F172A] text-white flex flex-col items-center justify-center gap-4">
@@ -229,7 +263,7 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
             >
               <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-red-950/70 border border-red-600/40 text-red-400 text-xs font-bold uppercase tracking-wider shadow-inner">
                 <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                CAMP DI ALTA SPECIALIZZAZIONE
+                {isIscrizioniChiuse ? "CAMP DI ALTA SPECIALIZZAZIONE · ISCRIZIONI IN ARRIVO" : "CAMP DI ALTA SPECIALIZZAZIONE · ISCRIZIONI APERTE"}
               </div>
 
               <div className="space-y-2">
@@ -245,22 +279,24 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
                 {config.descrizione_breve}
               </p>
 
-              {config.iscrizioni_aperte === false ? (
+              {isIscrizioniChiuse ? (
                 <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-950/60 to-slate-900 border border-amber-600/30 flex items-center gap-3 text-sm text-amber-200">
                   <Flame className="w-5 h-5 text-amber-400 shrink-0" />
                   <span>
-                    {config.testo_annuncio || "Iscrizioni al momento chiuse: compila il form di richiesta informazioni per essere ricontattato all'apertura!"}
+                    {config.testo_annuncio_chiuso || "Iscrizioni al Camp attualmente chiuse (in arrivo). Compila il modulo sotto per richiedere informazioni e ricevere notifica prioritaria all'apertura!"}
                   </span>
                 </div>
-              ) : config.testo_annuncio ? (
+              ) : (
                 <div className="p-4 rounded-2xl bg-gradient-to-r from-red-950/60 to-slate-900 border border-red-700/30 flex items-center gap-3 text-sm text-red-200">
                   <Flame className="w-5 h-5 text-red-400 shrink-0" />
-                  <span>{config.testo_annuncio}</span>
+                  <span>
+                    {config.testo_annuncio || "Iscrizioni ancora aperte! Posti limitati per garantire la massima qualità tecnica."}
+                  </span>
                 </div>
-              ) : null}
+              )}
 
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-4">
-                {config.iscrizioni_aperte !== false ? (
+                {!isIscrizioniChiuse ? (
                   <>
                     <a 
                       href="#iscrizione-form" 
@@ -477,7 +513,9 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
               Prossime Date & Località
             </h2>
             <p className="text-sm text-slate-400">
-              Scegli la tappa più adatta a te e prenota il tuo posto prima del sold-out.
+              {isIscrizioniChiuse
+                ? "Consulta le date e le località in programma. Le iscrizioni apriranno a breve: seleziona una tappa per richiedere informazioni in anteprima."
+                : "Scegli la tappa più adatta a te e prenota il tuo posto prima del sold-out."}
             </p>
           </div>
 
@@ -598,8 +636,8 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
           <div className="rounded-3xl bg-slate-900 border border-slate-800 p-6 sm:p-10 shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-red-600 via-amber-400 to-red-600" />
             
-            {/* Selettore Modalità: Iscrizione al Camp vs Richiedi Informazioni */}
-            {config.iscrizioni_aperte !== false ? (
+            {/* Selettore Modalità: SOLO se le iscrizioni sono aperte */}
+            {!isIscrizioniChiuse ? (
               <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 max-w-md mx-auto mb-8">
                 <button
                   type="button"
@@ -624,25 +662,42 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
                   Richiedi Informazioni
                 </button>
               </div>
-            ) : null}
+            ) : (
+              <div className="p-4 rounded-2xl bg-amber-950/40 border border-amber-600/30 text-amber-200 text-xs sm:text-sm flex items-center gap-3 max-w-2xl mx-auto mb-8">
+                <Flame className="w-5 h-5 text-amber-400 shrink-0" />
+                <span>
+                  <strong>Iscrizioni Ufficiali in Arrivo:</strong> Le registrazioni al Camp apriranno a breve. Utilizza il modulo qui sotto per inviare domande su tappe, alloggio o quote: ti risponderemo subito e sarai avvisato in anteprima!
+                </span>
+              </div>
+            )}
 
-            {/* Intestazione del Modulo */}
+            {/* Intestazione del Modulo Dinamica */}
             <div className="text-center max-w-xl mx-auto mb-8 space-y-2">
               <span className="text-xs font-mono font-bold uppercase tracking-widest text-red-400">
-                {formMode === 'info' || config.iscrizioni_aperte === false ? "Modulo Informazioni & Contatto" : "Modulo Iscrizione Online"}
+                {isIscrizioniChiuse
+                  ? "Modulo Richiesta Informazioni"
+                  : formMode === 'info'
+                  ? "Modulo Informazioni & Domande"
+                  : "Modulo Iscrizione Ufficiale Online"}
               </span>
               <h2 className="text-2xl sm:text-3xl font-black text-white font-sport uppercase">
-                {formMode === 'info' || config.iscrizioni_aperte === false ? "Richiedi Informazioni sul Voltex Camp" : "Modulo Iscrizione al Camp"}
+                {isIscrizioniChiuse
+                  ? "Richiedi Informazioni sul Voltex Camp"
+                  : formMode === 'info'
+                  ? "Hai Domande sul Voltex Camp? Scrivici"
+                  : "Modulo Iscrizione al Camp"}
               </h2>
-              <p className="text-xs sm:text-sm text-slate-400">
-                {formMode === 'info' || config.iscrizioni_aperte === false
-                  ? "Hai domande sul programma, costi, alloggio o tappe? Inserisci la tua richiesta qui sotto: lo staff Voltex ti risponderà subito."
-                  : "Compila i dati dell'atleta per registrare l'iscrizione. Riceverai conferma immediata dallo staff Voltex."}
+              <p className="text-xs sm:text-sm text-slate-300">
+                {isIscrizioniChiuse
+                  ? "Hai domande sul programma tecnico, orari, alloggio, quote o tappe? Inserisci la tua richiesta qui sotto: lo staff Voltex ti risponderà subito."
+                  : formMode === 'info'
+                  ? "Hai dubbi o richieste particolari prima di completare l'iscrizione? Compila il modulo qui sotto: ti risponderemo al più presto."
+                  : "Compila i dati dell'atleta per registrare l'iscrizione ufficiale. Riceverai conferma immediata dallo staff Voltex."}
               </p>
             </div>
 
             {/* SEZIONE FORM: RICHIEDI INFORMAZIONI */}
-            {(formMode === 'info' || config.iscrizioni_aperte === false) ? (
+            {isInfoMode ? (
               infoSuccess ? (
                 <div className="p-8 rounded-2xl bg-emerald-950/40 border border-emerald-600/40 text-center space-y-5 animate-in fade-in">
                   <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">

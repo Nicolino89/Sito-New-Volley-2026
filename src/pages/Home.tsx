@@ -991,23 +991,19 @@ export default function Home({
                   </div>
 
                   {/* Tasto Diretto alla Classifica */}
-                  <div className="pt-3 mt-3 border-t border-zinc-800/80">
+                  <div className="pt-3 mt-3 border-t border-zinc-800">
                     <button
                       onClick={handleGoToClassifica}
-                      className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 hover:from-[#FFE600] hover:to-[#ffd500] text-zinc-200 hover:text-zinc-950 border border-zinc-700/80 hover:border-[#FFE600] text-xs font-bold uppercase tracking-wider flex items-center justify-between transition-all duration-200 group shadow-lg hover:shadow-[#FFE600]/20 cursor-pointer"
+                      className="w-full py-2.5 px-4 rounded-xl bg-black/60 hover:bg-[#FFE600] text-zinc-300 hover:text-zinc-950 border border-zinc-800 hover:border-[#FFE600] text-xs font-bold font-sport uppercase tracking-wider flex items-center justify-between transition-colors duration-150 cursor-pointer group"
                       title={`Visualizza la classifica completa di ${selectedMatchCategory === 'D Maschile' ? 'Serie D Maschile' : 'Serie D Femminile'}`}
                     >
-                      <div className="flex items-center gap-2.5">
-                        <span className="p-1.5 rounded-lg bg-zinc-800/90 group-hover:bg-black/10 text-[#FFE600] group-hover:text-zinc-950 transition-colors">
-                          <Trophy className="w-4 h-4" />
-                        </span>
-                        <span className="font-barlow font-bold tracking-wider text-xs sm:text-sm uppercase">
-                          Classifica {selectedMatchCategory === 'D Maschile' ? 'Serie D Maschile' : 'Serie D Femminile'}
-                        </span>
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-[#FFE600] group-hover:text-zinc-950 transition-colors" />
+                        <span>Classifica {selectedMatchCategory === 'D Maschile' ? 'Serie D Maschile' : 'Serie D Femminile'}</span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-[11px] font-sans font-bold text-zinc-400 group-hover:text-zinc-950 transition-colors">
+                      <div className="flex items-center gap-1 text-[11px] font-sans font-bold text-zinc-400 group-hover:text-zinc-950 transition-colors">
                         <span>Vedi Girone</span>
-                        <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                        <ArrowRight className="w-3.5 h-3.5" />
                       </div>
                     </button>
                   </div>
