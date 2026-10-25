@@ -18,7 +18,7 @@ function cleanString(str: string): string {
 /**
  * Helper to check if a team string refers to New Volley Academy / the configured club team
  */
-export function isNvaTeam(name: string, customOfficialName?: string): boolean {
+export function isNvaTeam(name: string, customOfficialName?: string, myTeamName?: string): boolean {
   if (!name) return false;
   const n = name.toLowerCase().trim();
 
@@ -28,6 +28,14 @@ export function isNvaTeam(name: string, customOfficialName?: string): boolean {
     if (n === cust || n.includes(cust) || cust.includes(n)) {
       return true;
     }
+  }
+
+  // Prevent cross-matching distinct teams of the club (e.g. Nera vs Bianca)
+  if (myTeamName) {
+    const m = myTeamName.toLowerCase().trim();
+    if (m.includes('nera') && n.includes('bianca')) return false;
+    if (m.includes('bianca') && n.includes('nera')) return false;
+    if (m.includes('rossa') && (n.includes('nera') || n.includes('bianca'))) return false;
   }
 
   // Strict NVA identifiers (prevents matching other clubs containing "Academy" or "Volley")
@@ -143,6 +151,7 @@ export function parseFipavHtml(
   classifica: RigaClassifica[];
   partite: PartitaCampionato[];
   prossimaGara: ProssimaGara | null;
+  detectedUrl?: string;
 } {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
@@ -150,29 +159,36 @@ export function parseFipavHtml(
   const classifica: RigaClassifica[] = [];
   const partite: PartitaCampionato[] = [];
 
+  // Auto-detect page URL from OpenGraph meta tags if present
+  const ogUrl = doc.querySelector('meta[property="og:url"], meta[name="og:url"]')?.getAttribute('content') || undefined;
+
   // ==========================================
   // 1. PARSE STANDINGS (CLASSIFICA)
   // ==========================================
-  // Strategy A: Dedicated portalefipav.net (.tbl-classifica)
-  const tblClassifica = doc.querySelector('table.tbl-classifica, table[class*="tbl-classifica"]');
+  // Strategy A: Dedicated portalefipav.net (.tbl-classifica) or fipavromagna.it (.gare-classifica, [id^="classifica_"])
+  const tblClassifica = doc.querySelector(
+    'table.tbl-classifica, table[class*="tbl-classifica"], table.gare-classifica, table[class*="gare-classifica"], table[id^="classifica_"]'
+  );
   if (tblClassifica) {
-    const rows = Array.from(tblClassifica.querySelectorAll('tbody tr, tr')).filter(r => !r.closest('thead') && r.querySelectorAll('td').length >= 6);
+    const rows = Array.from(tblClassifica.querySelectorAll('tbody tr, tr')).filter(
+      r => !r.closest('thead') && r.querySelectorAll('td').length >= 3
+    );
     for (const r of rows) {
       const cells = Array.from(r.querySelectorAll('td')).map(td => cleanString(td.textContent || ''));
-      if (cells.length >= 6) {
+      if (cells.length >= 3) {
         const pos = parseInt(cells[0].replace(/[^\d]/g, ''), 10);
         const teamName = cells[1];
         const punti = parseInt(cells[2].replace(/[^\d]/g, ''), 10) || 0;
-        const giocate = parseInt(cells[3].replace(/[^\d]/g, ''), 10) || 0;
-        const vinte = parseInt(cells[4].replace(/[^\d]/g, ''), 10) || 0;
-        const perse = parseInt(cells[5].replace(/[^\d]/g, ''), 10) || 0;
+        const giocate = cells[3] ? parseInt(cells[3].replace(/[^\d]/g, ''), 10) || 0 : 0;
+        const vinte = cells[4] ? parseInt(cells[4].replace(/[^\d]/g, ''), 10) || 0 : 0;
+        const perse = cells[5] ? parseInt(cells[5].replace(/[^\d]/g, ''), 10) || 0 : 0;
         const setVinti = cells[6] ? parseInt(cells[6].replace(/[^\d]/g, ''), 10) || 0 : 0;
         const setPersi = cells[7] ? parseInt(cells[7].replace(/[^\d]/g, ''), 10) || 0 : 0;
 
-        if (pos > 0 && teamName && teamName.length >= 2) {
+        if (pos > 0 && teamName && teamName.length >= 2 && !teamName.toLowerCase().includes('squadra')) {
           const isMyTeam = customOfficialName && customOfficialName.trim()
-            ? (cleanString(teamName).toLowerCase() === customOfficialName.toLowerCase().trim() || isNvaTeam(teamName, customOfficialName))
-            : isNvaTeam(teamName, myTeamName);
+            ? (cleanString(teamName).toLowerCase() === customOfficialName.toLowerCase().trim() || isNvaTeam(teamName, customOfficialName, myTeamName))
+            : isNvaTeam(teamName, myTeamName, myTeamName);
 
           classifica.push({
             pos,
@@ -340,7 +356,125 @@ export function parseFipavHtml(
     }
   }
 
-  // Strategy B: General FIPAV match parsing (fallback)
+  // Strategy B: Dedicated fipavromagna.it & PowerSPORT portal (.tb-opponanet-contant or .gare-tab)
+  if (partite.length === 0) {
+    const oppBlocks = Array.from(doc.querySelectorAll('.tb-opponanet-contant'));
+    if (oppBlocks.length > 0) {
+      let matchIdx = 1;
+      for (const oppBlock of oppBlocks) {
+        const mainRow = oppBlock.closest('tr');
+        if (!mainRow) continue;
+
+        const team1El = oppBlock.querySelector('.tb-team-1 .text h6, .tb-team-1 h6, .tb-team-1 a, .tb-team-1');
+        const team2El = oppBlock.querySelector('.tb-team-2 .text h6, .tb-team-2 h6, .tb-team-2 a, .tb-team-2');
+        const team1 = cleanString(team1El?.textContent || '');
+        const team2 = cleanString(team2El?.textContent || '');
+
+        if (!team1 || !team2) continue;
+
+        const dateCell = mainRow.querySelector('.dataOra, .tb-date');
+        const dateCellText = cleanString(dateCell?.textContent || '');
+
+        let giornataNum = `${matchIdx}`;
+        const gMatch = dateCellText.match(/(?:G\.|giornata\s*)(\d+)/i);
+        if (gMatch) giornataNum = gMatch[1];
+
+        let garaNum = '';
+        const garaMatch = dateCellText.match(/Gara\s+n\.\s*(\d+)/i);
+        if (garaMatch) garaNum = garaMatch[1];
+
+        let data = new Date().toLocaleDateString('it-IT');
+        const dMatch = dateCellText.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+        if (dMatch) data = dMatch[1];
+
+        let ora = '20:30';
+        const oMatch = dateCellText.match(/(\d{1,2}:\d{2})/);
+        if (oMatch) ora = oMatch[1];
+
+        const score1El = oppBlock.querySelector('.tb-opponanet.aa h6, .tb-opponanet.aa');
+        const score2El = oppBlock.querySelector('.tb-opponanet.bb h6, .tb-opponanet.bb');
+        const score1Str = cleanString(score1El?.textContent || '');
+        const score2Str = cleanString(score2El?.textContent || '');
+
+        const s1 = parseInt(score1Str, 10);
+        const s2 = parseInt(score2Str, 10);
+        const hasScores = !isNaN(s1) && !isNaN(s2);
+
+        const parzialiEls = Array.from(mainRow.querySelectorAll('.rgb-parziali-tab h6, .rgb-parziali-tab span'));
+        const parzialiTokens = parzialiEls
+          .map(el => cleanString(el.textContent || ''))
+          .filter(t => /\d+-\d+/.test(t));
+        const parziali = parzialiTokens.join(' ');
+
+        let nextRow = mainRow.nextElementSibling;
+        while (nextRow && !nextRow.classList.contains('other-info') && !nextRow.querySelector('.imp-des')) {
+          if (nextRow.querySelector('.tb-opponanet-contant')) break;
+          nextRow = nextRow.nextElementSibling;
+        }
+
+        let luogo = '';
+        if (nextRow) {
+          const impDes = nextRow.querySelector('.imp-des p, .imp-des');
+          if (impDes) {
+            const b = impDes.querySelector('b');
+            const a = impDes.querySelector('a');
+            const namePart = cleanString(b?.textContent || '');
+            const addrPart = cleanString(a?.textContent || '');
+            luogo = [namePart, addrPart].filter(Boolean).join(' - ') || cleanString(impDes.textContent || '');
+          }
+        }
+
+        const isHome = isNvaTeam(team1, customOfficialName, myTeamName);
+        const isAway = isNvaTeam(team2, customOfficialName, myTeamName);
+
+        let matchTeamIsHome = isHome;
+        let opponent = '';
+
+        if (isHome) {
+          matchTeamIsHome = true;
+          opponent = team2;
+        } else if (isAway) {
+          matchTeamIsHome = false;
+          opponent = team1;
+        } else {
+          const t1Low = team1.toLowerCase();
+          const t2Low = team2.toLowerCase();
+          if (t1Low.includes('new volley') || t1Low.includes('nva')) {
+            matchTeamIsHome = true;
+            opponent = team2;
+          } else if (t2Low.includes('new volley') || t2Low.includes('nva')) {
+            matchTeamIsHome = false;
+            opponent = team1;
+          } else {
+            continue;
+          }
+        }
+
+        const setNva = hasScores ? (matchTeamIsHome ? s1 : s2) : null;
+        const setAvversario = hasScores ? (matchTeamIsHome ? s2 : s1) : null;
+        const terminata = hasScores;
+
+        partite.push({
+          id: `p_fipav_${garaNum || matchIdx}_${Date.now()}`,
+          giornata: `${giornataNum}ª Giornata`,
+          data,
+          ora,
+          avversario: opponent,
+          casa: matchTeamIsHome,
+          luogo: sanitizeLuogoDisplay(luogo, matchTeamIsHome),
+          risultato: terminata ? `${setNva} - ${setAvversario}` : '',
+          setNva,
+          setAvversario,
+          parzialiSet: parziali.trim(),
+          terminata
+        });
+
+        matchIdx++;
+      }
+    }
+  }
+
+  // Strategy C: General FIPAV match parsing (fallback)
   if (partite.length === 0) {
     const allMatchRows = Array.from(doc.querySelectorAll('tr, .match-row, .gara-row, .row'));
     let currentGiornata = "1ª Giornata";
@@ -357,7 +491,7 @@ export function parseFipavHtml(
       if (cells.length < 2) continue;
 
       const rowText = cells.join(' ');
-      const isNvaInRow = isNvaTeam(rowText, customOfficialName || myTeamName);
+      const isNvaInRow = isNvaTeam(rowText, customOfficialName || myTeamName, myTeamName);
 
       if (isNvaInRow) {
         let dateText = new Date().toLocaleDateString('it-IT');
@@ -390,11 +524,12 @@ export function parseFipavHtml(
         const setMatch = rowText.match(/(\d{2}\s*[-–]\s*\d{2}(?:[\s,]+\d{2}\s*[-–]\d{2})*)/);
         if (setMatch) parzialiSet = setMatch[1];
 
-        const vsMatch = rowText.match(/([a-zA-Z0-9\s'\.\-]+?)\s+(?:vs|-|–)\s+([a-zA-Z0-9\s'\.\-]+)/i);
+        // Search strictly for "vs" so that hyphens in "G.1 - Gara" or dates are never mistaken for team separators
+        const vsMatch = rowText.match(/([a-zA-Z0-9\s'\.\-]+?)\s+\bvs\b\s+([a-zA-Z0-9\s'\.\-]+)/i);
         if (vsMatch) {
           const t1 = cleanString(vsMatch[1]);
           const t2 = cleanString(vsMatch[2]);
-          if (isNvaTeam(t1, customOfficialName || myTeamName)) {
+          if (isNvaTeam(t1, customOfficialName || myTeamName, myTeamName)) {
             isHome = true;
             opponent = t2.replace(/[\d\/\:]/g, '').trim() || 'Avversario';
           } else {
@@ -444,7 +579,8 @@ export function parseFipavHtml(
   return {
     classifica: sortedClassifica,
     partite,
-    prossimaGara
+    prossimaGara,
+    detectedUrl: ogUrl
   };
 }
 

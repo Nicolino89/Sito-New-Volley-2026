@@ -193,7 +193,7 @@ export default function TabGareFipav({
 
 
   // Handle Pasted HTML / Source Extraction
-  const handleImportPastedHtml = async (onlyClassifica: boolean = false) => {
+  const handleImportPastedHtml = async (mode: 'ALL' | 'ONLY_CLASSIFICA' | 'ONLY_GARE' = 'ALL') => {
     if (!pastedHtml.trim()) {
       showToast("Incolla prima il codice sorgente o il testo della pagina FIPAV.", "error");
       return;
@@ -205,20 +205,52 @@ export default function TabGareFipav({
         return;
       }
 
-      if (onlyClassifica) {
+      // Auto-populate external URL if detected from HTML and currently empty
+      if (res.detectedUrl) {
+        if (!fipavUrl) setFipavUrl(res.detectedUrl);
+        if (!linkEsternoClassifica) setLinkEsternoClassifica(res.detectedUrl);
+      }
+
+      if (mode === 'ONLY_GARE') {
+        if (res.partite.length === 0) {
+          showToast("Nessuna gara trovata nel testo incollato. Se vuoi aggiornare la classifica, usa 'Aggiorna Solo Classifica'.", "error");
+          return;
+        }
+
+        const mergedPartite = mergePartite(partite, res.partite);
+        setPartite(mergedPartite);
+
+        await updateSquadraFipavData(activeTeam.id, {
+          fipav_url: fipavUrl || res.detectedUrl || activeTeam.fipav_url,
+          nome_visualizzato_gare: nomeVisualizzatoGare || activeTeam.nome_squadra,
+          squadra_fipav_ufficiale: squadraFipavUfficiale,
+          partite: mergedPartite,
+          classifica: activeTeam.classifica || classifica, // Non tocca la classifica!
+          tipo_classifica: (activeTeam as any).tipo_classifica || tipoClassifica || 'LINK_ESTERNO',
+          link_esterno_classifica: linkEsternoClassifica || fipavUrl || res.detectedUrl || activeTeam.fipav_url
+        } as any);
+
+        await loadAllData();
+        setShowHtmlPaste(false);
+        setPastedHtml('');
+        showToast(`Calendario gare aggiornato con successo (${res.partite.length} partite caricate)! La classifica e la modalità link esterno sono rimaste invariate.`, "success");
+        return;
+      }
+
+      if (mode === 'ONLY_CLASSIFICA') {
         if (res.classifica.length === 0) {
           showToast("Nessuna classifica trovata nel testo incollato. Se vuoi aggiornare anche le gare, clicca 'Aggiorna Tutto'.", "error");
           return;
         }
         setClassifica(res.classifica);
         await updateSquadraFipavData(activeTeam.id, {
-          fipav_url: fipavUrl || activeTeam.fipav_url,
+          fipav_url: fipavUrl || res.detectedUrl || activeTeam.fipav_url,
           nome_visualizzato_gare: nomeVisualizzatoGare || activeTeam.nome_squadra,
           squadra_fipav_ufficiale: squadraFipavUfficiale,
           classifica: res.classifica,
           partite: partite, // Calendario esistente intatto!
           tipo_classifica: 'FIPAV_SYNC',
-          link_esterno_classifica: fipavUrl || activeTeam.fipav_url
+          link_esterno_classifica: fipavUrl || res.detectedUrl || activeTeam.fipav_url
         } as any);
 
         await loadAllData();
@@ -228,21 +260,27 @@ export default function TabGareFipav({
         return;
       }
 
-      // Aggiornamento completo con Merge Intelligente
+      // Aggiornamento completo con Merge Intelligente ('ALL')
       const newClassifica = res.classifica.length > 0 ? res.classifica : classifica;
       const mergedPartite = mergePartite(partite, res.partite);
 
       setClassifica(newClassifica);
       setPartite(mergedPartite);
 
+      // Se l'utente ha impostato 'LINK_ESTERNO' o 'DISABILITATA', rispettiamo la sua scelta
+      const currentTipo = (activeTeam as any).tipo_classifica || tipoClassifica;
+      const targetTipoClassifica = (currentTipo === 'LINK_ESTERNO' || currentTipo === 'DISABILITATA') 
+        ? currentTipo 
+        : 'FIPAV_SYNC';
+
       await updateSquadraFipavData(activeTeam.id, {
-        fipav_url: fipavUrl || activeTeam.fipav_url,
+        fipav_url: fipavUrl || res.detectedUrl || activeTeam.fipav_url,
         nome_visualizzato_gare: nomeVisualizzatoGare || activeTeam.nome_squadra,
         squadra_fipav_ufficiale: squadraFipavUfficiale,
         classifica: newClassifica,
         partite: mergedPartite,
-        tipo_classifica: 'FIPAV_SYNC',
-        link_esterno_classifica: fipavUrl || activeTeam.fipav_url
+        tipo_classifica: targetTipoClassifica,
+        link_esterno_classifica: linkEsternoClassifica || fipavUrl || res.detectedUrl || activeTeam.fipav_url
       } as any);
 
       // Aggiorna la Prossima Gara sulla Home con la prima non disputata
@@ -1381,7 +1419,18 @@ export default function TabGareFipav({
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => handleImportPastedHtml(true)}
+                  onClick={() => handleImportPastedHtml('ONLY_GARE')}
+                  disabled={!pastedHtml.trim()}
+                  className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-200 border border-amber-500/40 font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider shadow cursor-pointer transition-all flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Aggiorna esclusivamente il calendario gare senza toccare o sostituire la classifica o la modalità link esterno"
+                >
+                  <Calendar className="w-4 h-4 text-amber-400" />
+                  <span>Importa Solo Gare</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleImportPastedHtml('ONLY_CLASSIFICA')}
                   disabled={!pastedHtml.trim()}
                   className="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider shadow cursor-pointer transition-all flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                   title="Aggiorna esclusivamente la tabella classifica senza toccare le gare esistenti"
@@ -1392,13 +1441,13 @@ export default function TabGareFipav({
 
                 <button
                   type="button"
-                  onClick={() => handleImportPastedHtml(false)}
+                  onClick={() => handleImportPastedHtml('ALL')}
                   disabled={!pastedHtml.trim()}
                   className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-900/30 cursor-pointer transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="Aggiorna sia la classifica che il calendario gare in un click"
+                  title="Aggiorna sia il calendario gare che la classifica in un click"
                 >
                   <Check className="w-4 h-4" />
-                  <span>Aggiorna Tutto (Gare + Classifica)</span>
+                  <span>Aggiorna Tutto</span>
                 </button>
               </div>
             </div>
