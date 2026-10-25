@@ -56,7 +56,8 @@ import {
   Giocatore,
   NewsBlog,
   Sponsor,
-  EventiTorneo
+  EventiTorneo,
+  sortSquadreByImportance
 } from './firebase-societa';
 
 import SplashScreen from './components/SplashScreen';
@@ -534,7 +535,8 @@ export default function App() {
         }
       }
 
-      setSquadreAll(squads);
+      const sortedSquads = sortSquadreByImportance(squads);
+      setSquadreAll(sortedSquads);
       setGiocatoriAll(players);
       setNewsAll(news);
       setSponsorsAll(sponsors);

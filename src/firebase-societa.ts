@@ -382,6 +382,121 @@ export function isSquadraMaschile(s?: Partial<RosaSquadra> | null): boolean {
 }
 
 /**
+ * Calcola l'indice di importanza/gerarchia e fascia d'età di una squadra.
+ * Minore è il numero, prima appare la squadra.
+ * 
+ * Gerarchia:
+ * 1. Serie D (Femminile, Maschile)
+ * 2. 1^ Divisione (Femminile, Maschile)
+ * 3. 2^ Divisione (Femminile, Maschile)
+ * 4. 3^ Divisione (Femminile, Maschile)
+ * 5. Altri campionati Senior
+ * 6. Settore Giovanile in ordine decrescente di età (Under 19 -> Under 12)
+ * 7. Minivolley / S3 / Primi Passi
+ */
+export function getSquadraHierarchyRank(s?: Partial<RosaSquadra> | null): number {
+  if (!s) return 9999;
+  
+  const nome = (s.nome_squadra || '').toUpperCase().trim();
+  const camp = (s.campionato || '').toUpperCase().trim();
+  const cat = (s.category || '').toUpperCase().trim();
+  const combined = `${nome} ${camp} ${cat}`;
+  
+  const gender = getGenereSquadra(s);
+  // Femminile prima (0), Maschile (1), Misto (2)
+  const genderOffset = gender === 'F' ? 0 : gender === 'M' ? 1 : 2;
+
+  // 1. SERIE D
+  if (cat === 'SERIE_D' || combined.includes('SERIE D') || combined.includes('SERIE-D')) {
+    return 100 + genderOffset;
+  }
+
+  // 2. PRIMA DIVISIONE (1^ DIV / 1° DIV / 1A DIV / PRIMA DIVISIONE)
+  if (
+    combined.includes('1^ DIVISIONE') || 
+    combined.includes('1° DIVISIONE') || 
+    combined.includes('1A DIVISIONE') || 
+    combined.includes('1 DIVISIONE') ||
+    combined.includes('PRIMA DIVISIONE')
+  ) {
+    return 200 + genderOffset;
+  }
+
+  // 3. SECONDA DIVISIONE (2^ DIV / 2° DIV / 2A DIV / SECONDA DIVISIONE)
+  if (
+    combined.includes('2^ DIVISIONE') || 
+    combined.includes('2° DIVISIONE') || 
+    combined.includes('2A DIVISIONE') || 
+    combined.includes('2 DIVISIONE') ||
+    combined.includes('SECONDA DIVISIONE')
+  ) {
+    return 300 + genderOffset;
+  }
+
+  // 4. TERZA DIVISIONE (3^ DIV / 3° DIV / 3A DIV / TERZA DIVISIONE)
+  if (
+    combined.includes('3^ DIVISIONE') || 
+    combined.includes('3° DIVISIONE') || 
+    combined.includes('3A DIVISIONE') || 
+    combined.includes('3 DIVISIONE') ||
+    combined.includes('TERZA DIVISIONE')
+  ) {
+    return 400 + genderOffset;
+  }
+
+  // 5. ALTRE DIVISIONI / SENIOR CHE NON SONO GIOVANILI
+  const isYouth = 
+    cat === 'GIOVANILI' || 
+    combined.includes('UNDER') || 
+    combined.includes('MINIVOLLEY') || 
+    combined.includes('S3') || 
+    combined.includes('PRIMI PASSI');
+
+  if (!isYouth && (cat === 'SENIOR' || cat === 'CAMPIONATI_SENIOR' || combined.includes('DIVISIONE') || combined.includes('OPEN') || combined.includes('AMATORI'))) {
+    return 500 + genderOffset;
+  }
+
+  // 6. GIOVANILI: Ordiniamo per età decrescente (dai più grandi ai più piccoli)
+  const underMatch = combined.match(/UNDER\s*(\d+)(?:\s*\/\s*(\d+))?|U(\d+)/i);
+  if (underMatch) {
+    let age = 15;
+    if (underMatch[1]) {
+      const primary = parseInt(underMatch[1], 10);
+      const secondary = underMatch[2] ? parseInt(underMatch[2], 10) : null;
+      age = secondary ? Math.max(primary, secondary) - 0.5 : primary;
+    } else if (underMatch[3]) {
+      age = parseInt(underMatch[3], 10);
+    }
+    // Più grande è l'età, minore deve essere il rank per venire prima
+    return 600 + Math.max(0, (25 - age)) * 10 + genderOffset;
+  }
+
+  // 7. MINIVOLLEY / VOLLEY S3 / PRIMI PASSI
+  if (combined.includes('MINIVOLLEY') || combined.includes('S3') || combined.includes('PRIMI PASSI') || combined.includes('CAS') || combined.includes('BABY')) {
+    return 800 + genderOffset;
+  }
+
+  // Squadre "Da Assegnare" o pool
+  if (combined.includes('DA ASSEGNARE') || combined.includes('POOL') || combined.includes('NON ASSEGNATI')) {
+    return 9900;
+  }
+
+  // Fallback generico
+  return 850 + genderOffset;
+}
+
+export function sortSquadreByImportance<T extends Partial<RosaSquadra>>(squadre: T[]): T[] {
+  return [...squadre].sort((a, b) => {
+    const rankA = getSquadraHierarchyRank(a);
+    const rankB = getSquadraHierarchyRank(b);
+    if (rankA !== rankB) {
+      return rankA - rankB;
+    }
+    return (a.nome_squadra || '').localeCompare(b.nome_squadra || '', 'it', { sensitivity: 'base' });
+  });
+}
+
+/**
  * Elenco cariche e ruoli tipici dello staff tecnico e dirigenziale (senza area sanitaria).
  * Può essere integrato o personalizzato liberamente dall'utente.
  */

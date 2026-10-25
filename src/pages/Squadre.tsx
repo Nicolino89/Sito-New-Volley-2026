@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RosaSquadra, getGenereSquadra, isSquadraFemminile, isSquadraMaschile } from '../firebase-societa';
+import { RosaSquadra, getGenereSquadra, isSquadraFemminile, isSquadraMaschile, sortSquadreByImportance } from '../firebase-societa';
 import { Trophy, Users, ChevronRight, HelpCircle, Shield, Sparkles, ArrowRight, History } from 'lucide-react';
 
 interface SquadreProps {
@@ -37,22 +37,22 @@ export default function Squadre({ squadre }: SquadreProps) {
   // Other Serie D teams if any that didn't match the primary 2
   const otherSerieD = serieDTeams.filter(s => s !== serieDFemminile && s !== serieDMaschile);
 
-  // Filter Senior categories
-  const seniorTeams = safeSquadre.filter(s => {
+  // Filter Senior categories (ordinate per gerarchia / divisione)
+  const seniorTeams = sortSquadreByImportance(safeSquadre.filter(s => {
     if (serieDTeams.includes(s)) return false;
     const cat = s?.category;
     const name = (s?.nome_squadra || '').toUpperCase();
     if (cat === 'GIOVANILI' || name.includes('UNDER') || name.includes('MINIVOLLEY')) return false;
     return true;
-  });
+  }));
 
-  // Filter Youth categories
-  const giovaniliTeams = safeSquadre.filter(s => {
+  // Filter Youth categories (ordinate per età decrescente: U17, U16, U15, U13/14, Minivolley)
+  const giovaniliTeams = sortSquadreByImportance(safeSquadre.filter(s => {
     if (serieDTeams.includes(s)) return false;
     const cat = s?.category;
     const name = (s?.nome_squadra || '').toUpperCase();
     return cat === 'GIOVANILI' || name.includes('UNDER') || name.includes('MINIVOLLEY');
-  });
+  }));
 
   const renderSerieDCard = (team: RosaSquadra | undefined, label: string, forcedGender?: 'M' | 'F' | 'MISTO') => {
     const gender = team ? getGenereSquadra(team) : (forcedGender || 'F');
@@ -61,7 +61,7 @@ export default function Squadre({ squadre }: SquadreProps) {
 
     if (!team) {
       return (
-        <div className="bg-zinc-900/70 backdrop-blur-md border border-dashed border-zinc-800 rounded-3xl p-8 flex flex-col items-center justify-center text-center min-h-[360px] relative overflow-hidden shadow-sm">
+        <div className="bg-zinc-900/70 backdrop-blur-md border border-dashed border-zinc-800 rounded-3xl p-8 flex flex-col items-center justify-center text-center min-h-[400px] relative overflow-hidden shadow-sm">
           <div className="absolute top-4 left-4 bg-zinc-800 text-zinc-400 text-[11px] font-mono font-bold tracking-wider uppercase px-3 py-1 rounded-md">
             SERIE D {gender === 'F' ? 'FEMMINILE' : 'MASCHILE'}
           </div>
@@ -78,19 +78,21 @@ export default function Squadre({ squadre }: SquadreProps) {
       <div 
         key={team.id}
         onClick={() => navigate(`/squadre/${team.id}`)}
-        className="bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 hover:border-[#FFE600] rounded-3xl overflow-hidden shadow-2xl transition-all duration-300 flex flex-col justify-between min-h-[360px] group relative cursor-pointer select-none hover:shadow-[0_10px_35px_rgba(255,230,0,0.15)]"
+        className="bg-zinc-950 border border-zinc-800 hover:border-[#FFE600] rounded-3xl overflow-hidden shadow-2xl transition-all duration-300 flex flex-col justify-between min-h-[420px] sm:min-h-[460px] group relative cursor-pointer select-none hover:shadow-[0_10px_35px_rgba(255,230,0,0.2)]"
       >
-        {/* Background Image / Overlay */}
+        {/* Background Image: Luminosa al 100%, senza ombre scure sui volti delle atlete/atleti */}
         <div className="absolute inset-0 z-0 overflow-hidden">
           <img 
             src={hasImage ? imageUrl : "https://images.unsplash.com/photo-1571008887538-b36bb32f4571?w=800&auto=format&fit=crop&q=80"} 
             alt={team?.nome_squadra || label}
             loading="lazy"
             decoding="async"
-            className="w-full h-full object-cover opacity-50 group-hover:opacity-75 group-hover:scale-105 transition-all duration-500"
+            className="w-full h-full object-cover opacity-100 group-hover:scale-105 transition-all duration-500"
             referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-black/30" />
+          {/* Leggera sfumatura in alto e in basso per la massima leggibilità dei badge e testi, lasciando il centro completamente limpido */}
+          <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/75 via-black/30 to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none" />
         </div>
 
         {/* Top Badges */}
@@ -108,18 +110,18 @@ export default function Squadre({ squadre }: SquadreProps) {
           <div>
             <div className="flex items-center gap-2">
               <span className={`inline-block w-3 h-3 rounded-full ${gender === 'F' ? 'bg-pink-500 shadow-[0_0_12px_rgba(236,72,153,0.8)]' : 'bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.8)]'}`} />
-              <span className="text-xs font-bold font-mono text-zinc-300 uppercase tracking-widest">{gender === 'F' ? 'Femminile' : 'Maschile'}</span>
+              <span className="text-xs font-bold font-mono text-zinc-200 uppercase tracking-widest drop-shadow-md">{gender === 'F' ? 'Femminile' : 'Maschile'}</span>
             </div>
-            <h3 className="text-3xl sm:text-4xl font-barlow font-black text-white uppercase tracking-wide group-hover:text-[#FFE600] transition-colors leading-none mt-2 drop-shadow-md">
+            <h3 className="text-3xl sm:text-4xl font-barlow font-black text-white uppercase tracking-wide group-hover:text-[#FFE600] transition-colors leading-none mt-2 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
               {team?.nome_squadra || label}
             </h3>
-            <p className="text-zinc-300 text-xs sm:text-sm font-mono font-medium truncate mt-1.5">
+            <p className="text-zinc-200 text-xs sm:text-sm font-mono font-medium truncate mt-1.5 drop-shadow-md">
               {team?.campionato || 'Campionato Regionale FIPAV'}
             </p>
           </div>
 
-          <div className="flex items-center justify-between pt-4 border-t border-zinc-800/90">
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-200 font-mono">
+          <div className="flex items-center justify-between pt-4 border-t border-zinc-700/80">
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-100 font-mono drop-shadow-md">
               <Users className="w-4 h-4 text-[#FFE600]" />
               <span><strong>{playersCount}</strong> Atleti Convocati</span>
             </div>

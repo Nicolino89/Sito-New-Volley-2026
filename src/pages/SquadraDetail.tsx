@@ -22,7 +22,8 @@ import {
   Info,
   ExternalLink,
   Download,
-  CalendarPlus
+  CalendarPlus,
+  Maximize2
 } from 'lucide-react';
 import { downloadIcsCalendar, getGoogleCalendarLink } from '../utils/calendarExport';
 import { updatePageMeta } from '../utils/seoHelper';
@@ -62,6 +63,7 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
   const teamId = rawTeamId ? decodeURIComponent(rawTeamId) : undefined;
   const navigate = useNavigate();
   const [activeSubTab, setActiveSubTab] = useState<'roster' | 'schedule' | 'classifica' | 'staff'>('roster');
+  const [showFullPhoto, setShowFullPhoto] = useState(false);
 
   // States for selected athlete detail modal and dynamic history loader
   const [selectedPlayer, setSelectedPlayer] = useState<Giocatore | null>(null);
@@ -357,22 +359,35 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
         </button>
       </div>
 
-      {/* TEAM HERO BANNER */}
+      {/* TEAM HERO BANNER: Ampio spazio foto panoramica, senza ombre scure sui volti */}
       <div 
-        className="bg-black border border-zinc-850 rounded-3xl overflow-hidden relative shadow-2xl h-72 md:h-96 flex flex-col justify-end"
+        className="bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden relative shadow-2xl min-h-[440px] sm:min-h-[540px] md:min-h-[620px] lg:min-h-[680px] flex flex-col justify-end group"
         id="team-detail-hero"
       >
         <div className="absolute inset-0 z-0">
           <img 
             src={team.foto_copertina_url || "https://images.unsplash.com/photo-1571008887538-b36bb32f4571?w=1200&auto=format&fit=crop&q=80"} 
             alt={team.nome_squadra}
-            className="w-full h-full object-cover opacity-45"
+            className="w-full h-full object-cover opacity-100 transition-all duration-300"
             style={{
               objectPosition: `center ${team.coverPositionY ?? 50}%`
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/75 to-transparent" />
+          {/* Sfumatura morbida solo sul fondo per dare massima leggibilità al titolo lasciando libera tutta la foto */}
+          <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/95 via-black/50 to-transparent pointer-events-none" />
         </div>
+
+        {/* Pulsante Ingrandisci Foto a Schermo Intero */}
+        {team.foto_copertina_url && (
+          <button
+            onClick={() => setShowFullPhoto(true)}
+            className="absolute top-4 right-4 z-20 bg-black/60 hover:bg-black/90 text-white/90 hover:text-white px-3.5 py-2 rounded-xl backdrop-blur-md border border-white/20 text-xs font-mono font-bold flex items-center gap-2 transition-all cursor-pointer shadow-lg hover:scale-105"
+            title="Visualizza foto squadra intera ad alta risoluzione"
+          >
+            <Maximize2 className="w-4 h-4 text-brand-yellow" />
+            <span>Ingrandisci Foto</span>
+          </button>
+        )}
 
         <div className="p-6 md:p-10 z-10 relative space-y-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -381,25 +396,55 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
             </span>
             <span className={`inline-flex items-center gap-1 text-[10px] font-black font-mono px-2.5 py-1 rounded-md uppercase border ${
               genderLetter === 'F' 
-                ? 'bg-pink-950/60 border-pink-500/30 text-pink-400' 
+                ? 'bg-pink-950/80 border-pink-500/50 text-pink-300 shadow-sm' 
                 : genderLetter === 'MISTO'
-                  ? 'bg-purple-950/60 border-purple-500/30 text-purple-400'
-                  : 'bg-blue-950/60 border-blue-500/30 text-blue-400'
+                  ? 'bg-purple-950/80 border-purple-500/50 text-purple-300 shadow-sm'
+                  : 'bg-blue-950/80 border-blue-500/50 text-blue-300 shadow-sm'
             }`}>
               {genderLetter === 'F' ? '♀ Femminile' : genderLetter === 'MISTO' ? '👥 Misto' : '♂ Maschile'}
             </span>
           </div>
 
           <div className="space-y-1">
-            <h1 className="text-3xl md:text-5xl font-barlow font-bold text-white uppercase tracking-wide leading-tight">
+            <h1 className="text-3xl md:text-5xl font-barlow font-bold text-white uppercase tracking-wide leading-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
               {team.nome_squadra}
             </h1>
-            <p className="text-brand-yellow font-barlow font-semibold uppercase text-sm tracking-wider">
+            <p className="text-brand-yellow font-barlow font-semibold uppercase text-sm tracking-wider drop-shadow-md">
               {team.campionato}
             </p>
           </div>
         </div>
       </div>
+
+      {/* Lightbox a Schermo Intero per la Foto della Squadra */}
+      <AnimatePresence>
+        {showFullPhoto && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowFullPhoto(false)}
+            className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out"
+          >
+            <button
+              onClick={() => setShowFullPhoto(false)}
+              className="absolute top-5 right-5 text-white/80 hover:text-white bg-zinc-800/80 hover:bg-zinc-700 p-2.5 rounded-full transition-all cursor-pointer z-50 shadow-lg"
+              aria-label="Chiudi foto"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <motion.img
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              src={team.foto_copertina_url || "https://images.unsplash.com/photo-1571008887538-b36bb32f4571?w=1200&auto=format&fit=crop&q=80"}
+              alt={team.nome_squadra}
+              className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Banner Informativo Rosa in Aggiornamento */}
       <div className="bg-amber-500/10 border border-amber-400/30 rounded-2xl py-3 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">

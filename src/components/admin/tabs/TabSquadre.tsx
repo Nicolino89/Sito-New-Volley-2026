@@ -40,6 +40,7 @@ import {
   CARICHE_STAFF_DEFAULT,
   getGenereSquadra,
   GenereSquadra,
+  sortSquadreByImportance,
   db
 } from '../../../firebase-societa';
 import { collection, getDocs } from 'firebase/firestore';
@@ -77,6 +78,11 @@ export default function TabSquadre({
   
   // Create Squad Form visibility
   const [showCreateSquadForm, setShowCreateSquadForm] = useState(false);
+
+  // Lista squadre ordinata rigorosamente per importanza/gerarchia ed età
+  const sortedSquadreList = React.useMemo(() => {
+    return sortSquadreByImportance(squadreAll || []);
+  }, [squadreAll]);
 
   // Global Athlete Filters
   const [playerSearch, setPlayerSearch] = useState('');
@@ -1707,7 +1713,7 @@ export default function TabSquadre({
 
           {/* TEAMS GRID LIST */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {squadreAll.map(team => {
+            {sortedSquadreList.map(team => {
               const playersCount = (team.id_atleti || []).filter((id: any) => {
                 const cleanId = String(typeof id === 'string' ? id : id?.id || '').trim();
                 return cleanId && validPlayerIdsSet.has(cleanId);

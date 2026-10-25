@@ -29,7 +29,8 @@ import {
   updateSquadraFipavData,
   updateProssimaGara,
   ProssimaGara,
-  getGenereSquadra
+  getGenereSquadra,
+  sortSquadreByImportance
 } from '../../../firebase-societa';
 import { scrapeFipavFullData, parseFipavHtml, sanitizeLuogoDisplay, mergePartite } from '../../../utils/fipavScraper';
 
@@ -45,9 +46,17 @@ export default function TabGareFipav({
   loadAllData,
   showToast
 }: TabGareFipavProps) {
-  // Selected Team
-  const [selectedTeamId, setSelectedTeamId] = useState<string>(squadreAll[0]?.id || '');
-  const activeTeam = squadreAll.find(s => s.id === selectedTeamId) || squadreAll[0];
+  // Lista squadre ordinata rigorosamente per importanza/gerarchia ed età
+  const sortedSquadre = React.useMemo(() => {
+    return sortSquadreByImportance(squadreAll || []);
+  }, [squadreAll]);
+
+  // Selected Team (default sulla prima squadra in ordine di importanza, es. Serie D)
+  const [selectedTeamId, setSelectedTeamId] = useState<string>(() => {
+    const sorted = sortSquadreByImportance(squadreAll || []);
+    return sorted[0]?.id || '';
+  });
+  const activeTeam = sortedSquadre.find(s => s.id === selectedTeamId) || sortedSquadre[0];
 
   // Active Sub Tab in this section (Partite vs Classifica)
   const [activeSection, setActiveSection] = useState<'partite' | 'classifica'>('partite');
@@ -456,7 +465,7 @@ export default function TabGareFipav({
 
         {/* Big Team Selection Pills / Buttons */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pt-1">
-          {squadreAll.map(sq => {
+          {sortedSquadre.map(sq => {
             const isSelected = sq.id === selectedTeamId;
             const gender = getGenereSquadra(sq);
             const matchesCount = sq.partite?.length || 0;

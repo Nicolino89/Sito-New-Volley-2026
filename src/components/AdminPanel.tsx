@@ -23,7 +23,8 @@ import {
   SocietaConfig, 
   Sponsor, 
   AdminUser, 
-  EventiTorneo 
+  EventiTorneo,
+  sortSquadreByImportance
 } from '../firebase-societa';
 
 // Modular Sub-Tabs
@@ -125,6 +126,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     } catch {}
     return defaultTab;
   });
+
+  // Squadre ordinate rigorosamente per importanza / categoria / età:
+  // 1) Serie D (F, M)
+  // 2) 1^ Divisione
+  // 3) 2^ Divisione
+  // 4) 3^ Divisione
+  // 5) Altre Senior
+  // 6) Giovanili decrescenti per età (Under 19 -> Under 12)
+  // 7) Minivolley / S3
+  const sortedSquadreAll = React.useMemo(() => {
+    return sortSquadreByImportance(squadreAll || []);
+  }, [squadreAll]);
 
   const setAdminTab = (tab: 'news' | 'squadre' | 'gare_fipav' | 'pagine' | 'galleria' | 'camp_tornei' | 'voltex' | 'hall_of_fame' | 'collaboratori' | 'staff' | 'sponsor' | 'statistiche' | 'backup') => {
     setAdminTabState(tab);
@@ -335,7 +348,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {adminTab === 'news' && (
           <TabNews
             newsAll={newsAll}
-            squadreAll={squadreAll}
+            squadreAll={sortedSquadreAll}
             loadAllData={loadAllData}
             showToast={showToast}
             caricaFileSuStorage={caricaFileSuStorage}
@@ -344,7 +357,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
         {adminTab === 'squadre' && (
           <TabSquadre
-            squadreAll={squadreAll}
+            squadreAll={sortedSquadreAll}
             setSquadreAll={setSquadreAll}
             giocatoriAll={giocatoriAll}
             setGiocatoriAll={setGiocatoriAll}
@@ -358,7 +371,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
         {adminTab === 'gare_fipav' && (
           <TabGareFipav
-            squadreAll={squadreAll}
+            squadreAll={sortedSquadreAll}
             loadAllData={loadAllData}
             showToast={showToast}
           />
@@ -402,7 +415,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <TabHallOfFame
             showToast={showToast}
             caricaFileSuStorage={caricaFileSuStorage}
-            initialSquadre={squadreAll}
+            initialSquadre={sortedSquadreAll}
             initialGiocatori={giocatoriAll}
           />
         )}
@@ -410,7 +423,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {adminTab === 'collaboratori' && (
           <TabCollaboratori
             currentUser={currentUser}
-            squadreAll={squadreAll}
+            squadreAll={sortedSquadreAll}
             showToast={showToast}
           />
         )}
@@ -432,7 +445,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {adminTab === 'statistiche' && (
           <TabStatistiche
             newsAll={newsAll}
-            squadreAll={squadreAll}
+            squadreAll={sortedSquadreAll}
             giocatoriAll={giocatoriAll}
             sponsorsAll={sponsorsAll}
             showToast={showToast}
