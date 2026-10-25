@@ -27,7 +27,8 @@ import {
   Eye,
   EyeOff,
   Menu,
-  MapPin
+  MapPin,
+  Trophy
 } from 'lucide-react';
 
 import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
@@ -51,13 +52,17 @@ import {
   updateSocietaSettings,
   handleFirestoreError,
   OperationType,
+  getSquadreAll,
+  isSquadraMaschile,
+  isSquadraFemminile,
   // Types
   SocietaInfo,
   ConfigHome,
   ProssimaGara,
   Sponsor,
   NewsBlog,
-  AdminUser
+  AdminUser,
+  RosaSquadra
 } from '../firebase-societa';
 import { sanitizeLuogoDisplay } from '../utils/fipavScraper';
 import { slugify } from './News';
@@ -265,6 +270,7 @@ interface HomeProps {
   societaInfo?: any;
   newsAll?: NewsBlog[];
   sponsorsAll?: Sponsor[];
+  squadreAll?: RosaSquadra[];
 }
 
 export default function Home({ 
@@ -272,7 +278,8 @@ export default function Home({
   setSocietaSettings: propsSetSocietaSettings,
   societaInfo: propsSocietaInfo,
   newsAll: propsNewsAll,
-  sponsorsAll: propsSponsorsAll
+  sponsorsAll: propsSponsorsAll,
+  squadreAll: propsSquadreAll
 }: HomeProps = {}) {
   const navigate = useNavigate();
 
@@ -280,6 +287,19 @@ export default function Home({
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
   const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
   const [loadingAuth, setLoadingAuth] = useState<boolean>(false);
+
+  // Lista Squadre per collegamenti diretti a classifiche e rose
+  const [squadreList, setSquadreList] = useState<RosaSquadra[]>(propsSquadreAll || []);
+
+  useEffect(() => {
+    if (propsSquadreAll && propsSquadreAll.length > 0) {
+      setSquadreList(propsSquadreAll);
+    } else {
+      getSquadreAll().then(data => {
+        if (data && data.length > 0) setSquadreList(data);
+      }).catch(err => console.warn("Errore caricamento squadre in Home:", err));
+    }
+  }, [propsSquadreAll]);
 
   // Sidebar visual state
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
@@ -713,6 +733,25 @@ export default function Home({
   // Get active match for view rendering
   const activeGara = prossimeGare.find(g => g?.categoria === (selectedMatchCategory === 'D Maschile' ? "Serie D Maschile" : "Serie D Femminile")) || prossimeGare[0];
 
+  // Navigazione diretta alla classifica della squadra di Serie D selezionata
+  const handleGoToClassifica = () => {
+    const isMaschileTarget = selectedMatchCategory === 'D Maschile';
+    const targetTeam = squadreList.find(s => {
+      const isM = isSquadraMaschile(s);
+      const isF = isSquadraFemminile(s);
+      const name = (s.nome_squadra || '').toUpperCase();
+      const camp = (s.campionato || '').toUpperCase();
+      const isSerieD = s.category === 'SERIE_D' || name.includes('SERIE D') || camp.includes('SERIE D');
+      return isMaschileTarget ? (isM && isSerieD) : (isF && isSerieD);
+    });
+
+    if (targetTeam?.id) {
+      navigate(`/squadre/${targetTeam.id}?tab=classifica`);
+    } else {
+      navigate(`/squadre/${isMaschileTarget ? 'serie-d-maschile' : 'serie-d-femminile'}?tab=classifica`);
+    }
+  };
+
   return (
     <div className="relative min-h-screen w-full flex flex-col lg:flex-row gap-0" id="home-layout-container">
       
@@ -949,6 +988,28 @@ export default function Home({
                     <span className="font-bold text-zinc-300 flex-shrink-0">
                       {activeGara?.giornata || "1ª Giornata"}
                     </span>
+                  </div>
+
+                  {/* Tasto Diretto alla Classifica */}
+                  <div className="pt-3 mt-3 border-t border-zinc-800/80">
+                    <button
+                      onClick={handleGoToClassifica}
+                      className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 hover:from-[#FFE600] hover:to-[#ffd500] text-zinc-200 hover:text-zinc-950 border border-zinc-700/80 hover:border-[#FFE600] text-xs font-bold uppercase tracking-wider flex items-center justify-between transition-all duration-200 group shadow-lg hover:shadow-[#FFE600]/20 cursor-pointer"
+                      title={`Visualizza la classifica completa di ${selectedMatchCategory === 'D Maschile' ? 'Serie D Maschile' : 'Serie D Femminile'}`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="p-1.5 rounded-lg bg-zinc-800/90 group-hover:bg-black/10 text-[#FFE600] group-hover:text-zinc-950 transition-colors">
+                          <Trophy className="w-4 h-4" />
+                        </span>
+                        <span className="font-barlow font-bold tracking-wider text-xs sm:text-sm uppercase">
+                          Classifica {selectedMatchCategory === 'D Maschile' ? 'Serie D Maschile' : 'Serie D Femminile'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[11px] font-sans font-bold text-zinc-400 group-hover:text-zinc-950 transition-colors">
+                        <span>Vedi Girone</span>
+                        <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                      </div>
+                    </button>
                   </div>
 
                 </div>

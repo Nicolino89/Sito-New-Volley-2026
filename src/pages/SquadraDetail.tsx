@@ -1,7 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { RosaSquadra, Giocatore, getStoricoGiocatore, RecordStoricoCarriera, formatRuoloGiocatore, getGenereSquadra, db, isDemoMode } from '../firebase-societa';
+import { 
+  RosaSquadra, 
+  Giocatore, 
+  getStoricoGiocatore, 
+  RecordStoricoCarriera, 
+  formatRuoloGiocatore, 
+  getGenereSquadra, 
+  isSquadraFemminile, 
+  isSquadraMaschile, 
+  db, 
+  isDemoMode 
+} from '../firebase-societa';
 import { collection, getDocs, query } from 'firebase/firestore';
 import { 
   ArrowLeft, 
@@ -59,10 +70,48 @@ interface SquadraDetailProps {
 export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps) {
   const { teamId: routeTeamId } = useParams<{ teamId: string }>();
   const location = useLocation();
-  const rawTeamId = routeTeamId || (location.pathname.startsWith('/squadre/') ? location.pathname.split('/squadre/')[1] : undefined);
+  const rawPathSegment = location.pathname.startsWith('/squadre/') ? location.pathname.split('/squadre/')[1] : undefined;
+  const cleanPathId = rawPathSegment ? rawPathSegment.split('?')[0].split('#')[0] : undefined;
+  const rawTeamId = routeTeamId || cleanPathId;
   const teamId = rawTeamId ? decodeURIComponent(rawTeamId) : undefined;
   const navigate = useNavigate();
-  const [activeSubTab, setActiveSubTab] = useState<'roster' | 'schedule' | 'classifica' | 'staff'>('roster');
+
+  // Inizializza subtab da query param (?tab=classifica), da hash (#classifica) o da navigation state
+  const getInitialTab = (): 'roster' | 'schedule' | 'classifica' | 'staff' => {
+    try {
+      const searchParams = new URLSearchParams(location.search);
+      const tabParam = searchParams.get('tab') || (location.hash ? location.hash.replace('#', '') : null);
+      if (tabParam && ['roster', 'schedule', 'classifica', 'staff'].includes(tabParam)) {
+        return tabParam as any;
+      }
+      if (location.state && (location.state as any).tab) {
+        const stateTab = (location.state as any).tab;
+        if (['roster', 'schedule', 'classifica', 'staff'].includes(stateTab)) {
+          return stateTab as any;
+        }
+      }
+    } catch {
+      // fallback
+    }
+    return 'roster';
+  };
+
+  const [activeSubTab, setActiveSubTab] = useState<'roster' | 'schedule' | 'classifica' | 'staff'>(getInitialTab);
+
+  // Sincronizza il sub-tab attivo se cambia l'URL o l'hash e scorre alla sezione
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const tabParam = searchParams.get('tab') || (location.hash ? location.hash.replace('#', '') : null);
+    if (tabParam && ['roster', 'schedule', 'classifica', 'staff'].includes(tabParam)) {
+      setActiveSubTab(tabParam as any);
+      setTimeout(() => {
+        const el = document.getElementById('squadra-subtabs-anchor');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 150);
+    }
+  }, [location.search, location.hash]);
   const [showFullPhoto, setShowFullPhoto] = useState(false);
 
   // States for selected athlete detail modal and dynamic history loader
@@ -273,7 +322,12 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
     );
   };
 
-  const team = squadre.find(s => s.id === teamId || s.id === rawTeamId);
+  const team = squadre.find(s => 
+    s.id === teamId || 
+    s.id === rawTeamId ||
+    (rawTeamId === 'serie-d-maschile' && isSquadraMaschile(s) && ((s.nome_squadra || '').toUpperCase().includes('SERIE D') || s.category === 'SERIE_D')) ||
+    (rawTeamId === 'serie-d-femminile' && isSquadraFemminile(s) && ((s.nome_squadra || '').toUpperCase().includes('SERIE D') || s.category === 'SERIE_D'))
+  );
 
   useEffect(() => {
     if (team) {
@@ -460,7 +514,7 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
       </div>
 
       {/* SUB TAB NAVIGATION */}
-      <div className="flex justify-start border-b border-zinc-200 pb-px">
+      <div id="squadra-subtabs-anchor" className="flex justify-start border-b border-zinc-200 pb-px scroll-mt-24">
         <div className="flex gap-2 bg-zinc-100 p-1 rounded-xl border border-zinc-250">
           <button
             onClick={() => setActiveSubTab('roster')}

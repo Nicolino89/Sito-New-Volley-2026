@@ -864,6 +864,7 @@ export default function App() {
                           societaInfo={societaInfo}
                           newsAll={newsAll}
                           sponsorsAll={sponsorsAll}
+                          squadreAll={squadreAll}
                         />
                       );
                       if (path.startsWith('/squadre')) {
