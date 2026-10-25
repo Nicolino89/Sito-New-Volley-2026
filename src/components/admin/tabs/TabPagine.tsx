@@ -59,7 +59,7 @@ export default function TabPagine({
   showToast,
   caricaFileSuStorage
 }: TabPagineProps) {
-  const [activeSection, setActiveSection] = useState<'info' | 'organigramma' | 'staff' | 'palestre' | 'storia' | 'branding'>('info');
+  const [activeSection, setActiveSection] = useState<'info' | 'organigramma' | 'staff' | 'carosello' | 'palestre' | 'storia' | 'branding'>('info');
   const [isSaving, setIsSaving] = useState(false);
 
   // Available staff from Anagrafica Staff (staff_profili)
@@ -71,6 +71,10 @@ export default function TabPagine({
   const hasAutoInitializedStaff = React.useRef(false);
   const [uploadingStaffId, setUploadingStaffId] = useState<string | null>(null);
   const [activePhotoAdjustId, setActivePhotoAdjustId] = useState<string | null>(null);
+
+  // Carosello Foto Società states
+  const [isUploadingCarosello, setIsUploadingCarosello] = useState(false);
+  const [newCaroselloUrl, setNewCaroselloUrl] = useState('');
 
   // Auto-sync staffTecnico with availableStaff if empty or containing mock data
   useEffect(() => {
@@ -721,6 +725,118 @@ export default function TabPagine({
     }
   };
 
+  // ==========================================
+  // CAROSELLO FOTO SOCIETÀ HANDLERS
+  // ==========================================
+  const handleUploadCaroselloPhoto = async (file: File) => {
+    try {
+      setIsUploadingCarosello(true);
+      showToast("Compressione e caricamento foto carosello in corso...", "info");
+
+      let url = '';
+      try {
+        const compResult = await compressImage(file, IMAGE_PRESETS.HERO);
+        url = await caricaBlobSuStorage(compResult.blob, `societa/carosello/${Date.now()}_${file.name.replace(/\s+/g, '_')}.webp`);
+      } catch (compErr) {
+        url = await caricaFileSuStorage(file, `societa/carosello/${Date.now()}_${file.name}`);
+      }
+
+      const currentFoto = societaConfig?.carosello?.foto || [];
+      const updatedFoto = [...currentFoto, { url, positionY: 50 }];
+      const updatedCarosello = {
+        foto: updatedFoto,
+        intervallo: societaConfig?.carosello?.intervallo || 5
+      };
+
+      setSocietaConfig(prev => prev ? ({ ...prev, carosello: updatedCarosello }) : null);
+      await updateSocietaConfig({ carosello: updatedCarosello });
+      showToast("Foto aggiunta al carosello e salvata online!", "success");
+    } catch (err: any) {
+      console.error("Errore upload carosello:", err);
+      showToast("Errore durante il caricamento della foto: " + (err?.message || ''), "error");
+    } finally {
+      setIsUploadingCarosello(false);
+    }
+  };
+
+  const handleAddCaroselloByUrl = async () => {
+    if (!newCaroselloUrl.trim()) return;
+    const currentFoto = societaConfig?.carosello?.foto || [];
+    const updatedFoto = [...currentFoto, { url: newCaroselloUrl.trim(), positionY: 50 }];
+    const updatedCarosello = {
+      foto: updatedFoto,
+      intervallo: societaConfig?.carosello?.intervallo || 5
+    };
+    setSocietaConfig(prev => prev ? ({ ...prev, carosello: updatedCarosello }) : null);
+    setNewCaroselloUrl('');
+    try {
+      await updateSocietaConfig({ carosello: updatedCarosello });
+      showToast("Foto aggiunta al carosello!", "success");
+    } catch (e: any) {
+      showToast("Errore salvataggio foto carosello: " + (e?.message || ''), "error");
+    }
+  };
+
+  const handleRemoveCaroselloPhoto = async (index: number) => {
+    const currentFoto = societaConfig?.carosello?.foto || [];
+    const updatedFoto = currentFoto.filter((_, i) => i !== index);
+    const updatedCarosello = {
+      foto: updatedFoto,
+      intervallo: societaConfig?.carosello?.intervallo || 5
+    };
+    setSocietaConfig(prev => prev ? ({ ...prev, carosello: updatedCarosello }) : null);
+    try {
+      await updateSocietaConfig({ carosello: updatedCarosello });
+      showToast("Foto rimossa dal carosello!", "success");
+    } catch (e: any) {
+      showToast("Errore rimozione foto: " + (e?.message || ''), "error");
+    }
+  };
+
+  const handleMoveCaroselloPhoto = async (index: number, direction: 'up' | 'down') => {
+    const currentFoto = [...(societaConfig?.carosello?.foto || [])];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= currentFoto.length) return;
+    const temp = currentFoto[index];
+    currentFoto[index] = currentFoto[targetIndex];
+    currentFoto[targetIndex] = temp;
+    const updatedCarosello = {
+      foto: currentFoto,
+      intervallo: societaConfig?.carosello?.intervallo || 5
+    };
+    setSocietaConfig(prev => prev ? ({ ...prev, carosello: updatedCarosello }) : null);
+    try {
+      await updateSocietaConfig({ carosello: updatedCarosello });
+    } catch (e) {
+      console.error("Errore riordino carosello:", e);
+    }
+  };
+
+  const handleUpdateCaroselloPositionY = (index: number, positionY: number) => {
+    const currentFoto = societaConfig?.carosello?.foto || [];
+    const updatedFoto = currentFoto.map((f, i) => i === index ? { ...f, positionY } : f);
+    setSocietaConfig(prev => prev ? ({
+      ...prev,
+      carosello: {
+        foto: updatedFoto,
+        intervallo: prev.carosello?.intervallo || 5
+      }
+    }) : null);
+  };
+
+  const handleSaveCarosello = async () => {
+    if (!societaConfig?.carosello) return;
+    try {
+      setIsSaving(true);
+      await updateSocietaConfig({ carosello: societaConfig.carosello });
+      showToast("Carosello foto della Società salvato con successo!", "success");
+    } catch (e: any) {
+      showToast("Errore durante il salvataggio del carosello: " + (e?.message || ''), "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (!societaInfo) {
     return (
       <div className="bg-white border border-slate-200 p-8 rounded-2xl text-center text-slate-400 font-mono">
@@ -757,6 +873,14 @@ export default function TabPagine({
           }`}
         >
           <UserCheck className="w-4 h-4 inline mr-1.5" /> Staff con Foto (Allenatori)
+        </button>
+        <button
+          onClick={() => setActiveSection('carosello')}
+          className={`px-4 py-2 rounded-lg text-xs font-bold font-sport uppercase italic tracking-wider transition-all ${
+            activeSection === 'carosello' ? 'bg-amber-500 text-slate-950 font-black shadow-sm' : 'text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <ImageIcon className="w-4 h-4 inline mr-1.5" /> Carosello Foto Società
         </button>
         <button
           onClick={() => setActiveSection('palestre')}
@@ -1485,6 +1609,289 @@ export default function TabPagine({
                 {isSaving ? 'Salvataggio...' : 'Salva Modifiche Staff'}
               </button>
             </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SECTION 2C: CAROSELLO FOTO SOCIETÀ                                        */}
+      {/* ========================================================================= */}
+      {activeSection === 'carosello' && (
+        <div className="space-y-6">
+          
+          {/* Header Banner */}
+          <div className="bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30 p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-800 text-[10px] font-mono font-bold uppercase tracking-wider">
+                <Sparkles className="w-3 h-3 text-amber-600" />
+                Vetrina Principale Società
+              </div>
+              <h3 className="text-base font-extrabold text-slate-900 uppercase font-sport tracking-wider">
+                Carosello Fotografico in Cima alla Pagina
+              </h3>
+              <p className="text-[11px] text-slate-600 max-w-2xl leading-relaxed">
+                Queste foto scorrono automaticamente in cima alla pagina pubblica <em>/societa</em> (sotto al titolo "LA NOSTRA SOCIETÀ"). Puoi caricare nuove foto dal computer o smartphone, riordinarle con le frecce, regolare la centratura dell'inquadratura e impostare i secondi di transizione.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSaveCarosello}
+                disabled={isSaving}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2 rounded-xl uppercase font-sport italic skew-x-[-6deg] flex items-center gap-1.5 shadow-sm cursor-pointer transition-all disabled:opacity-50"
+              >
+                <Save className="w-3.5 h-3.5" />
+                {isSaving ? 'Salvataggio...' : 'Salva Carosello'}
+              </button>
+            </div>
+          </div>
+
+          {/* Upload / Add New Slide Card */}
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-sm">
+            <h4 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider font-sport italic flex items-center gap-2 border-b border-slate-200 pb-2">
+              <Plus className="w-4 h-4 text-amber-500" />
+              Aggiungi Nuova Foto al Carosello
+            </h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              {/* Caricamento File */}
+              <div className="p-5 border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/40 rounded-2xl flex flex-col items-center justify-center text-center space-y-3 transition-colors">
+                <div className="w-12 h-12 rounded-full bg-amber-500/15 flex items-center justify-center text-amber-600">
+                  <Upload className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-900 uppercase font-sport tracking-wider">
+                    Carica Foto da Computer o Telefono
+                  </p>
+                  <p className="text-[10.5px] text-slate-500 mt-0.5">
+                    JPG, PNG o WebP (ottimizzata automaticamente in alta risoluzione)
+                  </p>
+                </div>
+                <label className="bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold px-4 py-2 rounded-xl text-xs uppercase font-sport italic skew-x-[-6deg] cursor-pointer shadow-sm transition-all flex items-center gap-1.5">
+                  {isUploadingCarosello ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Caricamento in corso...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>Scegli Foto dal Dispositivo</span>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={isUploadingCarosello}
+                    className="hidden"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUploadCaroselloPhoto(file);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+
+              {/* Inserimento da Link Esterno */}
+              <div className="p-5 border border-slate-200 bg-slate-50/60 rounded-2xl flex flex-col justify-between space-y-3">
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-slate-900 uppercase font-sport tracking-wider flex items-center gap-1.5">
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                    Oppure Inserisci Link / URL Foto
+                  </p>
+                  <p className="text-[10.5px] text-slate-500">
+                    Se hai già un'immagine ospitata online, incolla direttamente il link:
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={newCaroselloUrl}
+                    onChange={e => setNewCaroselloUrl(e.target.value)}
+                    className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-amber-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCaroselloByUrl}
+                    disabled={!newCaroselloUrl.trim()}
+                    className="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-black px-4 py-2 rounded-xl text-xs uppercase font-sport italic skew-x-[-6deg] shrink-0 cursor-pointer shadow-sm transition-all"
+                  >
+                    + Aggiungi
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Impostazioni Carosello: Tempo transizione */}
+            <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+              <div className="space-y-0.5">
+                <span className="font-bold text-slate-900 uppercase font-sport tracking-wider block">
+                  Tempo di Scorrimento Automatico: {societaConfig?.carosello?.intervallo || 5} secondi
+                </span>
+                <span className="text-[11px] text-slate-500">
+                  Intervallo di permanenza di ciascuna slide prima di passare alla successiva.
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[10px] text-slate-400 font-mono">2s</span>
+                <input
+                  type="range"
+                  min="2"
+                  max="12"
+                  value={societaConfig?.carosello?.intervallo || 5}
+                  onChange={e => {
+                    const intervallo = parseInt(e.target.value, 10);
+                    setSocietaConfig(prev => prev ? ({
+                      ...prev,
+                      carosello: {
+                        foto: prev.carosello?.foto || [],
+                        intervallo
+                      }
+                    }) : null);
+                  }}
+                  className="w-32 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                />
+                <span className="text-[10px] text-slate-400 font-mono">12s</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Slides List Card */}
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-sm">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+              <div>
+                <h4 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider font-sport italic">
+                  Foto Attualmente nel Carosello ({(societaConfig?.carosello?.foto || []).length})
+                </h4>
+                <p className="text-[11px] text-slate-500">
+                  Scorrono nell'ordine mostrato qui sotto. Usa le frecce per cambiare l'ordine o regola la centratura verticale.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveCarosello}
+                disabled={isSaving}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2 rounded-xl text-xs uppercase font-sport italic skew-x-[-6deg] flex items-center gap-1.5 cursor-pointer shadow transition-all"
+              >
+                <Save className="w-3.5 h-3.5" />
+                {isSaving ? 'Salvataggio...' : 'Salva Modifiche'}
+              </button>
+            </div>
+
+            {(!societaConfig?.carosello?.foto || societaConfig.carosello.foto.length === 0) ? (
+              <div className="text-center py-10 bg-slate-50 border border-dashed border-slate-200 rounded-xl space-y-2">
+                <ImageIcon className="w-8 h-8 text-slate-300 mx-auto" />
+                <p className="text-xs text-slate-500 font-medium">
+                  Nessuna foto nel carosello al momento. Caricane una per farla apparire in cima a /societa!
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {societaConfig.carosello.foto.map((slide, idx) => {
+                  const posY = slide.positionY ?? 50;
+                  return (
+                    <div 
+                      key={idx}
+                      className="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden p-3.5 space-y-3 hover:border-amber-400 transition-all shadow-sm flex flex-col justify-between"
+                    >
+                      {/* Anteprima Slide */}
+                      <div className="relative aspect-[16/9] w-full rounded-xl overflow-hidden bg-slate-900 border border-slate-300 shadow-inner">
+                        <img 
+                          src={slide.url} 
+                          alt={`Slide ${idx + 1}`} 
+                          className="w-full h-full object-cover transition-all"
+                          style={{ objectPosition: `center ${posY}%` }}
+                        />
+                        
+                        {/* Slide Number Badge */}
+                        <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-lg bg-black/75 backdrop-blur-md text-amber-400 font-mono text-[11px] font-black border border-amber-400/30">
+                          #{idx + 1}
+                        </div>
+
+                        {/* Order & Delete Buttons Overlay */}
+                        <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleMoveCaroselloPhoto(idx, 'up')}
+                            disabled={idx === 0}
+                            className="p-1.5 rounded-lg bg-black/75 hover:bg-amber-400 hover:text-black text-white disabled:opacity-30 disabled:hover:bg-black/75 disabled:hover:text-white transition-colors cursor-pointer"
+                            title="Sposta prima"
+                          >
+                            <ArrowUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleMoveCaroselloPhoto(idx, 'down')}
+                            disabled={idx === (societaConfig.carosello!.foto.length - 1)}
+                            className="p-1.5 rounded-lg bg-black/75 hover:bg-amber-400 hover:text-black text-white disabled:opacity-30 disabled:hover:bg-black/75 disabled:hover:text-white transition-colors cursor-pointer"
+                            title="Sposta dopo"
+                          >
+                            <ArrowDown className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCaroselloPhoto(idx)}
+                            className="p-1.5 rounded-lg bg-rose-950/80 hover:bg-rose-600 text-rose-300 hover:text-white transition-colors cursor-pointer ml-1"
+                            title="Rimuovi questa foto"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="absolute bottom-2 left-2.5 px-2 py-0.5 rounded bg-black/60 text-[10px] font-mono text-zinc-300">
+                          Centratura: {posY}%
+                        </div>
+                      </div>
+
+                      {/* Slider Centratura Verticale */}
+                      <div className="space-y-1.5 bg-white p-3 rounded-xl border border-slate-200">
+                        <div className="flex items-center justify-between text-[11px] font-mono font-bold text-slate-700">
+                          <span>Inquadratura Verticale:</span>
+                          <span className="text-amber-600">{posY}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={posY}
+                          onChange={e => handleUpdateCaroselloPositionY(idx, parseInt(e.target.value, 10))}
+                          className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                        />
+                        <div className="flex justify-between text-[9px] font-mono text-slate-400">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateCaroselloPositionY(idx, 20)}
+                            className="hover:text-slate-900 cursor-pointer"
+                          >
+                            Alto (20%)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateCaroselloPositionY(idx, 50)}
+                            className="hover:text-slate-900 cursor-pointer font-bold text-slate-600"
+                          >
+                            Centro (50%)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateCaroselloPositionY(idx, 80)}
+                            className="hover:text-slate-900 cursor-pointer"
+                          >
+                            Basso (80%)
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
         </div>
