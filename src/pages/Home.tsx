@@ -756,13 +756,13 @@ export default function Home({
         {/* ================= HERO SECTION FULL-BLEED ================= */}
         <section className="relative w-full min-h-[560px] lg:min-h-[640px] flex items-center bg-zinc-950 border-b border-zinc-850 overflow-hidden" id="hero-banner-card">
           
-          {/* Layer Sfondo: Foto con gradienti protettivi automatici o Texture di fallback */}
+          {/* Layer Sfondo: Foto con gradienti protettivi calibrati o Texture di fallback */}
           <div className="absolute inset-0 z-0">
             {(configHome?.hero_foto_url || configHome?.heroBgUrl) ? (
               <img
                 src={configHome.hero_foto_url || configHome.heroBgUrl}
                 alt="NVA Volley Action"
-                className="w-full h-full object-cover object-center filter brightness-90 contrast-105"
+                className="w-full h-full object-cover object-center filter brightness-105 contrast-110"
                 style={{
                   objectPosition: `center ${configHome?.heroBgPositionY || 50}%`
                 }}
@@ -771,9 +771,9 @@ export default function Home({
               <div className="w-full h-full bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(255,230,0,0.15),rgba(255,255,255,0))]" />
             )}
 
-            {/* Gradienti CSS: Leggeri e morbidi per garantire perfetta leggibilità lasciando viva e nitida la foto */}
-            <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/90 via-zinc-950/40 to-transparent sm:to-zinc-950/15" />
-            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-black/20" />
+            {/* Gradienti CSS: Calibrati morbidi per dare risalto alla pantera e garantire leggibilità al testo */}
+            <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/75 via-zinc-950/15 via-40% to-transparent sm:to-zinc-950/10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/75 via-transparent to-black/15" />
             
             {/* Soft Yellow Glow d'atmosfera */}
             <div className="absolute -top-24 left-1/4 w-96 h-96 bg-[#FFE600]/10 rounded-full blur-3xl pointer-events-none" />
@@ -793,7 +793,7 @@ export default function Home({
                 </div>
 
                 {/* Titolo Principale */}
-                <h1 className={`text-4xl sm:text-6xl lg:text-7xl uppercase tracking-tight text-white leading-[0.95] ${getTitleFontClass(configHome?.fontPreset)}`}>
+                <h1 className={`text-4xl sm:text-6xl lg:text-7xl uppercase tracking-tight text-white leading-[0.95] drop-shadow-[0_4px_16px_rgba(0,0,0,0.85)] ${getTitleFontClass(configHome?.fontPreset)}`}>
                   {configHome?.heroTitle || (
                     <>
                       Si gioca in <br />
@@ -804,7 +804,7 @@ export default function Home({
 
                 {/* Descrizione */}
                 <p 
-                  className="text-zinc-300 text-sm sm:text-base lg:text-lg max-w-xl font-normal leading-relaxed"
+                  className="text-zinc-200 text-sm sm:text-base lg:text-lg max-w-xl font-normal leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
                   style={{ color: configHome?.heroDescriptionColor || undefined }}
                 >
                   {configHome?.heroDescription || "Due prime squadre in Serie D, un settore giovanile che cresce ogni stagione, un'unica maglia. Questa è New Volley Academy."}

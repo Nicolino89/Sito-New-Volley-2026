@@ -33,11 +33,11 @@ export const Maintenance: React.FC<MaintenanceProps> = ({
         <img 
           src="/images/pantera-hero.png" 
           alt="Pantera NVA" 
-          className="w-full h-full object-cover object-center lg:object-[center_25%] filter brightness-95 contrast-110"
+          className="w-full h-full object-cover object-center lg:object-[center_25%] filter brightness-105 contrast-110"
         />
         {/* Gradienti protettivi per fondere la pantera nel nero puro #07080A */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#07080A] via-[#07080A]/75 to-[#07080A]/40" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#07080A] via-transparent to-[#07080A]/60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#07080A]/85 via-[#07080A]/40 to-[#07080A]/20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#07080A]/80 via-transparent to-[#07080A]/30" />
         
         {/* Alone di luce dorata dietro al testo */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-[#FFE600]/10 rounded-full blur-3xl pointer-events-none" />
