@@ -22,7 +22,7 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
   const isLibero = ruolo.toLowerCase().includes('libero');
 
   // Colori divisa: Maglia classica (Nera con dettagli Giallo Brand) vs Maglia Libero (Giallo Brand con dettagli Neri)
-  const jerseyBg = isLibero ? '#fcfe00' : '#141416';
+  const jerseyBg = isLibero ? '#facc15' : '#141416';
   const jerseyAccent = isLibero ? '#09090b' : '#fcfe00';
   const textFill = isLibero ? '#09090b' : '#ffffff';
 
@@ -60,16 +60,35 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
+          {/* Clip-Path Sagoma Canotta: impedisce rigorosamente a qualsiasi elemento di sbordare */}
+          <clipPath id={`jerseyClip-${uid}`}>
+            <path
+              d="M 52 26 
+                 L 76 26 
+                 Q 100 46 124 26 
+                 L 148 26 
+                 L 165 60 
+                 L 148 74 
+                 L 143 63 
+                 L 144 216 
+                 L 56 216 
+                 L 57 63 
+                 L 52 74 
+                 L 35 60 
+                 Z"
+            />
+          </clipPath>
+
           {/* Texture tessuto microforato mesh */}
           <pattern id={`mesh-${uid}`} width="6" height="6" patternUnits="userSpaceOnUse">
-            <circle cx="3" cy="3" r="0.8" fill="#ffffff" opacity="0.06" />
+            <circle cx="3" cy="3" r="0.8" fill={isLibero ? '#000000' : '#ffffff'} opacity={isLibero ? 0.05 : 0.06} />
           </pattern>
 
           {/* Sfumatura corpo maglia */}
           <linearGradient id={`jerseyGrad-${uid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={isLibero ? '#ffff33' : '#222226'} />
+            <stop offset="0%" stopColor={isLibero ? '#fff23a' : '#222226'} />
             <stop offset="50%" stopColor={jerseyBg} />
-            <stop offset="100%" stopColor={isLibero ? '#d4d600' : '#0c0c0e'} />
+            <stop offset="100%" stopColor={isLibero ? '#eab308' : '#0c0c0e'} />
           </linearGradient>
 
           {/* Sfumatura inserti laterali */}
@@ -78,7 +97,7 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
             <stop offset="100%" stopColor={isLibero ? '#18181b' : '#f59e0b'} />
           </linearGradient>
 
-          {/* Sfumatura orizzontale: il nero puro della maglia sui lati dissolve i bordi della pantera */}
+          {/* Sfumatura orizzontale (per maglia nera titolare con foto pantera) */}
           <linearGradient id={`pantherFadeX-${uid}`} x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor={jerseyBg} stopOpacity="1" />
             <stop offset="12%" stopColor={jerseyBg} stopOpacity="0.85" />
@@ -88,7 +107,7 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
             <stop offset="100%" stopColor={jerseyBg} stopOpacity="1" />
           </linearGradient>
 
-          {/* Sfumatura verticale: il nero puro della maglia in alto e in basso dissolve i bordi della pantera */}
+          {/* Sfumatura verticale (per maglia nera titolare con foto pantera) */}
           <linearGradient id={`pantherFadeY-${uid}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={jerseyBg} stopOpacity="1" />
             <stop offset="10%" stopColor={jerseyBg} stopOpacity="0.85" />
@@ -108,7 +127,187 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
           strokeLinecap="round"
         />
 
-        {/* Sagoma Principale Canotta / Maglia Gara */}
+        {/* CONTENUTO INTERNO RITAGLIATO ALLA SAGOMA DELLA MAGLIA */}
+        <g clipPath={`url(#jerseyClip-${uid})`}>
+          {/* Fondo Maglia */}
+          <rect x="0" y="0" width="200" height="230" fill={`url(#jerseyGrad-${uid})`} />
+
+          {/* Texture Mesh Traspirante sulla maglia */}
+          <rect x="0" y="0" width="200" height="230" fill={`url(#mesh-${uid})`} pointerEvents="none" />
+
+          {/* Speed-Lines Geometriche Sportive (solo maglia Libero per dinamismo atletico) */}
+          {isLibero && (
+            <g opacity="0.08" pointerEvents="none">
+              <path d="M 40 100 L 160 70 L 160 78 L 40 108 Z" fill="#000000" />
+              <path d="M 40 115 L 160 85 L 160 96 L 40 126 Z" fill="#000000" />
+              <path d="M 40 135 L 160 105 L 160 110 L 40 140 Z" fill="#000000" />
+            </g>
+          )}
+
+          {/* Inserti Fianchi Giallo/Nero Pantera */}
+          <path
+            d="M 56 78 L 64 88 L 62 216 L 56 216 Z"
+            fill={`url(#accentGrad-${uid})`}
+          />
+          <path
+            d="M 144 78 L 136 88 L 138 216 L 144 216 Z"
+            fill={`url(#accentGrad-${uid})`}
+          />
+
+          {/* Pinstripe sportivo di separazione fianco per maglia libero */}
+          {isLibero && (
+            <>
+              <line x1="64" y1="88" x2="62" y2="216" stroke="#facc15" strokeWidth="1" opacity="0.6" />
+              <line x1="136" y1="88" x2="138" y2="216" stroke="#facc15" strokeWidth="1" opacity="0.6" />
+            </>
+          )}
+
+          {/* ZONA CENTRALE MAGLIA */}
+          {isLibero ? (
+            /* SOLUZIONE 1: MAGLIA GARA LIBERO CON GRANDE NUMERO ATLETICO FIPAV */
+            <g>
+              {hasValidNumber ? (
+                <g transform="translate(100, 134)">
+                  {/* Ombra di stacco dinamica 3D */}
+                  <text
+                    x="1.5"
+                    y="2.5"
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill="#ca8a04"
+                    fontSize={displayNum.length > 2 ? "52" : displayNum.length === 2 ? "62" : "72"}
+                    fontFamily="'Barlow Condensed', 'Bebas Neue', 'Anton', Impact, sans-serif"
+                    fontWeight="900"
+                    letterSpacing="-1.5"
+                    opacity="0.35"
+                  >
+                    {displayNum}
+                  </text>
+
+                  {/* Grande Numero Atletico da Gara Nero Profondo */}
+                  <text
+                    x="0"
+                    y="0"
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill="#09090b"
+                    fontSize={displayNum.length > 2 ? "52" : displayNum.length === 2 ? "62" : "72"}
+                    fontFamily="'Barlow Condensed', 'Bebas Neue', 'Anton', Impact, sans-serif"
+                    fontWeight="900"
+                    letterSpacing="-1.5"
+                  >
+                    {displayNum}
+                  </text>
+
+                  {/* Profilo interno sportivo tipo termosaldatura */}
+                  <text
+                    x="0"
+                    y="0"
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill="none"
+                    stroke="#fef08a"
+                    strokeWidth="0.8"
+                    strokeDasharray="10 5"
+                    fontSize={displayNum.length > 2 ? "52" : displayNum.length === 2 ? "62" : "72"}
+                    fontFamily="'Barlow Condensed', 'Bebas Neue', 'Anton', Impact, sans-serif"
+                    fontWeight="900"
+                    letterSpacing="-1.5"
+                    opacity="0.8"
+                  >
+                    {displayNum}
+                  </text>
+                </g>
+              ) : (
+                /* Se il giocatore non ha ancora un numero di maglia assegnato */
+                <g transform="translate(100, 132)">
+                  <circle cx="0" cy="0" r="28" fill="#09090b" stroke="#facc15" strokeWidth="2" />
+                  <text
+                    x="0"
+                    y="1"
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill="#facc15"
+                    fontSize="18"
+                    fontFamily="'Barlow Condensed', 'Bebas Neue', Impact, sans-serif"
+                    fontWeight="900"
+                    letterSpacing="1"
+                  >
+                    NVA
+                  </text>
+                </g>
+              )}
+
+              {/* Badge LIBERO sotto al numero */}
+              <g transform="translate(100, 178)">
+                <rect x="-30" y="-8" width="60" height="16" rx="4" fill="#09090b" />
+                <text
+                  x="0"
+                  y="0.5"
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fill="#facc15"
+                  fontSize="7.5"
+                  fontFamily="system-ui, sans-serif"
+                  fontWeight="900"
+                  letterSpacing="2"
+                >
+                  LIBERO
+                </text>
+              </g>
+            </g>
+          ) : (
+            /* MAGLIA TITOLARE NERA: LA PANTERA NVA CON SFUMATURA MORBIDA */
+            <g>
+              <image
+                href="/images/pantera-hero.png"
+                x="54"
+                y="81"
+                width="92"
+                height="114"
+                preserveAspectRatio="xMidYMid meet"
+                style={{
+                  mixBlendMode: 'normal',
+                  filter: 'contrast(1.08) brightness(1.02)'
+                }}
+              />
+
+              <rect
+                x="53"
+                y="80"
+                width="94"
+                height="116"
+                fill={`url(#pantherFadeX-${uid})`}
+                pointerEvents="none"
+              />
+
+              <rect
+                x="53"
+                y="80"
+                width="94"
+                height="116"
+                fill={`url(#pantherFadeY-${uid})`}
+                pointerEvents="none"
+              />
+
+              {/* Scritta PANTERE sotto alla figura */}
+              <text
+                x="100"
+                y="196"
+                textAnchor="middle"
+                fill={jerseyAccent}
+                fontSize="7.5"
+                fontFamily="system-ui, sans-serif"
+                fontWeight="900"
+                letterSpacing="2.5"
+              >
+                PANTERE
+              </text>
+            </g>
+          )}
+        </g>
+
+        {/* BORDO ESTERNO SAGOMA CANOTTA */}
         <path
           d="M 52 26 
              L 76 26 
@@ -123,26 +322,9 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
              L 52 74 
              L 35 60 
              Z"
-          fill={`url(#jerseyGrad-${uid})`}
-          stroke="#27272a"
-          strokeWidth="1.5"
-        />
-
-        {/* Texture Mesh Traspirante sulla maglia */}
-        <path
-          d="M 56 33 L 144 33 L 144 214 L 56 214 Z"
-          fill={`url(#mesh-${uid})`}
-          pointerEvents="none"
-        />
-
-        {/* Inserti Fianchi Giallo/Nero Pantera */}
-        <path
-          d="M 56 78 L 63 88 L 61 214 L 56 214 Z"
-          fill={`url(#accentGrad-${uid})`}
-        />
-        <path
-          d="M 144 78 L 137 88 L 139 214 L 144 214 Z"
-          fill={`url(#accentGrad-${uid})`}
+          fill="none"
+          stroke={isLibero ? "#09090b" : "#27272a"}
+          strokeWidth="1.6"
         />
 
         {/* Bordatura Scollo a V */}
@@ -168,38 +350,65 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
           strokeWidth="2.5"
         />
 
-        {/* SPALLA SINISTRA (angolo sinistro sopra al cognome): NUMERO DI MAGLIA ATLETICO */}
-        {hasValidNumber && (
-          <g transform="translate(63, 44)">
-            <rect
-              x="-10"
-              y="-10"
-              width="20"
-              height="20"
-              rx="4.5"
-              fill={jerseyAccent}
-              stroke={isLibero ? '#09090b' : '#000000'}
-              strokeWidth="0.8"
-              style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.85))' }}
+        {/* SPALLA SINISTRA (angolo sinistro sopra al cognome): BADGE O NUMERO */}
+        {isLibero ? (
+          <g transform="translate(68, 44)">
+            <circle
+              cx="0"
+              cy="0"
+              r="7.5"
+              fill="#09090b"
+              stroke="#facc15"
+              strokeWidth="1"
+              style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.6))' }}
             />
             <text
               x="0"
-              y="1"
+              y="0.5"
               textAnchor="middle"
               dominantBaseline="central"
-              fill={isLibero ? '#fcfe00' : '#09090b'}
-              fontSize={displayNum.length > 2 ? "10" : displayNum.length === 2 ? "12" : "13.5"}
-              fontFamily="Barlow Condensed, Bebas Neue, Impact, sans-serif"
+              fill="#facc15"
+              fontSize="5.5"
+              fontFamily="system-ui, sans-serif"
               fontWeight="900"
-              letterSpacing="-0.5"
+              letterSpacing="0.5"
             >
-              {displayNum}
+              NVA
             </text>
           </g>
+        ) : (
+          hasValidNumber && (
+            <g transform="translate(63, 44)">
+              <rect
+                x="-10"
+                y="-10"
+                width="20"
+                height="20"
+                rx="4.5"
+                fill={jerseyAccent}
+                stroke="#000000"
+                strokeWidth="0.8"
+                style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.85))' }}
+              />
+              <text
+                x="0"
+                y="1"
+                textAnchor="middle"
+                dominantBaseline="central"
+                fill="#09090b"
+                fontSize={displayNum.length > 2 ? "10" : displayNum.length === 2 ? "12" : "13.5"}
+                fontFamily="Barlow Condensed, Bebas Neue, Impact, sans-serif"
+                fontWeight="900"
+                letterSpacing="-0.5"
+              >
+                {displayNum}
+              </text>
+            </g>
+          )
         )}
 
-        {/* SPALLA DESTRA (sopra al cognome): STEMMA UFFICIALE NVA */}
-        <g transform="translate(137, 44)">
+        {/* SPALLA DESTRA (sopra al cognome): STEMMA UFFICIALE NVA O PALLAVOLO */}
+        <g transform="translate(isLibero ? 132 : 137, 44)">
           <circle
             cx="0"
             cy="0"
@@ -215,12 +424,12 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
             textAnchor="middle"
             dominantBaseline="central"
             fill={jerseyAccent}
-            fontSize="6"
+            fontSize={isLibero ? "7" : "6"}
             fontFamily="system-ui, sans-serif"
             fontWeight="900"
-            letterSpacing="0.5"
+            letterSpacing={isLibero ? "0" : "0.5"}
           >
-            NVA
+            {isLibero ? '🏐' : 'NVA'}
           </text>
         </g>
 
@@ -247,69 +456,18 @@ export const PlayerJerseyPlaceholder: React.FC<PlayerJerseyPlaceholderProps> = (
         {/* Barra del Capitano sotto al cognome se designato capitano */}
         {isCapitano && (
           <g transform="translate(80, 73.5)">
-            <rect x="0" y="0" width="40" height="2.8" rx="1" fill="#fcfe00" />
-            <rect x="0.5" y="0.5" width="39" height="1.8" rx="0.5" fill="#eab308" />
+            <rect x="0" y="0" width="40" height="2.8" rx="1" fill={isLibero ? '#09090b' : '#fcfe00'} />
+            <rect x="0.5" y="0.5" width="39" height="1.8" rx="0.5" fill={isLibero ? '#27272a' : '#eab308'} />
           </g>
         )}
-
-        {/* ZONA CENTRALE: LA PANTERA NVA IN TUTTE LE MAGLIE (sfumata direttamente sul nero della maglia, senza cerchi o aloni gialli) */}
-        <g>
-          {/* Immagine Pantera */}
-          <image
-            href="/images/pantera-hero.png"
-            x="54"
-            y="81"
-            width="92"
-            height="114"
-            preserveAspectRatio="xMidYMid meet"
-            style={{
-              mixBlendMode: isLibero ? 'multiply' : 'normal',
-              filter: isLibero ? 'contrast(1.15) brightness(0.9)' : 'contrast(1.08) brightness(1.02)'
-            }}
-          />
-
-          {/* Sfumatura orizzontale: fonde dolcemente i lati nel nero della maglia */}
-          <rect
-            x="53"
-            y="80"
-            width="94"
-            height="116"
-            fill={`url(#pantherFadeX-${uid})`}
-            pointerEvents="none"
-          />
-
-          {/* Sfumatura verticale: fonde dolcemente top e bottom nel nero della maglia */}
-          <rect
-            x="53"
-            y="80"
-            width="94"
-            height="116"
-            fill={`url(#pantherFadeY-${uid})`}
-            pointerEvents="none"
-          />
-        </g>
-
-        {/* Scritta PANTERE sotto alla figura */}
-        <text
-          x="100"
-          y="196"
-          textAnchor="middle"
-          fill={jerseyAccent}
-          fontSize="7.5"
-          fontFamily="system-ui, sans-serif"
-          fontWeight="900"
-          letterSpacing="2.5"
-        >
-          PANTERE
-        </text>
 
         {/* Dicitura New Volley Academy sul fondo */}
         <text
           x="100"
-          y="208"
+          y="206"
           textAnchor="middle"
           fill={textFill}
-          opacity="0.6"
+          opacity={0.6}
           fontSize="5"
           fontFamily="system-ui, sans-serif"
           fontWeight="700"
