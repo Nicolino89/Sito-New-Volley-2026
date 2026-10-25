@@ -756,7 +756,7 @@ export default function TabPagine({
             activeSection === 'staff' ? 'bg-amber-500 text-slate-950 font-black shadow-sm' : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          <UserCheck className="w-4 h-4 inline mr-1.5" /> Staff Tecnico & Dirigenziale
+          <UserCheck className="w-4 h-4 inline mr-1.5" /> Staff con Foto (Allenatori)
         </button>
         <button
           onClick={() => setActiveSection('palestre')}

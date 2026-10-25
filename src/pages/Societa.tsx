@@ -383,8 +383,30 @@ export default function Societa({ societaInfo, societaConfig }: SocietaProps) {
                   </span>
                 </div>
 
-                {/* Staff Tecnico & Dirigenziale - Vertical Cards Grid */}
-                <div className="space-y-4">
+                {/* 1. CONSIGLIO DIRETTIVO (POSTO IN ALTO PRIMA DELLO STAFF) */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest font-mono">
+                    Consiglio Direttivo
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {direttivoList.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic col-span-full">Nessun membro configurato.</p>
+                    ) : (
+                      direttivoList.map((dir, idx) => (
+                        <div 
+                          key={dir.id || idx} 
+                          className="bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 p-3.5 rounded-2xl flex justify-between items-center transition-all shadow-sm"
+                        >
+                          <span className="text-xs text-slate-600 font-bold uppercase tracking-wider">{dir.ruolo}</span>
+                          <strong className="text-slate-950 font-barlow font-black uppercase tracking-wide text-sm">{dir.nome}</strong>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. STAFF TECNICO & DIRIGENZIALE - VERTICAL CARDS GRID CON FOTO */}
+                <div className="space-y-4 pt-6 border-t border-slate-100">
                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest font-mono">
                     Staff Tecnico & Dirigenziale
                   </h4>
@@ -474,28 +496,6 @@ export default function Societa({ societaInfo, societaConfig }: SocietaProps) {
                       })}
                     </div>
                   )}
-                </div>
-
-                {/* B. CONSIGLIO DIRETTIVO */}
-                <div className="space-y-3 pt-6 border-t border-slate-100">
-                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest font-mono">
-                    Consiglio Direttivo
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    {direttivoList.length === 0 ? (
-                      <p className="text-xs text-slate-400 italic col-span-full">Nessun membro configurato.</p>
-                    ) : (
-                      direttivoList.map((dir, idx) => (
-                        <div 
-                          key={dir.id || idx} 
-                          className="bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 p-3.5 rounded-2xl flex justify-between items-center transition-all shadow-sm"
-                        >
-                          <span className="text-xs text-slate-600 font-bold uppercase tracking-wider">{dir.ruolo}</span>
-                          <strong className="text-slate-950 font-barlow font-black uppercase tracking-wide text-sm">{dir.nome}</strong>
-                        </div>
-                      ))
-                    )}
-                  </div>
                 </div>
 
               </div>

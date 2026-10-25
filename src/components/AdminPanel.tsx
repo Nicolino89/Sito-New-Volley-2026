@@ -206,7 +206,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 }`}
               >
                 <BookOpen className="w-4 h-4 shrink-0" />
-                <span className="not-italic text-sm">PAGINE & PALESTRE</span>
+                <span className="not-italic text-sm">SOCIETÀ & PAGINE</span>
               </button>
 
               <button
