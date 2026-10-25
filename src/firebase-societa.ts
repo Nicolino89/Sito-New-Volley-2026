@@ -2228,6 +2228,17 @@ export interface VoltexIscrizione {
   stato: 'nuova' | 'contattato' | 'confermata' | 'annullata';
 }
 
+export interface VoltexRichiestaInfo {
+  id: string;
+  data_richiesta: string;
+  nome_cognome: string;
+  email: string;
+  telefono: string;
+  richiesta: string;
+  stato: 'nuova' | 'gestita' | 'archiviata';
+  note_interne?: string;
+}
+
 export interface VoltexCampConfig {
   titolo_hero: string;
   sottotitolo_hero: string;
@@ -2246,6 +2257,8 @@ export interface VoltexCampConfig {
   mental_coaching_info: string;
   date_camp: VoltexCampDate[];
   iscrizioni_ricevute: VoltexIscrizione[];
+  richieste_info?: VoltexRichiestaInfo[];
+  iscrizioni_aperte?: boolean;
   contatti_whatsapp: string;
   instagram_username: string;
   banner_attivo: boolean;
@@ -2332,6 +2345,8 @@ export const DEFAULT_VOLTEX_CAMP_CONFIG: VoltexCampConfig = {
     }
   ],
   iscrizioni_ricevute: [],
+  richieste_info: [],
+  iscrizioni_aperte: true,
   contatti_whatsapp: "393400000000",
   instagram_username: "voltexcamp",
   banner_attivo: true,
@@ -2352,6 +2367,8 @@ export async function getVoltexCampConfig(): Promise<VoltexCampConfig> {
         ...data,
         date_camp: data.date_camp || DEFAULT_VOLTEX_CAMP_CONFIG.date_camp,
         iscrizioni_ricevute: data.iscrizioni_ricevute || [],
+        richieste_info: data.richieste_info || [],
+        iscrizioni_aperte: data.iscrizioni_aperte !== undefined ? data.iscrizioni_aperte : true,
         hero_image_url: data.hero_image_url || DEFAULT_VOLTEX_CAMP_CONFIG.hero_image_url,
         galleria_foto: data.galleria_foto || DEFAULT_VOLTEX_CAMP_CONFIG.galleria_foto
       };
@@ -2409,6 +2426,25 @@ export async function salvaIscrizioneVoltex(iscrizione: VoltexIscrizione): Promi
     try {
       const local = getLocalData<VoltexIscrizione[]>('voltex_iscrizioni_pending', []);
       setLocalData('voltex_iscrizioni_pending', [iscrizione, ...local]);
+    } catch {}
+  }
+}
+
+export async function salvaRichiestaInfoVoltex(richiesta: VoltexRichiestaInfo): Promise<void> {
+  try {
+    const currentConfig = await getVoltexCampConfig();
+    const richiesteEsistenti = currentConfig.richieste_info || [];
+    const updatedRichieste = [richiesta, ...richiesteEsistenti];
+
+    await updateVoltexCampConfig({
+      ...currentConfig,
+      richieste_info: updatedRichieste
+    });
+  } catch (error) {
+    console.error("Errore salvataggio richiesta info Voltex:", error);
+    try {
+      const local = getLocalData<VoltexRichiestaInfo[]>('voltex_richieste_info_pending', []);
+      setLocalData('voltex_richieste_info_pending', [richiesta, ...local]);
     } catch {}
   }
 }

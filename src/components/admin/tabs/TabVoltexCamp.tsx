@@ -21,7 +21,11 @@ import {
   Upload,
   Image as ImageIcon,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  HelpCircle,
+  Phone,
+  Mail,
+  MessageSquare
 } from 'lucide-react';
 import { 
   getVoltexCampConfig, 
@@ -29,6 +33,7 @@ import {
   VoltexCampConfig, 
   VoltexCampDate, 
   VoltexIscrizione,
+  VoltexRichiestaInfo,
   DEFAULT_VOLTEX_CAMP_CONFIG,
   caricaBlobSuStorage
 } from '../../../firebase-societa';
@@ -44,7 +49,8 @@ export default function TabVoltexCamp({ showToast }: TabVoltexCampProps) {
   const [saving, setSaving] = useState(false);
   const [uploadingHero, setUploadingHero] = useState(false);
   const [uploadingGalleria, setUploadingGalleria] = useState(false);
-  const [subTab, setSubTab] = useState<'date' | 'iscrizioni' | 'testi' | 'foto'>('date');
+  const [subTab, setSubTab] = useState<'date' | 'iscrizioni' | 'richieste' | 'testi' | 'foto'>('date');
+  const [filtroStatoRichieste, setFiltroStatoRichieste] = useState<'tutti' | 'nuova' | 'gestita' | 'archiviata'>('tutti');
 
   // Stato per nuova/modifica tappa
   const [editingTappa, setEditingTappa] = useState<VoltexCampDate | null>(null);
@@ -140,6 +146,71 @@ export default function TabVoltexCamp({ showToast }: TabVoltexCampProps) {
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
     link.setAttribute("download", `iscrizioni_voltex_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Toggle Apertura Iscrizioni Pubbliche
+  const handleToggleIscrizioniAperte = async (aperta: boolean) => {
+    const newConfig = { ...config, iscrizioni_aperte: aperta };
+    await handleSaveConfig(newConfig);
+    showToast(
+      aperta 
+        ? "Iscrizioni Voltex APERTE al pubblico!" 
+        : "Iscrizioni chiuse. Ora la pagina mostra il modulo per richiedere info.",
+      "info"
+    );
+  };
+
+  // Gestione Richieste Info & Domande
+  const handleUpdateStatoRichiesta = (richiestaId: string, nuovoStato: VoltexRichiestaInfo['stato']) => {
+    const updated = (config.richieste_info || []).map(r => 
+      r.id === richiestaId ? { ...r, stato: nuovoStato } : r
+    );
+    handleSaveConfig({ ...config, richieste_info: updated });
+  };
+
+  const handleUpdateNoteRichiesta = (richiestaId: string, note_interne: string) => {
+    const updated = (config.richieste_info || []).map(r => 
+      r.id === richiestaId ? { ...r, note_interne } : r
+    );
+    setConfig({ ...config, richieste_info: updated });
+  };
+
+  const handleSalvaNoteRichieste = () => {
+    handleSaveConfig(config);
+  };
+
+  const handleDeleteRichiesta = (richiestaId: string) => {
+    if (!window.confirm("Eliminare definitivamente questa richiesta di informazioni?")) return;
+    const updated = (config.richieste_info || []).filter(r => r.id !== richiestaId);
+    handleSaveConfig({ ...config, richieste_info: updated });
+  };
+
+  const exportRichiesteCSV = () => {
+    const list = config.richieste_info || [];
+    if (list.length === 0) {
+      showToast("Nessuna richiesta da esportare", "info");
+      return;
+    }
+
+    const headers = ["Data", "Nome e Cognome", "Telefono", "Email", "Richiesta / Domanda", "Stato", "Note Interne"];
+    const rows = list.map(r => [
+      new Date(r.data_richiesta).toLocaleDateString('it-IT') + ' ' + new Date(r.data_richiesta).toLocaleTimeString('it-IT'),
+      `"${(r.nome_cognome || '').replace(/"/g, '""')}"`,
+      `"${r.telefono || ''}"`,
+      `"${r.email || ''}"`,
+      `"${(r.richiesta || '').replace(/"/g, '""')}"`,
+      r.stato,
+      `"${(r.note_interne || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `richieste_info_voltex_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -248,6 +319,8 @@ export default function TabVoltexCamp({ showToast }: TabVoltexCampProps) {
 
   const iscrizioni = config.iscrizioni_ricevute || [];
   const tappe = config.date_camp || [];
+  const richieste = config.richieste_info || [];
+  const richiesteNuove = richieste.filter(r => r.stato === 'nuova').length;
 
   return (
     <div className="space-y-6">
@@ -293,11 +366,77 @@ export default function TabVoltexCamp({ showToast }: TabVoltexCampProps) {
         </div>
       </div>
 
+      {/* Controllo Apertura Iscrizioni Pubbliche (Switch SÌ / NO) */}
+      <div className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm ${
+        config.iscrizioni_aperte !== false
+          ? 'bg-emerald-500/10 border-emerald-500/30'
+          : 'bg-amber-500/10 border-amber-500/30'
+      }`}>
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+            config.iscrizioni_aperte !== false
+              ? 'bg-emerald-500 text-white shadow-emerald-500/20 shadow-md'
+              : 'bg-amber-500 text-slate-950 shadow-amber-500/20 shadow-md'
+          }`}>
+            <Flame className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-bold text-slate-900 font-sport uppercase tracking-wide">
+                Apertura Iscrizioni al Pubblico:
+              </span>
+              <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border ${
+                config.iscrizioni_aperte !== false
+                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                  : 'bg-amber-100 text-amber-900 border-amber-300'
+              }`}>
+                {config.iscrizioni_aperte !== false ? 'APERTE (SÌ)' : 'CHIUSE / IN ARRIVO (NO)'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 mt-1 max-w-2xl">
+              {config.iscrizioni_aperte !== false ? (
+                <>I visitatori della pagina possono <strong>iscriversi direttamente</strong> o richiedere informazioni tramite l'apposito modulo.</>
+              ) : (
+                <>La pagina è <strong>aperta e navigabile dal pubblico</strong> senza mostrare il modulo di iscrizione (segnalato come "in arrivo"). Gli utenti possono comunque farti domande tramite il modulo <strong>"Richiedi Info"</strong> che potrai poi smistare.</>
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Pulsanti Switch SÌ / NO */}
+        <div className="flex items-center gap-1.5 bg-white p-1 rounded-2xl border border-slate-200 shadow-sm shrink-0 self-end sm:self-center">
+          <button
+            type="button"
+            onClick={() => handleToggleIscrizioniAperte(true)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
+              config.iscrizioni_aperte !== false
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            SÌ (Aperte)
+          </button>
+          <button
+            type="button"
+            onClick={() => handleToggleIscrizioniAperte(false)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
+              config.iscrizioni_aperte === false
+                ? 'bg-red-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            NO (Chiuse)
+          </button>
+        </div>
+      </div>
+
       {/* Sotto-Menu Tab */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-3 overflow-x-auto">
         <button
           onClick={() => setSubTab('date')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
             subTab === 'date'
               ? 'bg-amber-400 text-slate-950 shadow'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -309,7 +448,7 @@ export default function TabVoltexCamp({ showToast }: TabVoltexCampProps) {
 
         <button
           onClick={() => setSubTab('iscrizioni')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
             subTab === 'iscrizioni'
               ? 'bg-amber-400 text-slate-950 shadow'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -323,8 +462,25 @@ export default function TabVoltexCamp({ showToast }: TabVoltexCampProps) {
         </button>
 
         <button
+          onClick={() => setSubTab('richieste')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
+            subTab === 'richieste'
+              ? 'bg-amber-400 text-slate-950 shadow'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <HelpCircle className="w-4 h-4" />
+          Richieste Info ({richieste.length})
+          {richiesteNuove > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[10px] font-bold">
+              {richiesteNuove} nuove
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => setSubTab('testi')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
             subTab === 'testi'
               ? 'bg-amber-400 text-slate-950 shadow'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -336,7 +492,7 @@ export default function TabVoltexCamp({ showToast }: TabVoltexCampProps) {
 
         <button
           onClick={() => setSubTab('foto')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
             subTab === 'foto'
               ? 'bg-amber-400 text-slate-950 shadow'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -693,6 +849,237 @@ export default function TabVoltexCamp({ showToast }: TabVoltexCampProps) {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SOTTO-TAB: RICHIESTE INFO & DOMANDE (SMISTAMENTO) */}
+      {subTab === 'richieste' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+                  Richieste di Informazioni & Domande ({richieste.length})
+                </h3>
+                {richiesteNuove > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-bold border border-red-200">
+                    {richiesteNuove} nuove da smistare
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Domande inviate dagli utenti dalla pagina Voltex Camp. Clicca sui contatti per rispondere subito o assegna note interne per smistarle.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={exportRichiesteCSV}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-sm"
+              >
+                <Download className="w-4 h-4" />
+                Esporta CSV
+              </button>
+            </div>
+          </div>
+
+          {/* Filtri Stato */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+            <span className="text-slate-400 font-bold uppercase text-[10px] tracking-wider shrink-0">Filtra:</span>
+            <button
+              onClick={() => setFiltroStatoRichieste('tutti')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                filtroStatoRichieste === 'tutti'
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              Tutte ({richieste.length})
+            </button>
+            <button
+              onClick={() => setFiltroStatoRichieste('nuova')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                filtroStatoRichieste === 'nuova'
+                  ? 'bg-amber-500 text-slate-950 font-black'
+                  : 'bg-white text-amber-700 hover:bg-amber-50 border border-amber-200'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              Nuove ({richieste.filter(r => r.stato === 'nuova').length})
+            </button>
+            <button
+              onClick={() => setFiltroStatoRichieste('gestita')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                filtroStatoRichieste === 'gestita'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-white text-emerald-700 hover:bg-emerald-50 border border-emerald-200'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              Gestite / Smistate ({richieste.filter(r => r.stato === 'gestita').length})
+            </button>
+            <button
+              onClick={() => setFiltroStatoRichieste('archiviata')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                filtroStatoRichieste === 'archiviata'
+                  ? 'bg-slate-600 text-white'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              Archiviate ({richieste.filter(r => r.stato === 'archiviata').length})
+            </button>
+          </div>
+
+          {richieste.length === 0 ? (
+            <div className="p-12 text-center rounded-2xl bg-white border border-slate-200 text-slate-400 space-y-2">
+              <HelpCircle className="w-8 h-8 mx-auto text-slate-300" />
+              <p className="text-sm font-medium">Nessuna richiesta di informazione pervenuta.</p>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                Quando un utente compila il modulo "Richiedi Info" dalla pagina Voltex Camp, apparirà automaticamente qui con tutti i dettagli e la domanda.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {richieste
+                .filter(r => filtroStatoRichieste === 'tutti' || r.stato === filtroStatoRichieste)
+                .map((req) => {
+                  const waPhone = (req.telefono || '').replace(/[^0-9]/g, '');
+                  const waText = encodeURIComponent(
+                    `Ciao ${req.nome_cognome}, ti contattiamo da Voltex Academy / New Volley Academy in merito alla tua richiesta di informazioni sul Voltex Camp.`
+                  );
+
+                  return (
+                    <div
+                      key={req.id}
+                      className={`p-5 rounded-2xl bg-white border transition-all space-y-3 shadow-sm ${
+                        req.stato === 'nuova'
+                          ? 'border-amber-300 ring-2 ring-amber-100'
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      {/* Riga Superiore: Utente, Data e Badge Stato */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${
+                            req.stato === 'nuova' 
+                              ? 'bg-amber-100 text-amber-800' 
+                              : req.stato === 'gestita'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {req.nome_cognome ? req.nome_cognome.charAt(0).toUpperCase() : '?'}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-slate-900 text-sm">{req.nome_cognome}</h4>
+                            <div className="flex items-center gap-2 text-[11px] text-slate-400 font-mono">
+                              <Clock className="w-3 h-3 text-slate-400" />
+                              <span>{new Date(req.data_richiesta).toLocaleDateString('it-IT')} alle ore {new Date(req.data_richiesta).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Stato selettore rapido */}
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={req.stato}
+                            onChange={(e) => handleUpdateStatoRichiesta(req.id, e.target.value as any)}
+                            className={`text-xs font-bold uppercase rounded-xl px-3 py-1.5 border transition-all cursor-pointer ${
+                              req.stato === 'nuova'
+                                ? 'bg-amber-50 text-amber-900 border-amber-300 font-black'
+                                : req.stato === 'gestita'
+                                ? 'bg-emerald-50 text-emerald-900 border-emerald-300 font-black'
+                                : 'bg-slate-100 text-slate-600 border-slate-300'
+                            }`}
+                          >
+                            <option value="nuova">🟡 Nuova (Da Smistare)</option>
+                            <option value="gestita">🟢 Gestita / Smistata</option>
+                            <option value="archiviata">⚪ Archiviata</option>
+                          </select>
+
+                          <button
+                            onClick={() => handleDeleteRichiesta(req.id)}
+                            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-all cursor-pointer shrink-0"
+                            title="Elimina richiesta"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Riga Contatti: Telefono, WhatsApp, Email */}
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        {req.telefono && (
+                          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs">
+                            <Phone className="w-3.5 h-3.5 text-slate-500" />
+                            <a href={`tel:${req.telefono}`} className="font-mono font-bold text-slate-800 hover:text-red-600">
+                              {req.telefono}
+                            </a>
+                            {waPhone && (
+                              <a
+                                href={`https://wa.me/${waPhone}?text=${waText}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="ml-1 px-2 py-0.5 rounded-md bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold flex items-center gap-1 transition-all"
+                                title="Scrivi su WhatsApp"
+                              >
+                                <MessageCircle className="w-3 h-3" />
+                                WhatsApp
+                              </a>
+                            )}
+                          </div>
+                        )}
+
+                        {req.email && (
+                          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs">
+                            <Mail className="w-3.5 h-3.5 text-slate-500" />
+                            <a
+                              href={`mailto:${req.email}?subject=Riscontro%20richiesta%20info%20Voltex%20Camp`}
+                              className="font-medium text-slate-800 hover:text-red-600"
+                            >
+                              {req.email}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Testo della Richiesta / Domanda */}
+                      <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200/70 text-slate-800 text-xs leading-relaxed space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900 block flex items-center gap-1">
+                          <MessageSquare className="w-3 h-3 text-amber-600" />
+                          Domanda / Richiesta dell'utente:
+                        </span>
+                        <p className="whitespace-pre-line font-medium text-slate-900">{req.richiesta}</p>
+                      </div>
+
+                      {/* Note Interne / Smistamento */}
+                      <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <label className="text-[11px] font-bold uppercase text-slate-500 shrink-0">
+                          Note Interne / Smistata a:
+                        </label>
+                        <input
+                          type="text"
+                          value={req.note_interne || ''}
+                          onChange={(e) => handleUpdateNoteRichiesta(req.id, e.target.value)}
+                          onBlur={handleSalvaNoteRichieste}
+                          placeholder="es. Inoltrata a coach Marco / Contattato via telefono il 25/10..."
+                          className="flex-1 px-3 py-1.5 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleSalvaNoteRichieste();
+                            showToast("Note interne salvate", "success");
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer shrink-0"
+                        >
+                          Salva Nota
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           )}
         </div>

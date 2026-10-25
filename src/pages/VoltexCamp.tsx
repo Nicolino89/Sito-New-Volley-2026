@@ -20,9 +20,11 @@ import {
 import { 
   getVoltexCampConfig, 
   salvaIscrizioneVoltex, 
+  salvaRichiestaInfoVoltex,
   VoltexCampConfig, 
   DEFAULT_VOLTEX_CAMP_CONFIG,
   VoltexIscrizione,
+  VoltexRichiestaInfo,
   SocietaInfo
 } from '../firebase-societa';
 import { updatePageMeta } from '../utils/seoHelper';
@@ -53,6 +55,18 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [whatsappLink, setWhatsappLink] = useState('');
 
+  // Form stato: 'iscrizione' o 'info'
+  const [formMode, setFormMode] = useState<'iscrizione' | 'info'>('iscrizione');
+  
+  // Form Richiedi Info
+  const [infoNomeCognome, setInfoNomeCognome] = useState('');
+  const [infoEmail, setInfoEmail] = useState('');
+  const [infoTelefono, setInfoTelefono] = useState('');
+  const [infoRichiesta, setInfoRichiesta] = useState('');
+  const [isSubmittingInfo, setIsSubmittingInfo] = useState(false);
+  const [infoSuccess, setInfoSuccess] = useState(false);
+  const [infoWhatsappLink, setInfoWhatsappLink] = useState('');
+
   useEffect(() => {
     updatePageMeta({
       title: 'Voltex Academy Summer Camp - Alta Specializzazione Volley by Valentina Diouf',
@@ -65,6 +79,9 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
     getVoltexCampConfig().then((data) => {
       if (mounted) {
         setConfig(data);
+        if (data.iscrizioni_aperte === false) {
+          setFormMode('info');
+        }
         const primaAttiva = data.date_camp?.find(d => d.attivo && d.stato !== 'chiuse');
         if (primaAttiva) {
           setSelectedTappaId(primaAttiva.id);
@@ -76,6 +93,42 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
     });
     return () => { mounted = false; };
   }, []);
+
+  const handleSubmitInfo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!infoNomeCognome.trim() || !infoTelefono.trim() || !infoRichiesta.trim()) return;
+
+    setIsSubmittingInfo(true);
+    const nuovaRichiesta: VoltexRichiestaInfo = {
+      id: `info_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      data_richiesta: new Date().toISOString(),
+      nome_cognome: infoNomeCognome.trim(),
+      email: infoEmail.trim(),
+      telefono: infoTelefono.trim(),
+      richiesta: infoRichiesta.trim(),
+      stato: 'nuova'
+    };
+
+    try {
+      await salvaRichiestaInfoVoltex(nuovaRichiesta);
+      
+      const numeroWa = (config.contatti_whatsapp || societaInfo?.contatti?.telefono || '393400000000').replace(/[^0-9]/g, '');
+      const testoWa = encodeURIComponent(
+        `🏐 *RICHIESTA INFORMAZIONI VOLTEX CAMP*\n\n` +
+        `• *Nome e Cognome:* ${infoNomeCognome.trim()}\n` +
+        `• *Telefono:* ${infoTelefono.trim()}\n` +
+        (infoEmail.trim() ? `• *Email:* ${infoEmail.trim()}\n` : '') +
+        `• *Richiesta:* ${infoRichiesta.trim()}\n\n` +
+        `Inviato dal portale ufficiale New Volley Academy.`
+      );
+      setInfoWhatsappLink(`https://wa.me/${numeroWa}?text=${testoWa}`);
+      setInfoSuccess(true);
+    } catch (err) {
+      console.error("Errore salvataggio richiesta info:", err);
+    } finally {
+      setIsSubmittingInfo(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,6 +184,15 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
 
   const handleSelectTappa = (tappaId: string) => {
     setSelectedTappaId(tappaId);
+    if (config.iscrizioni_aperte === false) {
+      setFormMode('info');
+      const tappa = config.date_camp?.find(d => d.id === tappaId);
+      if (tappa) {
+        setInfoRichiesta(`Vorrei ricevere informazioni per la tappa ${tappa.titolo} (${tappa.localita} - ${tappa.periodo}).`);
+      }
+    } else {
+      setFormMode('iscrizione');
+    }
     const formElem = document.getElementById('iscrizione-form');
     if (formElem) {
       formElem.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -183,21 +245,49 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
                 {config.descrizione_breve}
               </p>
 
-              {config.testo_annuncio && (
+              {config.iscrizioni_aperte === false ? (
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-950/60 to-slate-900 border border-amber-600/30 flex items-center gap-3 text-sm text-amber-200">
+                  <Flame className="w-5 h-5 text-amber-400 shrink-0" />
+                  <span>
+                    {config.testo_annuncio || "Iscrizioni al momento chiuse: compila il form di richiesta informazioni per essere ricontattato all'apertura!"}
+                  </span>
+                </div>
+              ) : config.testo_annuncio ? (
                 <div className="p-4 rounded-2xl bg-gradient-to-r from-red-950/60 to-slate-900 border border-red-700/30 flex items-center gap-3 text-sm text-red-200">
                   <Flame className="w-5 h-5 text-red-400 shrink-0" />
                   <span>{config.testo_annuncio}</span>
                 </div>
-              )}
+              ) : null}
 
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-4">
-                <a 
-                  href="#iscrizione-form" 
-                  className="px-7 py-3.5 rounded-xl bg-gradient-to-r from-[#C0392B] to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold text-sm uppercase tracking-wider shadow-lg shadow-red-900/40 transition-all transform hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer"
-                >
-                  Iscriviti al Camp
-                  <ChevronRight className="w-4 h-4" />
-                </a>
+                {config.iscrizioni_aperte !== false ? (
+                  <>
+                    <a 
+                      href="#iscrizione-form" 
+                      onClick={() => setFormMode('iscrizione')}
+                      className="px-7 py-3.5 rounded-xl bg-gradient-to-r from-[#C0392B] to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold text-sm uppercase tracking-wider shadow-lg shadow-red-900/40 transition-all transform hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer"
+                    >
+                      Iscriviti al Camp
+                      <ChevronRight className="w-4 h-4" />
+                    </a>
+                    <a 
+                      href="#iscrizione-form" 
+                      onClick={() => setFormMode('info')}
+                      className="px-5 py-3.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-amber-300 font-bold text-sm uppercase tracking-wider border border-amber-500/40 transition-all flex items-center gap-2 cursor-pointer"
+                    >
+                      Richiedi Info
+                    </a>
+                  </>
+                ) : (
+                  <a 
+                    href="#iscrizione-form" 
+                    onClick={() => setFormMode('info')}
+                    className="px-7 py-3.5 rounded-xl bg-gradient-to-r from-[#C0392B] to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold text-sm uppercase tracking-wider shadow-lg shadow-red-900/40 transition-all transform hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer"
+                  >
+                    Richiedi Informazioni
+                    <ChevronRight className="w-4 h-4" />
+                  </a>
+                )}
                 <a 
                   href="#tappe" 
                   className="px-6 py-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 font-bold text-sm uppercase tracking-wider border border-slate-700/80 transition-all flex items-center gap-2"
@@ -421,11 +511,13 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
                       <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${
                         isClosed 
                           ? 'bg-red-950 text-red-400 border border-red-800' 
+                          : config.iscrizioni_aperte === false
+                          ? 'bg-amber-950/80 text-amber-300 border border-amber-600/40'
                           : isInEsaurimento 
                           ? 'bg-amber-950 text-amber-300 border border-amber-800 animate-pulse'
                           : 'bg-emerald-950 text-emerald-400 border border-emerald-800'
                       }`}>
-                        {isClosed ? 'Sold Out' : isInEsaurimento ? 'Quasi Pieno' : 'Iscrizioni Aperte'}
+                        {isClosed ? 'Sold Out' : config.iscrizioni_aperte === false ? 'Iscrizioni in arrivo' : isInEsaurimento ? 'Quasi Pieno' : 'Iscrizioni Aperte'}
                       </span>
                     </div>
 
@@ -484,7 +576,13 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
                           : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
                       }`}
                     >
-                      {isClosed ? 'Chiuso' : selectedTappaId === tappa.id ? 'Selezionata ✓' : 'Scegli questa data'}
+                      {isClosed 
+                        ? 'Chiuso' 
+                        : config.iscrizioni_aperte === false 
+                        ? 'Richiedi Info' 
+                        : selectedTappaId === tappa.id 
+                        ? 'Selezionata ✓' 
+                        : 'Scegli questa data'}
                     </button>
                   </div>
                 </div>
@@ -494,228 +592,386 @@ export default function VoltexCampPage({ societaInfo }: VoltexCampPageProps) {
         </div>
       </section>
 
-      {/* 5. MODULO DI ISCRIZIONE (id="iscrizione-form") */}
+      {/* 5. MODULO DI ISCRIZIONE O RICHIESTA INFORMAZIONI (id="iscrizione-form") */}
       <section id="iscrizione-form" className="py-20 border-t border-slate-800 bg-[#0b1320]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="rounded-3xl bg-slate-900 border border-slate-800 p-6 sm:p-10 shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-red-600 via-amber-400 to-red-600" />
             
+            {/* Selettore Modalità: Iscrizione al Camp vs Richiedi Informazioni */}
+            {config.iscrizioni_aperte !== false ? (
+              <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 max-w-md mx-auto mb-8">
+                <button
+                  type="button"
+                  onClick={() => setFormMode('iscrizione')}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold font-sport uppercase tracking-wider transition-all cursor-pointer ${
+                    formMode === 'iscrizione'
+                      ? 'bg-gradient-to-r from-red-600 to-[#C0392B] text-white shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Iscrizione al Camp
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormMode('info')}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold font-sport uppercase tracking-wider transition-all cursor-pointer ${
+                    formMode === 'info'
+                      ? 'bg-gradient-to-r from-red-600 to-[#C0392B] text-white shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Richiedi Informazioni
+                </button>
+              </div>
+            ) : null}
+
+            {/* Intestazione del Modulo */}
             <div className="text-center max-w-xl mx-auto mb-8 space-y-2">
-              <span className="text-xs font-mono font-bold uppercase tracking-widest text-red-400">Modulo Online</span>
+              <span className="text-xs font-mono font-bold uppercase tracking-widest text-red-400">
+                {formMode === 'info' || config.iscrizioni_aperte === false ? "Modulo Informazioni & Contatto" : "Modulo Iscrizione Online"}
+              </span>
               <h2 className="text-2xl sm:text-3xl font-black text-white font-sport uppercase">
-                Iscrizione / Richiesta Informazioni
+                {formMode === 'info' || config.iscrizioni_aperte === false ? "Richiedi Informazioni sul Voltex Camp" : "Modulo Iscrizione al Camp"}
               </h2>
               <p className="text-xs sm:text-sm text-slate-400">
-                Compila i dati per registrare la richiesta. Riceverai conferma immediata dallo staff Voltex.
+                {formMode === 'info' || config.iscrizioni_aperte === false
+                  ? "Hai domande sul programma, costi, alloggio o tappe? Inserisci la tua richiesta qui sotto: lo staff Voltex ti risponderà subito."
+                  : "Compila i dati dell'atleta per registrare l'iscrizione. Riceverai conferma immediata dallo staff Voltex."}
               </p>
             </div>
 
-            {submitSuccess ? (
-              <div className="p-8 rounded-2xl bg-emerald-950/40 border border-emerald-600/40 text-center space-y-5 animate-in fade-in">
-                <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-xl font-bold text-white font-sport uppercase">Richiesta Ricevuta con Successo!</h3>
-                  <p className="text-sm text-slate-300">
-                    Abbiamo registrato i dati dell'atleta <strong>{nomeAtleta} {cognomeAtleta}</strong>.
-                  </p>
-                </div>
-                {whatsappLink && (
-                  <div className="pt-2">
-                    <a
-                      href={whatsappLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm uppercase tracking-wider shadow-lg shadow-emerald-950/50 transition-all cursor-pointer"
-                    >
-                      <MessageCircle className="w-5 h-5" />
-                      Invia Conferma su WhatsApp allo Staff
-                    </a>
+            {/* SEZIONE FORM: RICHIEDI INFORMAZIONI */}
+            {(formMode === 'info' || config.iscrizioni_aperte === false) ? (
+              infoSuccess ? (
+                <div className="p-8 rounded-2xl bg-emerald-950/40 border border-emerald-600/40 text-center space-y-5 animate-in fade-in">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-8 h-8" />
                   </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSubmitSuccess(false);
-                    setNomeAtleta('');
-                    setCognomeAtleta('');
-                    setTelefono('');
-                    setEmail('');
-                    setNote('');
-                  }}
-                  className="text-xs text-slate-400 hover:text-white underline cursor-pointer mt-4 block mx-auto"
-                >
-                  Compila un'altra iscrizione
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                
-                {/* Selezione Tappa */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                    Tappa Selezionata *
-                  </label>
-                  <select
-                    value={selectedTappaId}
-                    onChange={(e) => setSelectedTappaId(e.target.value)}
-                    required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500"
+                  <div className="space-y-1">
+                    <h3 className="text-xl font-bold text-white font-sport uppercase">Richiesta Inviata con Successo!</h3>
+                    <p className="text-sm text-slate-300">
+                      Grazie <strong>{infoNomeCognome}</strong>! Abbiamo registrato la tua richiesta di informazioni.
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      Lo staff del Voltex Camp ti contatterà al più presto via telefono ({infoTelefono}) o email ({infoEmail}).
+                    </p>
+                  </div>
+                  {infoWhatsappLink && (
+                    <div className="pt-2">
+                      <a
+                        href={infoWhatsappLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm uppercase tracking-wider shadow-lg shadow-emerald-950/50 transition-all cursor-pointer"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                        Invia Domanda anche su WhatsApp
+                      </a>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInfoSuccess(false);
+                      setInfoNomeCognome('');
+                      setInfoEmail('');
+                      setInfoTelefono('');
+                      setInfoRichiesta('');
+                    }}
+                    className="text-xs text-slate-400 hover:text-white underline cursor-pointer mt-4 block mx-auto"
                   >
-                    {config.date_camp?.filter(d => d.attivo).map((d) => (
-                      <option key={d.id} value={d.id} disabled={d.stato === 'chiuse'}>
-                        {d.titolo} - {d.localita} ({d.periodo}) {d.stato === 'chiuse' ? '[SOLD OUT]' : ''}
-                      </option>
-                    ))}
-                  </select>
+                    Invia un'altra domanda o richiesta
+                  </button>
                 </div>
+              ) : (
+                <form onSubmit={handleSubmitInfo} className="space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                        Nome e Cognome *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={infoNomeCognome}
+                        onChange={e => setInfoNomeCognome(e.target.value)}
+                        placeholder="es. Mario Rossi"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500"
+                      />
+                    </div>
 
-                {/* Dati Atleta */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Nome Atleta *</label>
-                    <input
-                      type="text"
-                      required
-                      value={nomeAtleta}
-                      onChange={(e) => setNomeAtleta(e.target.value)}
-                      placeholder="es. Martina"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
-                    />
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                        Numero di Telefono / WhatsApp *
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        value={infoTelefono}
+                        onChange={e => setInfoTelefono(e.target.value)}
+                        placeholder="es. 340 1234567"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Cognome Atleta *</label>
-                    <input
-                      type="text"
-                      required
-                      value={cognomeAtleta}
-                      onChange={(e) => setCognomeAtleta(e.target.value)}
-                      placeholder="es. Rossi"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
-                    />
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Data di Nascita</label>
-                    <input
-                      type="date"
-                      value={dataNascita}
-                      onChange={(e) => setDataNascita(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Ruolo</label>
-                    <select
-                      value={ruolo}
-                      onChange={(e) => setRuolo(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
-                    >
-                      <option value="Schiacciatore">Schiacciatore</option>
-                      <option value="Opposto">Opposto</option>
-                      <option value="Palleggiatore">Palleggiatore</option>
-                      <option value="Centrale">Centrale</option>
-                      <option value="Libero">Libero</option>
-                      <option value="Non definito">Non definito</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Taglia Kit Voltex</label>
-                    <select
-                      value={tagliaKit}
-                      onChange={(e) => setTagliaKit(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
-                    >
-                      <option value="12A">12 Anni</option>
-                      <option value="14A">14 Anni</option>
-                      <option value="XS">XS</option>
-                      <option value="S">S</option>
-                      <option value="M">M</option>
-                      <option value="L">L</option>
-                      <option value="XL">XL</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Squadra / Categoria Attuale</label>
-                  <input
-                    type="text"
-                    value={livelloSquadra}
-                    onChange={(e) => setLivelloSquadra(e.target.value)}
-                    placeholder="es. Under 14 New Volley Academy"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
-                  />
-                </div>
-
-                {/* Contatti */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Nome Genitore (se minorenne)</label>
-                    <input
-                      type="text"
-                      value={nomeGenitore}
-                      onChange={(e) => setNomeGenitore(e.target.value)}
-                      placeholder="es. Mario Rossi"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Telefono / WhatsApp *</label>
-                    <input
-                      type="tel"
-                      required
-                      value={telefono}
-                      onChange={(e) => setTelefono(e.target.value)}
-                      placeholder="es. 340 1234567"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Email Contatto</label>
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                      Indirizzo Email *
+                    </label>
                     <input
                       type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="es. email@esempio.it"
+                      required
+                      value={infoEmail}
+                      onChange={e => setInfoEmail(e.target.value)}
+                      placeholder="es. mario.rossi@email.it"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                      La tua Richiesta o Domanda *
+                    </label>
+                    <textarea
+                      rows={4}
+                      required
+                      value={infoRichiesta}
+                      onChange={e => setInfoRichiesta(e.target.value)}
+                      placeholder="Scrivi qui la tua domanda (es. informazioni sui costi, date disponibili, alloggio, livello tecnico richiesto, ecc.)..."
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500 leading-relaxed"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmittingInfo}
+                    className="w-full py-4 rounded-xl bg-gradient-to-r from-[#C0392B] to-red-600 hover:from-red-600 hover:to-red-700 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-red-950/60 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSubmittingInfo ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Invio richiesta in corso...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Invia Richiesta di Informazioni
+                      </>
+                    )}
+                  </button>
+                </form>
+              )
+            ) : (
+              /* SEZIONE FORM: ISCRIZIONE COMPLETA */
+              submitSuccess ? (
+                <div className="p-8 rounded-2xl bg-emerald-950/40 border border-emerald-600/40 text-center space-y-5 animate-in fade-in">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-xl font-bold text-white font-sport uppercase">Iscrizione Ricevuta con Successo!</h3>
+                    <p className="text-sm text-slate-300">
+                      Abbiamo registrato i dati dell'atleta <strong>{nomeAtleta} {cognomeAtleta}</strong>.
+                    </p>
+                  </div>
+                  {whatsappLink && (
+                    <div className="pt-2">
+                      <a
+                        href={whatsappLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm uppercase tracking-wider shadow-lg shadow-emerald-950/50 transition-all cursor-pointer"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                        Invia Conferma su WhatsApp allo Staff
+                      </a>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSubmitSuccess(false);
+                      setNomeAtleta('');
+                      setCognomeAtleta('');
+                      setTelefono('');
+                      setEmail('');
+                      setNote('');
+                    }}
+                    className="text-xs text-slate-400 hover:text-white underline cursor-pointer mt-4 block mx-auto"
+                  >
+                    Compila un'altra iscrizione
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  
+                  {/* Selezione Tappa */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                      Tappa Selezionata *
+                    </label>
+                    <select
+                      value={selectedTappaId}
+                      onChange={(e) => setSelectedTappaId(e.target.value)}
+                      required
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500"
+                    >
+                      {config.date_camp?.filter(d => d.attivo).map((d) => (
+                        <option key={d.id} value={d.id} disabled={d.stato === 'chiuse'}>
+                          {d.titolo} - {d.localita} ({d.periodo}) {d.stato === 'chiuse' ? '[SOLD OUT]' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Dati Atleta */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Nome Atleta *</label>
+                      <input
+                        type="text"
+                        required
+                        value={nomeAtleta}
+                        onChange={(e) => setNomeAtleta(e.target.value)}
+                        placeholder="es. Martina"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Cognome Atleta *</label>
+                      <input
+                        type="text"
+                        required
+                        value={cognomeAtleta}
+                        onChange={(e) => setCognomeAtleta(e.target.value)}
+                        placeholder="es. Rossi"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Data di Nascita</label>
+                      <input
+                        type="date"
+                        value={dataNascita}
+                        onChange={(e) => setDataNascita(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Ruolo</label>
+                      <select
+                        value={ruolo}
+                        onChange={(e) => setRuolo(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
+                      >
+                        <option value="Schiacciatore">Schiacciatore</option>
+                        <option value="Opposto">Opposto</option>
+                        <option value="Palleggiatore">Palleggiatore</option>
+                        <option value="Centrale">Centrale</option>
+                        <option value="Libero">Libero</option>
+                        <option value="Non definito">Non definito</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Taglia Kit Voltex</label>
+                      <select
+                        value={tagliaKit}
+                        onChange={(e) => setTagliaKit(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
+                      >
+                        <option value="12A">12 Anni</option>
+                        <option value="14A">14 Anni</option>
+                        <option value="XS">XS</option>
+                        <option value="S">S</option>
+                        <option value="M">M</option>
+                        <option value="L">L</option>
+                        <option value="XL">XL</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Squadra / Categoria Attuale</label>
+                    <input
+                      type="text"
+                      value={livelloSquadra}
+                      onChange={(e) => setLivelloSquadra(e.target.value)}
+                      placeholder="es. Under 14 New Volley Academy"
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
                     />
                   </div>
-                </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Note o Richieste Particolari</label>
-                  <textarea
-                    rows={2}
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder="Allergie alimentari, formula giorno/residenziale preferita, ecc."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500"
-                  />
-                </div>
+                  {/* Contatti */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Nome Genitore (se minorenne)</label>
+                      <input
+                        type="text"
+                        value={nomeGenitore}
+                        onChange={(e) => setNomeGenitore(e.target.value)}
+                        placeholder="es. Mario Rossi"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Telefono / WhatsApp *</label>
+                      <input
+                        type="tel"
+                        required
+                        value={telefono}
+                        onChange={(e) => setTelefono(e.target.value)}
+                        placeholder="es. 340 1234567"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Email Contatto</label>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="es. email@esempio.it"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500"
+                      />
+                    </div>
+                  </div>
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full py-4 rounded-xl bg-gradient-to-r from-[#C0392B] to-red-600 hover:from-red-600 hover:to-red-700 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-red-950/60 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Registrazione in corso...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      Invia Iscrizione al Camp
-                    </>
-                  )}
-                </button>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Note o Richieste Particolari</label>
+                    <textarea
+                      rows={2}
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="Allergie alimentari, formula giorno/residenziale preferita, ecc."
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
 
-              </form>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full py-4 rounded-xl bg-gradient-to-r from-[#C0392B] to-red-600 hover:from-red-600 hover:to-red-700 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-red-950/60 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Registrazione in corso...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Invia Iscrizione al Camp
+                      </>
+                    )}
+                  </button>
+
+                </form>
+              )
             )}
 
           </div>
