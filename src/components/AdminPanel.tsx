@@ -147,7 +147,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 w-full max-w-full bg-[#F8FAFC] p-4 md:p-6 rounded-3xl border border-slate-200 shadow-sm text-slate-900 font-sans" id="cms-dashboard">
+    <div className="flex flex-col lg:flex-row gap-6 w-full max-w-full overflow-x-hidden bg-[#F8FAFC] p-4 md:p-6 rounded-3xl border border-slate-200 shadow-sm text-slate-900 font-sans" id="cms-dashboard">
       
       {/* Left Column: Vertical Sidebar Menu */}
       <div className="w-full lg:w-72 bg-white border border-slate-200 p-5 rounded-2xl space-y-4 shadow-sm shrink-0 h-fit">
@@ -344,7 +344,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       </div>
 
       {/* Right Column: Active Admin Tab Content Area */}
-      <div className="flex-1 min-w-0 space-y-6">
+      <div className="flex-1 min-w-0 space-y-6 overflow-x-hidden">
         {adminTab === 'news' && (
           <TabNews
             newsAll={newsAll}
