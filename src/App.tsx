@@ -23,6 +23,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import LoadingFallback from './components/LoadingFallback';
 import WhatsAppFloatingButton from './components/WhatsAppFloatingButton';
 import VoltexCampPill from './components/VoltexCampPill';
+import DirettaLivePill from './components/DirettaLivePill';
 
 // Public pages eagerly loaded for instant tab switching
 import Home from './pages/Home';
@@ -31,6 +32,7 @@ import SquadraDetail from './pages/SquadraDetail';
 import News from './pages/News';
 import Societa from './pages/Societa';
 import SponsorPage from './pages/Sponsor';
+import DirettaLive from './pages/DirettaLive';
 import NotFound from './pages/NotFound';
 import Maintenance from './pages/Maintenance';
 import SitoInAggiornamento from './components/SitoInAggiornamento';
@@ -257,6 +259,14 @@ export const getPageMeta = (pathname: string): PageMeta => {
       title: 'LA SOCIETÀ',
       sezione: 'La Società',
       descrizione: "Stiamo aggiornando l'organigramma societario e i documenti ufficiali NVA per la nuova stagione agonistica."
+    };
+  }
+  if (pathname.startsWith('/diretta') || pathname.startsWith('/live')) {
+    return {
+      key: 'diretta',
+      title: 'DIRETTA STREAMING',
+      sezione: 'Diretta Streaming',
+      descrizione: 'La trasmissione streaming del match è in allestimento.'
     };
   }
   if (pathname.startsWith('/news')) {
@@ -821,15 +831,18 @@ export default function App() {
             );
           })()}
 
-          {/* VOLTEX CAMP PILL (Subito sotto alla riga delle scritte che scorrono a destra) */}
+          {/* FLOATING ACTION PILLS (Live streaming a sinistra se attivo, Voltex Camp a destra) */}
           <div className="relative w-full z-30 pointer-events-none select-none">
+            <div className="absolute left-0 top-0 pointer-events-auto">
+              <DirettaLivePill />
+            </div>
             <div className="absolute right-0 top-0 pointer-events-auto">
               <VoltexCampPill />
             </div>
           </div>
 
           {/* DYNAMIC CONTENT STAGE */}
-          <main className={`w-full min-h-screen ${(location.pathname === '/' || location.pathname === '/squadre' || location.pathname.startsWith('/camp-tornei') || location.pathname.startsWith('/voltex') || location.pathname.startsWith('/societa') || location.pathname.startsWith('/news') || location.pathname.startsWith('/galleria') || location.pathname.startsWith('/albo-d-oro') || location.pathname.startsWith('/hall-of-fame')) ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`} id="content-stage">
+          <main className={`w-full min-h-screen ${(location.pathname === '/' || location.pathname === '/squadre' || location.pathname.startsWith('/camp-tornei') || location.pathname.startsWith('/voltex') || location.pathname.startsWith('/societa') || location.pathname.startsWith('/news') || location.pathname.startsWith('/galleria') || location.pathname.startsWith('/albo-d-oro') || location.pathname.startsWith('/hall-of-fame') || location.pathname.startsWith('/diretta') || location.pathname.startsWith('/live')) ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`} id="content-stage">
             {location.pathname === '/login' ? (
               <ChunkErrorBoundary key={location.pathname}>
                 <Suspense fallback={<LoadingFallback />}>
@@ -856,6 +869,7 @@ export default function App() {
                       // ALTRIMENTI: rendering reale dei contenuti (visibile all'admin e ai visitatori se pubblicata)
                       if (path === '/privacy') return <Privacy />;
                       if (path === '/sponsor') return <SponsorPage />;
+                      if (path === '/diretta' || path === '/live') return <DirettaLive sponsorsAll={sponsorsAll} societaInfo={societaInfo} />;
                       if (path === '/voltex' || path.startsWith('/voltex')) return <VoltexCampPage societaInfo={societaInfo} />;
                       if (path === '/' || path === '/home' || path === '/index.html') return (
                         <Home 

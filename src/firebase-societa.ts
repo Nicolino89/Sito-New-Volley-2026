@@ -4852,3 +4852,89 @@ export async function eliminaRichiestaSponsor(id: string): Promise<void> {
   }
 }
 
+// ============================================================================
+// 17. DIRETTA STREAMING YOUTUBE & MATCH DAY LIVE
+// ============================================================================
+
+export interface DirettaStreaming {
+  attiva: boolean;
+  stato: 'live' | 'in_programma' | 'terminata';
+  url_youtube: string;
+  titolo: string;
+  sottotitolo?: string;
+  data_ora?: string;
+  luogo?: string;
+  squadra_casa?: string;
+  squadra_ospite?: string;
+  categoria?: string;
+  mostra_chat?: boolean;
+  descrizione?: string;
+  aggiornato_il?: string;
+}
+
+export const DEFAULT_DIRETTA_STREAMING: DirettaStreaming = {
+  attiva: false,
+  stato: 'in_programma',
+  url_youtube: '',
+  titolo: 'Serie D: New Volley Academy in Diretta Streaming',
+  sottotitolo: 'Match Ufficiale di Campionato FIPAV',
+  squadra_casa: 'New Volley Academy',
+  squadra_ospite: '',
+  categoria: 'Serie D Femminile',
+  luogo: 'Palazzetto G. Marabini, Forlì',
+  data_ora: '',
+  mostra_chat: false,
+  descrizione: 'Guarda la partita ufficiale della New Volley Academy in diretta streaming. Tifa per le nostre atlete!',
+  aggiornato_il: new Date().toISOString()
+};
+
+export function extractYouTubeVideoId(url?: string | null): string | null {
+  if (!url) return null;
+  const cleanUrl = url.trim();
+  if (/^[a-zA-Z0-9_-]{11}$/.test(cleanUrl)) return cleanUrl;
+  const watchMatch = cleanUrl.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+  if (watchMatch) return watchMatch[1];
+  const shortMatch = cleanUrl.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+  if (shortMatch) return shortMatch[1];
+  const liveMatch = cleanUrl.match(/youtube\.com\/live\/([a-zA-Z0-9_-]{11})/);
+  if (liveMatch) return liveMatch[1];
+  const embedMatch = cleanUrl.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
+  if (embedMatch) return embedMatch[1];
+  return null;
+}
+
+export async function getDirettaStreaming(): Promise<DirettaStreaming> {
+  if (isDemoMode || !db) {
+    const local = localStorage.getItem('nva_diretta_streaming_cache');
+    return local ? JSON.parse(local) : DEFAULT_DIRETTA_STREAMING;
+  }
+  try {
+    const docRef = doc(db, 'config', 'diretta_streaming');
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      const data = snap.data() as DirettaStreaming;
+      localStorage.setItem('nva_diretta_streaming_cache', JSON.stringify(data));
+      return { ...DEFAULT_DIRETTA_STREAMING, ...data };
+    }
+  } catch (err) {
+    console.warn("Errore getDirettaStreaming:", err);
+  }
+  const local = localStorage.getItem('nva_diretta_streaming_cache');
+  return local ? JSON.parse(local) : DEFAULT_DIRETTA_STREAMING;
+}
+
+export async function salvaDirettaStreaming(config: Partial<DirettaStreaming>): Promise<void> {
+  const current = await getDirettaStreaming();
+  const payload: DirettaStreaming = {
+    ...current,
+    ...config,
+    aggiornato_il: new Date().toISOString()
+  };
+  localStorage.setItem('nva_diretta_streaming_cache', JSON.stringify(payload));
+  if (!isDemoMode && db) {
+    const docRef = doc(db, 'config', 'diretta_streaming');
+    await setDoc(docRef, payload, { merge: true });
+  }
+}
+
+

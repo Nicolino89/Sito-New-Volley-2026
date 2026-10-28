@@ -12,7 +12,8 @@ import {
   Shield,
   ShieldCheck,
   Database,
-  Flame
+  Flame,
+  Radio
 } from 'lucide-react';
 
 import { 
@@ -31,6 +32,7 @@ import {
 import TabNews from './admin/tabs/TabNews';
 import TabSquadre from './admin/tabs/TabSquadre';
 import TabGareFipav from './admin/tabs/TabGareFipav';
+import TabDirettaStreaming from './admin/tabs/TabDirettaStreaming';
 import TabPagine from './admin/tabs/TabPagine';
 import TabGalleria from './admin/tabs/TabGalleria';
 import TabCampTornei from './admin/tabs/TabCampTornei';
@@ -112,11 +114,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 }) => {
   const defaultTab = currentUser?.ruolo === 'Super Admin' ? 'news' : 'squadre';
   const [adminTab, setAdminTabState] = useState<
-    'news' | 'squadre' | 'gare_fipav' | 'pagine' | 'galleria' | 'camp_tornei' | 'voltex' | 'hall_of_fame' | 'collaboratori' | 'staff' | 'sponsor' | 'statistiche' | 'backup'
+    'news' | 'squadre' | 'gare_fipav' | 'diretta_streaming' | 'pagine' | 'galleria' | 'camp_tornei' | 'voltex' | 'hall_of_fame' | 'collaboratori' | 'staff' | 'sponsor' | 'statistiche' | 'backup'
   >(() => {
     try {
       const saved = localStorage.getItem('nva_admin_active_tab');
-      const valid = ['news', 'squadre', 'gare_fipav', 'pagine', 'galleria', 'camp_tornei', 'voltex', 'hall_of_fame', 'collaboratori', 'staff', 'sponsor', 'statistiche', 'backup'];
+      const valid = ['news', 'squadre', 'gare_fipav', 'diretta_streaming', 'pagine', 'galleria', 'camp_tornei', 'voltex', 'hall_of_fame', 'collaboratori', 'staff', 'sponsor', 'statistiche', 'backup'];
       if (saved && valid.includes(saved)) {
         if (currentUser?.ruolo !== 'Super Admin' && ['news', 'pagine', 'galleria', 'camp_tornei', 'voltex', 'hall_of_fame', 'collaboratori', 'staff', 'sponsor', 'statistiche', 'backup'].includes(saved)) {
           return 'squadre';
@@ -193,6 +195,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           >
             <Trophy className="w-4 h-4 shrink-0 text-amber-600" />
             <span className="not-italic text-sm">GARE & FIPAV SYNC</span>
+          </button>
+
+          <button
+            onClick={() => setAdminTab('diretta_streaming')}
+            className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold uppercase transition-all font-sport italic skew-x-[-6deg] flex items-center justify-between cursor-pointer ${
+              adminTab === 'diretta_streaming'
+                ? 'bg-red-600 text-white shadow-md font-black ring-2 ring-red-400/30'
+                : 'bg-slate-50 text-slate-700 hover:text-slate-950 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <Radio className={`w-4 h-4 shrink-0 ${adminTab === 'diretta_streaming' ? 'text-white' : 'text-red-500 animate-pulse'}`} />
+              <span className="not-italic text-sm">DIRETTA STREAMING</span>
+            </div>
+            <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full ${
+              adminTab === 'diretta_streaming' ? 'bg-white/20 text-white' : 'bg-red-100 text-red-700'
+            }`}>
+              LIVE
+            </span>
           </button>
 
           {currentUser?.ruolo === 'Super Admin' && (
@@ -373,6 +394,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <TabGareFipav
             squadreAll={sortedSquadreAll}
             loadAllData={loadAllData}
+            showToast={showToast}
+          />
+        )}
+
+        {adminTab === 'diretta_streaming' && (
+          <TabDirettaStreaming
+            squadreAll={sortedSquadreAll}
             showToast={showToast}
           />
         )}

@@ -28,7 +28,10 @@ import {
   EyeOff,
   Menu,
   MapPin,
-  Trophy
+  Trophy,
+  Play,
+  Radio,
+  Video
 } from 'lucide-react';
 
 import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
@@ -48,6 +51,8 @@ import {
   getSponsorPerLivello,
   getNewsAll,
   getProssimaGara,
+  getDirettaStreaming,
+  DirettaStreaming,
   updateProssimaGara,
   updateSocietaSettings,
   handleFirestoreError,
@@ -349,6 +354,7 @@ export default function Home({
   const [sponsorMain, setSponsorMain] = useState<any[]>(homeCache?.sponsorMain || cachedSponsorMain);
   const [sponsorGold, setSponsorGold] = useState<any[]>(homeCache?.sponsorGold || cachedSponsorGold);
   const [sponsorSilver, setSponsorSilver] = useState<any[]>(homeCache?.sponsorSilver || cachedSponsorSilver);
+  const [direttaStreaming, setDirettaStreaming] = useState<DirettaStreaming | null>(null);
   const [loadingData, setLoadingData] = useState<boolean>(false);
 
   // Fallback to local states if props not supplied
@@ -512,7 +518,8 @@ export default function Home({
         sMain,
         sGold,
         sSilver,
-        settings
+        settings,
+        direttaLive
       ] = await Promise.all([
         getSocietaInfo(),
         getConfigHome(isEditorAdmin ? 'draft' : 'live'),
@@ -522,7 +529,8 @@ export default function Home({
         isDemoMode || !db ? getSponsorPerLivello('Main') : getDocs(query(collection(db, 'sponsors'), where('tipologia', '==', 'Main Sponsor'), orderBy('ordine'))).then(s => s.docs.map(d => ({ id: d.id, ...d.data() }))).catch(() => getSponsorPerLivello('Main')),
         isDemoMode || !db ? getSponsorPerLivello('Gold') : getDocs(query(collection(db, 'sponsors'), where('tipologia', '==', 'Gold Partner'), orderBy('ordine'))).then(s => s.docs.map(d => ({ id: d.id, ...d.data() }))).catch(() => getSponsorPerLivello('Gold')),
         isDemoMode || !db ? getSponsorPerLivello('Silver') : getDocs(query(collection(db, 'sponsors'), where('tipologia', '==', 'Sponsor Tecnico'), orderBy('ordine'))).then(s => s.docs.map(d => ({ id: d.id, ...d.data() }))).catch(() => getSponsorPerLivello('Silver')),
-        getSocietaSettings()
+        getSocietaSettings(),
+        getDirettaStreaming()
       ]);
 
       cachedHomeInfo = info || null;
@@ -540,6 +548,7 @@ export default function Home({
       setSponsorMain(sMain || []);
       setSponsorGold(sGold || []);
       setSponsorSilver(sSilver || []);
+      setDirettaStreaming(direttaLive || null);
 
       // Persist to local storage for instant 0ms future visits
       try {
@@ -1007,6 +1016,30 @@ export default function Home({
                       </div>
                     </button>
                   </div>
+
+                  {/* Tasto Diretto alla Diretta Streaming (Se attiva o in programma) */}
+                  {direttaStreaming?.attiva && (
+                    <div className="pt-3 mt-3 border-t border-zinc-800">
+                      <Link
+                        to="/diretta"
+                        className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white shadow-lg shadow-red-600/25 text-xs font-black font-sport italic uppercase tracking-wider flex items-center justify-between transition-all duration-200 group cursor-pointer border border-red-500/30"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
+                          <Radio className="w-4 h-4 text-white animate-pulse" />
+                          <span>
+                            {direttaStreaming.stato === 'live' 
+                              ? '🔴 Guarda la Partita in Diretta Streaming!' 
+                              : '⏰ Diretta Streaming in Programma'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-[11px] font-sans font-bold text-white group-hover:translate-x-0.5 transition-transform">
+                          <span>Vai al Live</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </div>
+                      </Link>
+                    </div>
+                  )}
 
                 </div>
               </div>
