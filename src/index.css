@@ -91,3 +91,43 @@ html, body {
   background-size: 200px 200px;
   pointer-events: none;
 }
+
+/* ==========================================================================
+   STILI DI STAMPA UFFICIALI PER REPORT E DOSSIER SPONSOR (PDF / PRINT)
+   ========================================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Quando è attiva la classe printing-sponsor-report, nascondi l'intera UI tranne il report */
+  body.printing-sponsor-report * {
+    visibility: hidden;
+  }
+
+  body.printing-sponsor-report #sponsor-report-printable,
+  body.printing-sponsor-report #sponsor-report-printable * {
+    visibility: visible;
+  }
+
+  body.printing-sponsor-report #sponsor-report-printable {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}

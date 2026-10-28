@@ -4133,12 +4133,21 @@ export async function tracciaVisitaPagina(path: string): Promise<void> {
     // Firestore counter update
     if (!isDemoMode && db) {
       const statsRef = doc(db, 'statistiche_visite', 'panoramica');
-      await setDoc(statsRef, {
-        totaleVisite: increment(1),
-        [`pagine.${rawKey}`]: increment(1),
-        [`giorni.${today}`]: increment(1),
-        ultimoAccesso: new Date().toISOString()
-      }, { merge: true });
+      try {
+        await updateDoc(statsRef, {
+          totaleVisite: increment(1),
+          [`pagine.${rawKey}`]: increment(1),
+          [`giorni.${today}`]: increment(1),
+          ultimoAccesso: new Date().toISOString()
+        });
+      } catch (err) {
+        await setDoc(statsRef, {
+          totaleVisite: increment(1),
+          pagine: { [rawKey]: 1 },
+          giorni: { [today]: 1 },
+          ultimoAccesso: new Date().toISOString()
+        }, { merge: true });
+      }
     }
   } catch (e) {
     // Non-blocking telemetry error suppression
@@ -4147,25 +4156,21 @@ export async function tracciaVisitaPagina(path: string): Promise<void> {
 
 export async function getStatisticheVisite(): Promise<any> {
   const defaultInitial = {
-    totaleVisite: 196,
+    totaleVisite: 2840,
     pagine: {
-      home: 76,
-      squadre: 57,
-      news: 14,
-      'camp-tornei': 12,
-      galleria: 15,
-      societa: 12,
-      sponsor: 10
+      home: 1137,
+      squadre: 888,
+      news: 124,
+      societa: 102,
+      'camp-tornei': 86,
+      'albo-d-oro': 85,
+      blog: 68,
+      galleria: 55,
+      voltex: 38,
+      sponsor: 36,
+      modulistica: 26
     },
-    giorni: {
-      '2026-08-21': 18,
-      '2026-08-22': 12,
-      '2026-08-23': 25,
-      '2026-08-24': 16,
-      '2026-08-25': 34,
-      '2026-08-26': 42,
-      '2026-08-27': 49
-    },
+    giorni: {},
     ultimoAccesso: new Date().toISOString()
   };
 
@@ -4174,16 +4179,29 @@ export async function getStatisticheVisite(): Promise<any> {
       const docRef = doc(db, 'statistiche_visite', 'panoramica');
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data && (data.totaleVisite || 0) > 10) {
-          return data;
-        } else {
-          await setDoc(docRef, defaultInitial, { merge: true });
-          return defaultInitial;
+        const rawData = docSnap.data();
+        if (rawData) {
+          // Normalize both nested maps and potential flat dot keys for total robustness
+          const giorni: Record<string, number> = { ...(rawData.giorni || {}) };
+          const pagine: Record<string, number> = { ...(rawData.pagine || {}) };
+          
+          for (const [k, v] of Object.entries(rawData)) {
+            if (k.startsWith('giorni.')) {
+              const dKey = k.replace('giorni.', '');
+              giorni[dKey] = (giorni[dKey] || 0) + Number(v || 0);
+            } else if (k.startsWith('pagine.')) {
+              const pKey = k.replace('pagine.', '');
+              pagine[pKey] = (pagine[pKey] || 0) + Number(v || 0);
+            }
+          }
+
+          return {
+            ...rawData,
+            totaleVisite: Number(rawData.totaleVisite || 0),
+            giorni,
+            pagine
+          };
         }
-      } else {
-        await setDoc(docRef, defaultInitial);
-        return defaultInitial;
       }
     } catch (e) {
       console.warn("Errore getStatisticheVisite:", e);
