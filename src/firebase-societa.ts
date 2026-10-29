@@ -121,6 +121,7 @@ export interface ProssimaGara {
   link_mappa?: string;
   logo_avversario?: string;
   logo_casa?: string;
+  logo_ospite?: string;
   logo_nva?: string;
 }
 
@@ -4884,6 +4885,24 @@ export interface DirettaStreaming {
 }
 
 export const OFFICIAL_NVA_LOGO = 'https://firebasestorage.googleapis.com/v0/b/new-volley-academy.firebasestorage.app/o/settings%2Flogo_1783320543830.webp?alt=media&token=1311d811-745b-44ae-af58-326e4add2e02';
+
+export function getKnownTeamLogo(teamName?: string | null): string {
+  if (!teamName) return '';
+  const clean = teamName.toUpperCase().trim();
+  if (clean.includes('NEW VOLLEY') || clean.includes('NVA') || clean.includes('SALFEP')) {
+    return OFFICIAL_NVA_LOGO;
+  }
+  if (clean.includes('FENIX') || clean.includes('FAENZA')) {
+    return '/images/teams/fenix-faenza.png';
+  }
+  if (clean.includes('ALFONSINE') || clean.includes('ALFOVOLLEY')) {
+    return '/images/teams/alfonsine.png';
+  }
+  if (clean.includes('RUBICONE')) {
+    return 'https://www.rubiconeinvolley.it/wp-content/uploads/2018/01/logo-Rubicone-In-Volley-72x72.png';
+  }
+  return '';
+}
 
 export const DEFAULT_DIRETTA_STREAMING: DirettaStreaming = {
   attiva: true,

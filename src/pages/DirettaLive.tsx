@@ -22,7 +22,8 @@ import {
   parseMatchDateTime,
   Sponsor,
   SocietaInfo,
-  OFFICIAL_NVA_LOGO
+  OFFICIAL_NVA_LOGO,
+  getKnownTeamLogo
 } from '../firebase-societa';
 
 interface DirettaLiveProps {
@@ -154,14 +155,15 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
   const isFenixCasa = nomeCasa.toUpperCase().includes('FENIX');
   const isFenixOspite = nomeOspite.toUpperCase().includes('FENIX');
 
-  // Risoluzione loghi ufficiali (priorità a Firebase CDN per NVA e fallback locali)
+  // Risoluzione loghi ufficiali (priorità a Firebase CDN per NVA e dizionario federale per avversari)
   const getLogoCasa = () => {
     if (isNvaCasa) {
       if (diretta.logo_casa && diretta.logo_casa !== '/logo.png') return diretta.logo_casa;
       return OFFICIAL_NVA_LOGO;
     }
-    if (isFenixCasa) return 'https://www.pallavolofaenza.com/site_img/logo.png';
-    return diretta.logo_casa || '';
+    const known = getKnownTeamLogo(nomeCasa);
+    if (known) return known;
+    return (diretta.logo_casa && diretta.logo_casa !== '/logo.png') ? diretta.logo_casa : '';
   };
 
   const getLogoOspite = () => {
@@ -169,8 +171,9 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
       if (diretta.logo_ospite && diretta.logo_ospite !== '/logo.png') return diretta.logo_ospite;
       return OFFICIAL_NVA_LOGO;
     }
-    if (isFenixOspite) return 'https://www.pallavolofaenza.com/site_img/logo.png';
-    return diretta.logo_ospite || '';
+    const known = getKnownTeamLogo(nomeOspite);
+    if (known) return known;
+    return (diretta.logo_ospite && diretta.logo_ospite !== '/logo.png') ? diretta.logo_ospite : '';
   };
 
   const logoCasaEffective = getLogoCasa();

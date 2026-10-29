@@ -3,7 +3,7 @@
  * Dedicated parser for crer.portalefipav.net, portalefipav.net, fipavromagna.it, and fipav-er.it
  */
 
-import { ProssimaGara, RigaClassifica, PartitaCampionato } from '../firebase-societa';
+import { ProssimaGara, RigaClassifica, PartitaCampionato, OFFICIAL_NVA_LOGO, getKnownTeamLogo } from '../firebase-societa';
 
 /**
  * Clean up strings
@@ -252,7 +252,7 @@ export function parseFipavHtml(
             setVinti,
             setPersi,
             isMyTeam,
-            logo: teamLogo || (isMyTeam ? '/logo.png' : '')
+            logo: teamLogo || (isMyTeam ? OFFICIAL_NVA_LOGO : (getKnownTeamLogo(teamName) || ''))
           });
         }
       }
@@ -377,8 +377,8 @@ export function parseFipavHtml(
         if (rawHomeLogo) teamLogosMap[homeTeam.toUpperCase()] = rawHomeLogo;
         if (rawAwayLogo) teamLogosMap[awayTeam.toUpperCase()] = rawAwayLogo;
 
-        const homeLogo = rawHomeLogo || teamLogosMap[homeTeam.toUpperCase()] || (isHome ? '/logo.png' : '');
-        const awayLogo = rawAwayLogo || teamLogosMap[awayTeam.toUpperCase()] || (isAway ? '/logo.png' : '');
+        const homeLogo = rawHomeLogo || teamLogosMap[homeTeam.toUpperCase()] || (isHome ? OFFICIAL_NVA_LOGO : (getKnownTeamLogo(homeTeam) || ''));
+        const awayLogo = rawAwayLogo || teamLogosMap[awayTeam.toUpperCase()] || (isAway ? OFFICIAL_NVA_LOGO : (getKnownTeamLogo(awayTeam) || ''));
         const opponentLogo = isHome ? awayLogo : homeLogo;
 
         if (isHome || isAway) {
@@ -627,8 +627,8 @@ export function parseFipavHtml(
   const unplayed = partite.find(p => !p.terminata);
   if (unplayed) {
     const oppName = unplayed.avversario;
-    const oppLogo = unplayed.logo_avversario || teamLogosMap[oppName.toUpperCase()] || '';
-    const myLogo = '/logo.png';
+    const oppLogo = unplayed.logo_avversario || teamLogosMap[oppName.toUpperCase()] || getKnownTeamLogo(oppName) || '';
+    const myLogo = OFFICIAL_NVA_LOGO;
     prossimaGara = {
       id: myTeamName.toLowerCase().includes('masch') ? 'serie_d_maschile' : 'serie_d_femminile',
       categoria: myTeamName.toLowerCase().includes('masch') ? 'Serie D Maschile' : 'Serie D Femminile',
@@ -641,6 +641,7 @@ export function parseFipavHtml(
       punti_avversario: null,
       logo_avversario: oppLogo,
       logo_casa: unplayed.casa ? myLogo : oppLogo,
+      logo_ospite: unplayed.casa ? oppLogo : myLogo,
       logo_nva: myLogo
     };
   }

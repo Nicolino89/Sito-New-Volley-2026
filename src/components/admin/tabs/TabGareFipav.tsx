@@ -30,7 +30,9 @@ import {
   updateProssimaGara,
   ProssimaGara,
   getGenereSquadra,
-  sortSquadreByImportance
+  sortSquadreByImportance,
+  OFFICIAL_NVA_LOGO,
+  getKnownTeamLogo
 } from '../../../firebase-societa';
 import { scrapeFipavFullData, parseFipavHtml, sanitizeLuogoDisplay, mergePartite } from '../../../utils/fipavScraper';
 
@@ -178,9 +180,9 @@ export default function TabGareFipav({
           casa: upcoming.casa,
           punti_nva: null,
           punti_avversario: null,
-          logo_avversario: upcoming.logo_avversario || '',
-          logo_casa: upcoming.casa ? '/logo.png' : (upcoming.logo_casa || upcoming.logo_avversario || ''),
-          logo_nva: '/logo.png'
+          logo_avversario: upcoming.logo_avversario || getKnownTeamLogo(upcoming.avversario) || '',
+          logo_casa: upcoming.casa ? OFFICIAL_NVA_LOGO : (upcoming.logo_casa || upcoming.logo_avversario || getKnownTeamLogo(upcoming.avversario) || ''),
+          logo_nva: OFFICIAL_NVA_LOGO
         });
       }
 
@@ -301,9 +303,9 @@ export default function TabGareFipav({
           casa: upcoming.casa,
           punti_nva: null,
           punti_avversario: null,
-          logo_avversario: upcoming.logo_avversario || '',
-          logo_casa: upcoming.casa ? '/logo.png' : (upcoming.logo_casa || upcoming.logo_avversario || ''),
-          logo_nva: '/logo.png'
+          logo_avversario: upcoming.logo_avversario || getKnownTeamLogo(upcoming.avversario) || '',
+          logo_casa: upcoming.casa ? OFFICIAL_NVA_LOGO : (upcoming.logo_casa || upcoming.logo_avversario || getKnownTeamLogo(upcoming.avversario) || ''),
+          logo_nva: OFFICIAL_NVA_LOGO
         });
       }
 

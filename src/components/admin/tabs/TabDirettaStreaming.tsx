@@ -28,7 +28,8 @@ import {
   getProssimaGara,
   ProssimaGara,
   RosaSquadra,
-  OFFICIAL_NVA_LOGO
+  OFFICIAL_NVA_LOGO,
+  getKnownTeamLogo
 } from '../../../firebase-societa';
 
 interface TabDirettaStreamingProps {
@@ -67,8 +68,8 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
     const sottotitoloDefault = `${gara.giornata || 'Campionato FIPAV'} • ${isCasa ? 'In Casa al Palazzetto' : 'In Trasferta'}`;
     
     // Assegnazione loghi ufficiali (NVA vs Avversario)
-    const myLogo = gara.logo_nva || OFFICIAL_NVA_LOGO;
-    const oppLogo = gara.logo_avversario || (gara.avversario?.toUpperCase().includes('FENIX') ? 'https://www.pallavolofaenza.com/site_img/logo.png' : '');
+    const myLogo = OFFICIAL_NVA_LOGO;
+    const oppLogo = gara.logo_avversario || getKnownTeamLogo(gara.avversario) || '';
 
     setDiretta(prev => ({
       ...prev,
@@ -460,17 +461,21 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
                     />
                     <div className="flex items-center gap-2 pt-1">
                       <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
-                        <img 
-                          src={(diretta.logo_casa && diretta.logo_casa !== '/logo.png') ? diretta.logo_casa : OFFICIAL_NVA_LOGO} 
-                          alt="Logo Casa" 
-                          className="w-full h-full object-contain" 
-                        />
+                        {((diretta.logo_casa && diretta.logo_casa !== '/logo.png') || getKnownTeamLogo(diretta.squadra_casa)) ? (
+                          <img 
+                            src={(diretta.logo_casa && diretta.logo_casa !== '/logo.png') ? diretta.logo_casa : getKnownTeamLogo(diretta.squadra_casa)} 
+                            alt="Logo Casa" 
+                            className="w-full h-full object-contain" 
+                          />
+                        ) : (
+                          <Shield className="w-5 h-5 text-slate-400" />
+                        )}
                       </div>
                       <input
                         type="text"
                         value={diretta.logo_casa || ''}
                         onChange={e => setDiretta(prev => ({ ...prev, logo_casa: e.target.value }))}
-                        placeholder="URL Logo Casa"
+                        placeholder="URL Logo Casa (es. FIPAV o web)"
                         className="w-full bg-white border border-slate-300 focus:border-amber-500 rounded-xl px-2.5 py-1.5 text-[11px] text-slate-700 font-mono"
                       />
                     </div>
@@ -490,8 +495,12 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
                     />
                     <div className="flex items-center gap-2 pt-1">
                       <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
-                        {diretta.logo_ospite ? (
-                          <img src={diretta.logo_ospite} alt="Logo Ospite" className="w-full h-full object-contain" />
+                        {((diretta.logo_ospite && diretta.logo_ospite !== '/logo.png') || getKnownTeamLogo(diretta.squadra_ospite)) ? (
+                          <img 
+                            src={(diretta.logo_ospite && diretta.logo_ospite !== '/logo.png') ? diretta.logo_ospite : getKnownTeamLogo(diretta.squadra_ospite)} 
+                            alt="Logo Ospite" 
+                            className="w-full h-full object-contain" 
+                          />
                         ) : (
                           <Shield className="w-5 h-5 text-slate-400" />
                         )}
