@@ -4905,7 +4905,7 @@ export function getKnownTeamLogo(teamName?: string | null): string {
 }
 
 export const DEFAULT_DIRETTA_STREAMING: DirettaStreaming = {
-  attiva: true,
+  attiva: false,
   stato: 'in_programma',
   url_youtube: '',
   url_video_presentazione: '',

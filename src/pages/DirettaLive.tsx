@@ -101,8 +101,8 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
 
   const liveVideoId = extractYouTubeVideoId(diretta.url_youtube);
 
-  // Consideriamo attiva la live se impostata su 'live' dall'admin, oppure se c'è un video YouTube attivo durante il match
-  const isLiveNow = diretta.stato === 'live';
+  // Consideriamo attiva la live se impostata su 'live' dall'admin E attiva è true
+  const isLiveNow = Boolean(diretta.attiva) && diretta.stato === 'live';
 
   // Orario di inizio estratto (es. "21:15")
   const orarioInizio = useMemo(() => {
@@ -194,16 +194,22 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
           </Link>
 
           <div className="flex items-center gap-2.5">
-            {isLiveNow ? (
-              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600 text-white text-xs font-black uppercase font-sport tracking-wider animate-pulse shadow-lg shadow-red-600/30">
-                <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                <Radio className="w-3.5 h-3.5" />
-                <span>IN DIRETTA ORA</span>
-              </span>
+            {diretta.attiva ? (
+              isLiveNow ? (
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600 text-white text-xs font-black uppercase font-sport tracking-wider animate-pulse shadow-lg shadow-red-600/30">
+                  <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                  <Radio className="w-3.5 h-3.5" />
+                  <span>IN DIRETTA ORA</span>
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold uppercase font-sport tracking-wider">
+                  <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>MATCH DAY • PRE-PARTITA</span>
+                </span>
+              )
             ) : (
-              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold uppercase font-sport tracking-wider">
-                <Clock className="w-3.5 h-3.5 text-amber-400" />
-                <span>MATCH DAY • PRE-PARTITA</span>
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700 text-xs font-mono font-bold uppercase tracking-wider">
+                <span>NON ATTIVA</span>
               </span>
             )}
             
@@ -215,9 +221,35 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
       </div>
 
       {/* ========================================================================= */}
-      {/* SCENARIO A: LIVE IN CORSO (PLAYER YOUTUBE IN PRIMO PIANO, HEADER COMPATTO) */}
+      {/* SCENARIO 0: DIRETTA DISATTIVATA DALL'ADMIN                                */}
       {/* ========================================================================= */}
-      {isLiveNow ? (
+      {!diretta.attiva ? (
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-20 text-center space-y-6">
+          <div className="w-20 h-20 mx-auto rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 shadow-xl">
+            <Radio className="w-10 h-10 opacity-40 text-slate-400" />
+          </div>
+          <div className="space-y-2">
+            <span className="px-3 py-1 rounded-full bg-slate-800 text-slate-400 text-xs font-mono font-bold uppercase tracking-wider border border-slate-700">
+              Trasmissione Non Attiva
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-black font-sport uppercase tracking-wider text-white italic">
+              Nessuna Diretta Streaming al Momento
+            </h1>
+            <p className="text-sm text-slate-400 max-w-md mx-auto">
+              Al momento la diretta non è attiva sul sito. Torna a trovarci per seguire le prossime sfide delle pantere!
+            </p>
+          </div>
+          <div className="pt-2">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black font-sport italic uppercase text-xs transition-transform hover:scale-105 shadow-lg shadow-amber-400/20"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Torna al Sito Ufficiale
+            </Link>
+          </div>
+        </div>
+      ) : isLiveNow ? (
         <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
           
           {/* HEADER COMPATTO CON I DUE STEMMI (OCCUPA POCO SPAZIO IN ALTO) */}

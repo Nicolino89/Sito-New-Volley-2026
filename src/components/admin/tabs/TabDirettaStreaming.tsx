@@ -88,12 +88,34 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
     showToast(`Dati e loghi di ${gara.categoria} caricati! Clicca "Salva" per confermare.`, "success");
   };
 
+  const handleToggleAttiva = async (newAttiva: boolean) => {
+    const updated = { ...diretta, attiva: newAttiva };
+    setDiretta(updated);
+    try {
+      await salvaDirettaStreaming(updated);
+      showToast(
+        newAttiva 
+          ? "✅ Diretta streaming ATTIVATA sul sito!" 
+          : "⏸️ Diretta streaming DISATTIVATA: tutti i banner sono stati rimossi dal sito.",
+        "success"
+      );
+    } catch (err: any) {
+      console.error(err);
+      showToast("Errore durante il salvataggio: " + (err.message || ''), "error");
+    }
+  };
+
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setIsSaving(true);
     try {
       await salvaDirettaStreaming(diretta);
-      showToast("Configurazione diretta streaming salvata e attiva!", "success");
+      showToast(
+        diretta.attiva 
+          ? "Configurazione salvata: la diretta è ATTIVA sul sito!" 
+          : "Configurazione salvata: la diretta è DISATTIVA (nessun banner visibile).", 
+        "success"
+      );
     } catch (err: any) {
       console.error(err);
       showToast("Errore durante il salvataggio della diretta: " + (err.message || ''), "error");
@@ -262,8 +284,8 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
               <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
                 <input
                   type="checkbox"
-                  checked={diretta.attiva}
-                  onChange={e => setDiretta(prev => ({ ...prev, attiva: e.target.checked }))}
+                  checked={Boolean(diretta.attiva)}
+                  onChange={e => handleToggleAttiva(e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500" />
@@ -278,22 +300,34 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => setDiretta(prev => ({ ...prev, stato: 'live', attiva: true }))}
+                  onClick={() => {
+                    const updated = { ...diretta, stato: 'live' as const, attiva: true };
+                    setDiretta(updated);
+                    salvaDirettaStreaming(updated).then(() => {
+                      showToast("🔴 Stato impostato su 'IN DIRETTA ORA' e attivato sul sito!", "success");
+                    }).catch(() => {});
+                  }}
                   className={`py-2.5 px-3 rounded-xl border text-xs font-bold font-sport uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                    diretta.stato === 'live'
+                    diretta.stato === 'live' && diretta.attiva
                       ? 'bg-red-600 text-white border-red-700 shadow-md ring-2 ring-red-400/30'
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
-                  <span className={`w-2 h-2 rounded-full ${diretta.stato === 'live' ? 'bg-white animate-ping' : 'bg-red-500'}`} />
+                  <span className={`w-2 h-2 rounded-full ${diretta.stato === 'live' && diretta.attiva ? 'bg-white animate-ping' : 'bg-red-500'}`} />
                   <span>🔴 In Diretta Ora</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setDiretta(prev => ({ ...prev, stato: 'in_programma', attiva: true }))}
+                  onClick={() => {
+                    const updated = { ...diretta, stato: 'in_programma' as const, attiva: true };
+                    setDiretta(updated);
+                    salvaDirettaStreaming(updated).then(() => {
+                      showToast("⏰ Stato impostato su 'IN PROGRAMMA' e attivato sul sito!", "success");
+                    }).catch(() => {});
+                  }}
                   className={`py-2.5 px-3 rounded-xl border text-xs font-bold font-sport uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                    diretta.stato === 'in_programma'
+                    diretta.stato === 'in_programma' && diretta.attiva
                       ? 'bg-amber-500 text-slate-950 border-amber-600 shadow-md ring-2 ring-amber-400/30'
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
@@ -304,9 +338,15 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
 
                 <button
                   type="button"
-                  onClick={() => setDiretta(prev => ({ ...prev, stato: 'terminata' }))}
+                  onClick={() => {
+                    const updated = { ...diretta, stato: 'terminata' as const, attiva: false };
+                    setDiretta(updated);
+                    salvaDirettaStreaming(updated).then(() => {
+                      showToast("⏹️ Diretta segnata come Conclusa (disattivata dal sito).", "info");
+                    }).catch(() => {});
+                  }}
                   className={`py-2.5 px-3 rounded-xl border text-xs font-bold font-sport uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                    diretta.stato === 'terminata'
+                    diretta.stato === 'terminata' || !diretta.attiva
                       ? 'bg-slate-800 text-white border-slate-900 shadow-md ring-2 ring-slate-400/30'
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}

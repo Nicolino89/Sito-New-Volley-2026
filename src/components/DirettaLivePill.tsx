@@ -16,7 +16,8 @@ export const DirettaLivePill: React.FC = () => {
 
   const isLiveNow = diretta?.stato === 'live';
   const isInProgramma = diretta?.stato === 'in_programma';
-  const isEffectivelyActive = diretta && (diretta.attiva || isLiveNow || isInProgramma);
+  // Rigido master check: deve essere esplicitamente attiva E in stato live o in_programma
+  const isEffectivelyActive = Boolean(diretta?.attiva) && (isLiveNow || isInProgramma);
 
   if (isDirettaPage || !isEffectivelyActive) {
     return null;

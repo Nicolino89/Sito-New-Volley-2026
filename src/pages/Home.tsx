@@ -834,13 +834,16 @@ export default function Home({
               {/* Colonna Sinistra: Brand & Call To Actions */}
               <div className="lg:col-span-7 space-y-6 max-w-full overflow-hidden">
                 
-                {/* 🔴 LIVE / MATCH DAY BROADCAST HERO ALERT */}
+                {/* 🔴 LIVE / MATCH DAY BROADCAST HERO ALERT (Rigido rispetto di diretta.attiva) */}
                 {(() => {
-                  const isLive = direttaStreaming?.stato === 'live';
-                  const isInProg = direttaStreaming?.stato === 'in_programma';
-                  const isDirectActive = direttaStreaming && (direttaStreaming.attiva || isLive || isInProg);
+                  // Se la diretta non è esplicitamente attiva dall'admin, non mostrare alcun banner
+                  if (!direttaStreaming || !direttaStreaming.attiva) return null;
 
-                  if (!isDirectActive) return null;
+                  const isLive = direttaStreaming.stato === 'live';
+                  const isInProg = direttaStreaming.stato === 'in_programma';
+
+                  // Mostra solo se lo stato è live o in_programma
+                  if (!isLive && !isInProg) return null;
 
                   return (
                     <motion.div
@@ -1068,8 +1071,8 @@ export default function Home({
                     </button>
                   </div>
 
-                  {/* Tasto Diretto alla Diretta Streaming (Se attiva o in programma) */}
-                  {direttaStreaming && (direttaStreaming.attiva || direttaStreaming.stato === 'live' || direttaStreaming.stato === 'in_programma') && (
+                  {/* Tasto Diretto alla Diretta Streaming (Solo se attiva E in stato live o in_programma) */}
+                  {direttaStreaming && direttaStreaming.attiva && (direttaStreaming.stato === 'live' || direttaStreaming.stato === 'in_programma') && (
                     <div className="pt-3 mt-3 border-t border-zinc-800">
                       <Link
                         to="/diretta"
