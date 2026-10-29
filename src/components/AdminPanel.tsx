@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { Component, useState } from 'react';
 import { 
   Newspaper, 
   Users, 
@@ -13,7 +13,9 @@ import {
   ShieldCheck,
   Database,
   Flame,
-  Radio
+  Radio,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 
 import { 
@@ -43,6 +45,103 @@ import TabSponsor from './admin/tabs/TabSponsor';
 import TabStatistiche from './admin/tabs/TabStatistiche';
 import TabHallOfFame from './admin/tabs/TabHallOfFame';
 import TabBackup from './admin/tabs/TabBackup';
+
+export type AdminTabType = 
+  | 'news' 
+  | 'squadre' 
+  | 'gare_fipav' 
+  | 'diretta_streaming' 
+  | 'pagine' 
+  | 'galleria' 
+  | 'camp_tornei' 
+  | 'voltex' 
+  | 'hall_of_fame' 
+  | 'collaboratori' 
+  | 'staff' 
+  | 'sponsor' 
+  | 'statistiche' 
+  | 'backup';
+
+interface AdminTabErrorBoundaryProps {
+  tabName: string;
+  onResetTab?: () => void;
+  children: React.ReactNode;
+}
+
+interface AdminTabErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class AdminTabErrorBoundary extends Component<AdminTabErrorBoundaryProps, AdminTabErrorBoundaryState> {
+  public props: AdminTabErrorBoundaryProps;
+  public state: AdminTabErrorBoundaryState = {
+    hasError: false,
+    error: null
+  };
+
+  constructor(props: AdminTabErrorBoundaryProps) {
+    super(props);
+    this.props = props;
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error(`[AdminPanel] Errore critico nel tab "${this.props.tabName}":`, error, errorInfo);
+  }
+
+  handleRetry = () => {
+    (this as any).setState({ hasError: false, error: null });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="bg-white border border-red-200 rounded-3xl p-8 text-center space-y-4 shadow-sm max-w-xl mx-auto my-8 animate-fade-in">
+          <div className="w-14 h-14 rounded-2xl bg-red-50 border border-red-200 text-red-500 flex items-center justify-center mx-auto shadow-inner">
+            <AlertCircle className="w-7 h-7" />
+          </div>
+          <div className="space-y-1">
+            <h4 className="text-base font-bold font-sport uppercase text-slate-900 tracking-wider">
+              Errore di caricamento: {this.props.tabName}
+            </h4>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Si è verificato un problema isolato in questa scheda. La dashboard e le altre schede rimangono attive e accessibili.
+            </p>
+            {this.state.error?.message && (
+              <p className="text-[11px] font-mono text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-100 max-w-md mx-auto break-words mt-2">
+                {this.state.error.message}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center justify-center gap-3 pt-3">
+            <button
+              type="button"
+              onClick={this.handleRetry}
+              className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-2"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Riprova Caricamento</span>
+            </button>
+            {this.props.onResetTab && (
+              <button
+                type="button"
+                onClick={this.props.onResetTab}
+                className="px-4 py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm"
+              >
+                Torna a Gestione Squadre
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export interface AdminPanelProps {
   newsAll: NewsBlog[];
@@ -112,18 +211,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   loadAllData = async () => {},
   showToast = (msg: string) => console.log(msg)
 }) => {
-  const defaultTab = currentUser?.ruolo === 'Super Admin' ? 'news' : 'squadre';
-  const [adminTab, setAdminTabState] = useState<
-    'news' | 'squadre' | 'gare_fipav' | 'diretta_streaming' | 'pagine' | 'galleria' | 'camp_tornei' | 'voltex' | 'hall_of_fame' | 'collaboratori' | 'staff' | 'sponsor' | 'statistiche' | 'backup'
-  >(() => {
+  const defaultTab: AdminTabType = currentUser?.ruolo === 'Super Admin' ? 'news' : 'squadre';
+  const [adminTab, setAdminTabState] = useState<AdminTabType>(() => {
     try {
-      const saved = localStorage.getItem('nva_admin_active_tab');
-      const valid = ['news', 'squadre', 'gare_fipav', 'diretta_streaming', 'pagine', 'galleria', 'camp_tornei', 'voltex', 'hall_of_fame', 'collaboratori', 'staff', 'sponsor', 'statistiche', 'backup'];
+      const saved = localStorage.getItem('nva_admin_active_tab') as AdminTabType;
+      const valid: AdminTabType[] = ['news', 'squadre', 'gare_fipav', 'diretta_streaming', 'pagine', 'galleria', 'camp_tornei', 'voltex', 'hall_of_fame', 'collaboratori', 'staff', 'sponsor', 'statistiche', 'backup'];
       if (saved && valid.includes(saved)) {
         if (currentUser?.ruolo !== 'Super Admin' && ['news', 'pagine', 'galleria', 'camp_tornei', 'voltex', 'hall_of_fame', 'collaboratori', 'staff', 'sponsor', 'statistiche', 'backup'].includes(saved)) {
           return 'squadre';
         }
-        return saved as any;
+        return saved;
       }
     } catch {}
     return defaultTab;
@@ -141,7 +238,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     return sortSquadreByImportance(squadreAll || []);
   }, [squadreAll]);
 
-  const setAdminTab = (tab: 'news' | 'squadre' | 'gare_fipav' | 'pagine' | 'galleria' | 'camp_tornei' | 'voltex' | 'hall_of_fame' | 'collaboratori' | 'staff' | 'sponsor' | 'statistiche' | 'backup') => {
+  const setAdminTab = (tab: AdminTabType) => {
     setAdminTabState(tab);
     try {
       localStorage.setItem('nva_admin_active_tab', tab);
@@ -367,124 +464,152 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       {/* Right Column: Active Admin Tab Content Area */}
       <div className="flex-1 min-w-0 space-y-6 overflow-x-hidden">
         {adminTab === 'news' && (
-          <TabNews
-            newsAll={newsAll}
-            squadreAll={sortedSquadreAll}
-            loadAllData={loadAllData}
-            showToast={showToast}
-            caricaFileSuStorage={caricaFileSuStorage}
-          />
+          <AdminTabErrorBoundary tabName="Sezione News" onResetTab={() => setAdminTab('squadre')}>
+            <TabNews
+              newsAll={newsAll}
+              squadreAll={sortedSquadreAll}
+              loadAllData={loadAllData}
+              showToast={showToast}
+              caricaFileSuStorage={caricaFileSuStorage}
+            />
+          </AdminTabErrorBoundary>
         )}
 
         {adminTab === 'squadre' && (
-          <TabSquadre
-            squadreAll={sortedSquadreAll}
-            setSquadreAll={setSquadreAll}
-            giocatoriAll={giocatoriAll}
-            setGiocatoriAll={setGiocatoriAll}
-            sponsorsAll={sponsorsAll}
-            currentUser={currentUser}
-            loadAllData={loadAllData}
-            showToast={showToast}
-            caricaFileSuStorage={caricaFileSuStorage}
-          />
+          <AdminTabErrorBoundary tabName="Squadre & Atleti">
+            <TabSquadre
+              squadreAll={sortedSquadreAll}
+              setSquadreAll={setSquadreAll}
+              giocatoriAll={giocatoriAll}
+              setGiocatoriAll={setGiocatoriAll}
+              sponsorsAll={sponsorsAll}
+              currentUser={currentUser}
+              loadAllData={loadAllData}
+              showToast={showToast}
+              caricaFileSuStorage={caricaFileSuStorage}
+            />
+          </AdminTabErrorBoundary>
         )}
 
         {adminTab === 'gare_fipav' && (
-          <TabGareFipav
-            squadreAll={sortedSquadreAll}
-            loadAllData={loadAllData}
-            showToast={showToast}
-          />
+          <AdminTabErrorBoundary tabName="Gare & FIPAV Sync" onResetTab={() => setAdminTab('squadre')}>
+            <TabGareFipav
+              squadreAll={sortedSquadreAll}
+              loadAllData={loadAllData}
+              showToast={showToast}
+            />
+          </AdminTabErrorBoundary>
         )}
 
         {adminTab === 'diretta_streaming' && (
-          <TabDirettaStreaming
-            squadreAll={sortedSquadreAll}
-            showToast={showToast}
-          />
+          <AdminTabErrorBoundary tabName="Diretta Streaming" onResetTab={() => setAdminTab('squadre')}>
+            <TabDirettaStreaming
+              squadreAll={sortedSquadreAll}
+              showToast={showToast}
+            />
+          </AdminTabErrorBoundary>
         )}
 
         {adminTab === 'pagine' && (
-          <TabPagine
-            societaInfo={societaInfo}
-            setSocietaInfo={setSocietaInfo}
-            societaConfig={societaConfig}
-            setSocietaConfig={setSocietaConfig}
-            societaSettings={societaSettings}
-            setSocietaSettings={setSocietaSettings}
-            loadAllData={loadAllData}
-            showToast={showToast}
-            caricaFileSuStorage={caricaFileSuStorage}
-          />
+          <AdminTabErrorBoundary tabName="Società & Pagine" onResetTab={() => setAdminTab('squadre')}>
+            <TabPagine
+              societaInfo={societaInfo}
+              setSocietaInfo={setSocietaInfo}
+              societaConfig={societaConfig}
+              setSocietaConfig={setSocietaConfig}
+              societaSettings={societaSettings}
+              setSocietaSettings={setSocietaSettings}
+              loadAllData={loadAllData}
+              showToast={showToast}
+              caricaFileSuStorage={caricaFileSuStorage}
+            />
+          </AdminTabErrorBoundary>
         )}
 
         {adminTab === 'galleria' && (
-          <TabGalleria
-            showToast={showToast}
-            caricaFileSuStorage={caricaFileSuStorage}
-          />
+          <AdminTabErrorBoundary tabName="Galleria Foto" onResetTab={() => setAdminTab('squadre')}>
+            <TabGalleria
+              showToast={showToast}
+              caricaFileSuStorage={caricaFileSuStorage}
+            />
+          </AdminTabErrorBoundary>
         )}
 
         {adminTab === 'camp_tornei' && (
-          <TabCampTornei
-            showToast={showToast}
-            caricaFileSuStorage={caricaFileSuStorage}
-          />
+          <AdminTabErrorBoundary tabName="Camp & Tornei" onResetTab={() => setAdminTab('squadre')}>
+            <TabCampTornei
+              showToast={showToast}
+              caricaFileSuStorage={caricaFileSuStorage}
+            />
+          </AdminTabErrorBoundary>
         )}
 
         {adminTab === 'voltex' && (
-          <TabVoltexCamp
-            showToast={showToast}
-          />
+          <AdminTabErrorBoundary tabName="Voltex Camp" onResetTab={() => setAdminTab('squadre')}>
+            <TabVoltexCamp
+              showToast={showToast}
+            />
+          </AdminTabErrorBoundary>
         )}
 
         {adminTab === 'hall_of_fame' && (
-          <TabHallOfFame
-            showToast={showToast}
-            caricaFileSuStorage={caricaFileSuStorage}
-            initialSquadre={sortedSquadreAll}
-            initialGiocatori={giocatoriAll}
-          />
+          <AdminTabErrorBoundary tabName="Hall of Fame" onResetTab={() => setAdminTab('squadre')}>
+            <TabHallOfFame
+              showToast={showToast}
+              caricaFileSuStorage={caricaFileSuStorage}
+              initialSquadre={sortedSquadreAll}
+              initialGiocatori={giocatoriAll}
+            />
+          </AdminTabErrorBoundary>
         )}
 
         {adminTab === 'collaboratori' && (
-          <TabCollaboratori
-            currentUser={currentUser}
-            squadreAll={sortedSquadreAll}
-            showToast={showToast}
-          />
+          <AdminTabErrorBoundary tabName="Collaboratori" onResetTab={() => setAdminTab('squadre')}>
+            <TabCollaboratori
+              currentUser={currentUser}
+              squadreAll={sortedSquadreAll}
+              showToast={showToast}
+            />
+          </AdminTabErrorBoundary>
         )}
 
         {adminTab === 'staff' && (
-          <TabStaff
-            showToast={showToast}
-            caricaFileSuStorage={caricaFileSuStorage}
-          />
+          <AdminTabErrorBoundary tabName="Staff Tecnico & Dirigenti" onResetTab={() => setAdminTab('squadre')}>
+            <TabStaff
+              showToast={showToast}
+              caricaFileSuStorage={caricaFileSuStorage}
+            />
+          </AdminTabErrorBoundary>
         )}
 
         {adminTab === 'sponsor' && (
-          <TabSponsor
-            showToast={showToast}
-            caricaFileSuStorage={caricaFileSuStorage}
-          />
+          <AdminTabErrorBoundary tabName="Sponsor" onResetTab={() => setAdminTab('squadre')}>
+            <TabSponsor
+              showToast={showToast}
+              caricaFileSuStorage={caricaFileSuStorage}
+            />
+          </AdminTabErrorBoundary>
         )}
 
         {adminTab === 'statistiche' && (
-          <TabStatistiche
-            newsAll={newsAll}
-            squadreAll={sortedSquadreAll}
-            giocatoriAll={giocatoriAll}
-            sponsorsAll={sponsorsAll}
-            showToast={showToast}
-          />
+          <AdminTabErrorBoundary tabName="Statistiche" onResetTab={() => setAdminTab('squadre')}>
+            <TabStatistiche
+              newsAll={newsAll}
+              squadreAll={sortedSquadreAll}
+              giocatoriAll={giocatoriAll}
+              sponsorsAll={sponsorsAll}
+              showToast={showToast}
+            />
+          </AdminTabErrorBoundary>
         )}
 
         {adminTab === 'backup' && (
-          <TabBackup
-            showToast={showToast}
-            loadAllData={loadAllData}
-          />
+          <AdminTabErrorBoundary tabName="Backup Dati" onResetTab={() => setAdminTab('squadre')}>
+            <TabBackup
+              showToast={showToast}
+              loadAllData={loadAllData}
+            />
+          </AdminTabErrorBoundary>
         )}
       </div>
 

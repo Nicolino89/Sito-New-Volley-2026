@@ -16,7 +16,8 @@ import {
   RefreshCw,
   Share2,
   Calendar,
-  MapPin
+  MapPin,
+  Shield
 } from 'lucide-react';
 import { 
   DirettaStreaming, 

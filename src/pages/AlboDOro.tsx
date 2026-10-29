@@ -151,7 +151,7 @@ export default function AlboDOro() {
 
   // Calcola tutti i singoli anni distinti per ospiti illustri (senza raggrupparli o concatenarli)
   const tuttiAnniOspiti = ospiti.flatMap(o => getAnniOspite(o)).filter(Boolean);
-  const anniOspitiDisponibili = Array.from(new Set(tuttiAnniOspiti)).sort((a, b) => b.localeCompare(a));
+  const anniOspitiDisponibili = Array.from(new Set(tuttiAnniOspiti)).sort((a: any, b: any) => String(b).localeCompare(String(a)));
 
   // Filtra atleti NVA
   const atletiFiltrati = atleti.filter(a => {

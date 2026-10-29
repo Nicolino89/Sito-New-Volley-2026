@@ -101,55 +101,89 @@ interface ChunkErrorBoundaryProps {
 
 interface ChunkErrorBoundaryState {
   hasError: boolean;
+  error: Error | null;
 }
 
 class ChunkErrorBoundary extends React.Component<ChunkErrorBoundaryProps, ChunkErrorBoundaryState> {
   public props: ChunkErrorBoundaryProps;
   public state: ChunkErrorBoundaryState = {
-    hasError: false
+    hasError: false,
+    error: null
   };
 
   constructor(props: ChunkErrorBoundaryProps) {
     super(props);
     this.props = props;
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("Chunk loading error in Suspense:", error, errorInfo);
+    console.error("[ChunkErrorBoundary] Errore catturato:", error, errorInfo);
   }
 
   handleReload = () => {
-    sessionStorage.removeItem('nva_chunk_reload');
+    try {
+      sessionStorage.removeItem('nva_chunk_reload');
+      // Ripristina anche eventuale tab admin problematica memorizzata per sicurezza
+      localStorage.removeItem('nva_admin_active_tab');
+    } catch {}
     window.location.reload();
+  };
+
+  handleResetHome = () => {
+    try {
+      sessionStorage.clear();
+      localStorage.removeItem('nva_admin_active_tab');
+    } catch {}
+    window.location.href = '/';
   };
 
   render() {
     if (this.state.hasError) {
+      const isChunkError = 
+        this.state.error?.message?.includes('Failed to fetch') ||
+        this.state.error?.message?.includes('dynamically imported') ||
+        this.state.error?.name === 'ChunkLoadError';
+
       return (
-        <div className="flex flex-col items-center justify-center py-20 px-4 text-center space-y-4">
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center space-y-4 max-w-md mx-auto">
           <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
             <RotateCcw className="w-8 h-8 mx-auto" />
           </div>
           <div className="space-y-1">
             <h3 className="text-lg font-bold font-sport uppercase text-zinc-900">
-              Aggiornamento disponibile o errore di caricamento
+              {isChunkError ? "Aggiornamento applicazione disponibile" : "Errore temporaneo di caricamento"}
             </h3>
             <p className="text-xs text-zinc-500 max-w-sm mx-auto">
-              Una nuova versione della sezione è pronta oppure la connessione è stata interrotta. Clicca sotto per ricaricare.
+              {isChunkError 
+                ? "Una nuova versione del sito è stata pubblicata. Clicca sotto per aggiornare la visualizzazione." 
+                : "La sezione ha riscontrato un'eccezione temporanea. Puoi ricaricare o ripristinare la navigazione."}
             </p>
+            {this.state.error?.message && !isChunkError && (
+              <p className="text-[10px] font-mono text-red-500 bg-red-50 border border-red-100 p-2 rounded-lg text-left break-words mt-2">
+                {this.state.error.message}
+              </p>
+            )}
           </div>
-          <button
-            onClick={this.handleReload}
-            className="bg-[#FFE600] hover:bg-yellow-400 text-black font-bold py-2.5 px-6 rounded-xl text-xs uppercase font-sport tracking-wider flex items-center gap-2 transition-all shadow-md cursor-pointer"
-          >
-            <RotateCcw className="w-4 h-4" />
-            <span>Ricarica</span>
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+            <button
+              onClick={this.handleReload}
+              className="bg-[#FFE600] hover:bg-yellow-400 text-black font-bold py-2.5 px-6 rounded-xl text-xs uppercase font-sport tracking-wider flex items-center gap-2 transition-all shadow-md cursor-pointer"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Ricarica e Aggiorna</span>
+            </button>
+            <button
+              onClick={this.handleResetHome}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2.5 px-4 rounded-xl text-xs uppercase font-sport tracking-wider transition-all cursor-pointer"
+            >
+              Home Page
+            </button>
+          </div>
         </div>
       );
     }
