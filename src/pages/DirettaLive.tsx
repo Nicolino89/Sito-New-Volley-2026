@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Play, 
   Radio, 
-  Share2, 
   Copy, 
   Check, 
   MapPin, 
@@ -13,15 +11,7 @@ import {
   Shield,
   MessageCircle,
   Sparkles,
-  Tv,
-  CalendarPlus,
-  RefreshCw,
-  Film,
-  Volume2,
-  Maximize2,
-  Sliders,
-  Bell,
-  Heart
+  CalendarPlus
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { 
@@ -68,9 +58,9 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
   const [diretta, setDiretta] = useState<DirettaStreaming>(DEFAULT_DIRETTA_STREAMING);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [activeTabMedia, setActiveTabMedia] = useState<'live' | 'teaser'>('live');
   const [nowTick, setNowTick] = useState(Date.now());
-  const [playClickedNotice, setPlayClickedNotice] = useState(false);
+  const [nvaLogoError, setNvaLogoError] = useState(false);
+  const [oppLogoError, setOppLogoError] = useState(false);
 
   // Caricamento configurazione diretta streaming
   useEffect(() => {
@@ -81,9 +71,6 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
       getDirettaStreaming()
         .then(d => {
           setDiretta(d);
-          if (d.stato === 'in_programma' && d.url_video_presentazione && !d.url_youtube) {
-            setActiveTabMedia('teaser');
-          }
         })
         .catch(err => console.warn("Errore caricamento diretta:", err))
         .finally(() => setIsLoading(false));
@@ -111,10 +98,9 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
   }, [targetMatchDate, nowTick]);
 
   const liveVideoId = extractYouTubeVideoId(diretta.url_youtube);
-  const teaserVideoId = extractYouTubeVideoId(diretta.url_video_presentazione);
 
+  // Consideriamo attiva la live se impostata su 'live' dall'admin, oppure se c'è un video YouTube attivo durante il match
   const isLiveNow = diretta.stato === 'live';
-  const isInProgramma = diretta.stato === 'in_programma';
 
   // Orario di inizio estratto (es. "21:15")
   const orarioInizio = useMemo(() => {
@@ -138,11 +124,6 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
   };
 
-  const handleSimulatedPlayClick = () => {
-    setPlayClickedNotice(true);
-    setTimeout(() => setPlayClickedNotice(false), 4500);
-  };
-
   // Google Calendar link
   const googleCalendarUrl = useMemo(() => {
     if (!targetMatchDate) return null;
@@ -152,7 +133,7 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
     
     const title = encodeURIComponent(`🏐 Live Volley: ${diretta.titolo || 'New Volley Academy'}`);
     const details = encodeURIComponent(
-      `Diretta streaming ufficiale su: ${window.location.origin}/diretta\nTorna qui a tifare le nostre atlete!\n${diretta.sottotitolo || ''}`
+      `Diretta streaming ufficiale su: ${window.location.origin}/diretta\nTorna qui a tifare le nostre pantere!\n${diretta.sottotitolo || ''}`
     );
     const location = encodeURIComponent(diretta.luogo || 'Palazzetto dello Sport');
 
@@ -196,14 +177,10 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                 <Radio className="w-3.5 h-3.5" />
                 <span>IN DIRETTA ORA</span>
               </span>
-            ) : isInProgramma ? (
+            ) : (
               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold uppercase font-sport tracking-wider">
                 <Clock className="w-3.5 h-3.5 text-amber-400" />
                 <span>MATCH DAY • PRE-PARTITA</span>
-              </span>
-            ) : (
-              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 text-slate-400 text-xs font-bold uppercase font-sport tracking-wider">
-                <span>ARCHIVIO MATCH</span>
               </span>
             )}
             
@@ -214,272 +191,87 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
         </div>
       </div>
 
-      {/* 2. MATCH ARENA & MOTIVATIONAL BROADCAST HERO */}
-      <div className="relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 border-b border-slate-800/80 pt-6 pb-10 px-4 sm:px-6">
-        
-        {/* Glow sportivo di sfondo */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="max-w-4xl mx-auto relative z-10 space-y-6">
-
-          {/* ======================================================== */}
-          {/* BANNER PRINCIPALE: LA LIVE INIZIERÀ ALLE ORE...          */}
-          {/* ======================================================== */}
-          <div className="rounded-3xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 p-[2px] shadow-2xl shadow-red-950/60">
-            <div className="bg-slate-950/95 rounded-[22px] p-5 sm:p-7 backdrop-blur-md text-center space-y-3.5">
-              
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-red-600/25 border border-red-500/40 text-red-300 font-sport font-black text-xs uppercase tracking-widest animate-pulse">
-                <Radio className="w-4 h-4 text-red-400" />
-                <span>{isLiveNow ? 'PARTITA IN CORSO' : 'DIRETTA STREAMING MATCH DAY'}</span>
-              </div>
-              
-              <div className="space-y-1.5 max-w-2xl mx-auto">
-                <h1 className="text-2xl sm:text-4xl md:text-5xl font-black font-sport uppercase tracking-tight text-white leading-tight">
-                  {isLiveNow ? (
-                    'SEGUI LE NOSTRE PANTERE DAL VIVO!'
-                  ) : (
-                    <>
-                      LA LIVE INIZIERÀ ALLE ORE <span className="text-amber-400 underline decoration-red-500 decoration-4">{orarioInizio}</span>
-                    </>
-                  )}
-                </h1>
-                <p className="text-sm sm:text-lg font-sport uppercase font-bold text-amber-200 tracking-wider">
-                  ★ TORNA QUI A TIFARE IN DIRETTA CON NOI! ★
-                </p>
-                <p className="text-xs sm:text-sm text-slate-300 font-inter max-w-xl mx-auto leading-relaxed pt-1">
-                  Metti questa pagina tra i preferiti o attiva il promemoria: stasera tutta la community di New Volley Academy sarà collegata per sostenere la squadra set dopo set!
-                </p>
-              </div>
-
-              {/* Pulsanti Rapidi nel Banner */}
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-                {googleCalendarUrl && !isLiveNow && (
-                  <a
-                    href={googleCalendarUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black font-sport italic uppercase text-xs flex items-center gap-2 shadow-lg shadow-amber-400/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                  >
-                    <CalendarPlus className="w-4 h-4 text-slate-950" />
-                    <span>Aggiungi Promemoria Calendario</span>
-                  </a>
-                )}
-
-                <button
-                  onClick={handleShareWhatsapp}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black font-sport italic uppercase text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                >
-                  <MessageCircle className="w-4 h-4 fill-white" />
-                  <span>Condividi su WhatsApp</span>
-                </button>
-
-                <button
-                  onClick={handleCopyLink}
-                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-2 border border-slate-700 transition-colors cursor-pointer"
-                >
-                  {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-slate-400" />}
-                  <span>{copied ? 'Link Copiato!' : 'Copia Link Pagina'}</span>
-                </button>
-              </div>
-
-            </div>
-          </div>
-
-          {/* SCONTRO DIRETTO: STEMMA CASA vs STEMMA OSPITE */}
-          <div className="bg-slate-900/60 border border-slate-800/90 rounded-3xl p-5 sm:p-6 space-y-4">
-            
-            <div className="flex items-center justify-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-400 text-xs font-sport uppercase tracking-wider font-bold">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>{diretta.categoria || 'Match Ufficiale FIPAV'}</span>
-              </span>
-              {diretta.sottotitolo && (
-                <span className="text-xs text-slate-400 font-mono hidden sm:inline">
-                  • {diretta.sottotitolo}
-                </span>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-7 items-center gap-4 sm:gap-2 text-center py-1">
-              
-              {/* SQUADRA CASA */}
-              <div className="sm:col-span-3 flex flex-col items-center sm:items-end space-y-2">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white border border-slate-200 p-2 flex items-center justify-center shadow-xl group-hover:scale-105 transition-transform overflow-hidden">
-                  {logoCasaEffective ? (
-                    <img 
-                      src={logoCasaEffective} 
-                      alt={nomeCasa} 
-                      className="w-full h-full object-contain filter drop-shadow"
-                      onError={(e)=>{ 
-                        if (isNvaCasa) {
-                          (e.target as any).src = '/logo.png';
-                        } else {
-                          (e.target as any).style.display = 'none';
-                        }
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 font-sport font-black uppercase text-center p-1 leading-none text-xs">
-                      <Shield className="w-8 h-8 mb-1 text-slate-500" />
-                      <span className="truncate max-w-full text-[9px]">{nomeCasa.slice(0, 6)}</span>
-                    </div>
-                  )}
-                </div>
-                <h2 className="text-lg sm:text-xl md:text-2xl font-black font-sport uppercase tracking-wide text-white leading-tight">
-                  {nomeCasa}
-                </h2>
-                <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-amber-400 bg-amber-400/10 px-2.5 py-0.5 rounded-md">
-                  CASA
-                </span>
-              </div>
-
-              {/* EMBLEMA "VS" CENTRALE */}
-              <div className="sm:col-span-1 flex flex-col items-center justify-center space-y-1">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-black font-sport italic text-base flex items-center justify-center shadow-lg shadow-amber-500/25 ring-4 ring-slate-950">
-                  VS
-                </div>
-              </div>
-
-              {/* SQUADRA OSPITE */}
-              <div className="sm:col-span-3 flex flex-col items-center sm:items-start space-y-2">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white border border-slate-200 p-2 flex items-center justify-center shadow-xl overflow-hidden">
-                  {logoOspiteEffective ? (
-                    <img 
-                      src={logoOspiteEffective} 
-                      alt={nomeOspite} 
-                      className="w-full h-full object-contain filter drop-shadow"
-                      onError={(e)=>{ 
-                        if (!isNvaCasa) {
-                          (e.target as any).src = '/logo.png';
-                        } else {
-                          (e.target as any).style.display = 'none';
-                        }
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 font-sport font-black uppercase text-center p-1 leading-none text-xs">
-                      <Shield className="w-8 h-8 mb-1 text-slate-500" />
-                      <span className="truncate max-w-full text-[9px]">{nomeOspite.slice(0, 6)}</span>
-                    </div>
-                  )}
-                </div>
-                <h2 className="text-lg sm:text-xl md:text-2xl font-black font-sport uppercase tracking-wide text-white leading-tight">
-                  {nomeOspite}
-                </h2>
-                <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-slate-400 bg-slate-800 px-2.5 py-0.5 rounded-md">
-                  OSPITE
-                </span>
-              </div>
-
-            </div>
-
-            {/* DETTAGLI CAMPO & ORARIO */}
-            {(diretta.luogo || diretta.data_ora) && (
-              <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-mono text-slate-300 pt-2 border-t border-slate-800/60">
-                {diretta.data_ora && (
-                  <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 px-3.5 py-1.5 rounded-xl">
-                    <Calendar className="w-4 h-4 text-amber-400" />
-                    <span className="font-bold text-white">{diretta.data_ora}</span>
-                  </div>
-                )}
-                {diretta.luogo && (
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(diretta.luogo)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 bg-slate-950/80 hover:bg-slate-800 border border-slate-800 px-3.5 py-1.5 rounded-xl text-slate-300 hover:text-amber-400 transition-colors"
-                  >
-                    <MapPin className="w-4 h-4 text-amber-400" />
-                    <span className="truncate max-w-[280px]">{diretta.luogo}</span>
-                    <ExternalLink className="w-3 h-3 opacity-60" />
-                  </a>
-                )}
-              </div>
-            )}
-
-            {/* COUNTDOWN BOX SOTTO ALLO SCONTRO */}
-            {isInProgramma && targetMatchDate && !timeLeft.isPast && (
-              <div className="pt-2">
-                <div className="grid grid-cols-4 gap-2 sm:gap-4 max-w-md mx-auto">
-                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-2 sm:p-2.5 text-center">
-                    <span className="block text-2xl sm:text-3xl font-black font-sport text-amber-400">
-                      {String(timeLeft.days).padStart(2, '0')}
-                    </span>
-                    <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
-                      Giorni
-                    </span>
-                  </div>
-                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-2 sm:p-2.5 text-center">
-                    <span className="block text-2xl sm:text-3xl font-black font-sport text-amber-400">
-                      {String(timeLeft.hours).padStart(2, '0')}
-                    </span>
-                    <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
-                      Ore
-                    </span>
-                  </div>
-                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-2 sm:p-2.5 text-center">
-                    <span className="block text-2xl sm:text-3xl font-black font-sport text-amber-400">
-                      {String(timeLeft.minutes).padStart(2, '0')}
-                    </span>
-                    <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
-                      Minuti
-                    </span>
-                  </div>
-                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-2 sm:p-2.5 text-center">
-                    <span className="block text-2xl sm:text-3xl font-black font-sport text-white animate-pulse">
-                      {String(timeLeft.seconds).padStart(2, '0')}
-                    </span>
-                    <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
-                      Secondi
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-          </div>
-
-        </div>
-      </div>
-
-      {/* 3. PLAYER CONTAINER (PLAYER YOUTUBE REALE OPPURE SIMULATORE BROADCAST TV) */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 space-y-6">
-
-        {/* TABS MULTIMEDIALI SE C'È UN VIDEO DI PRESENTAZIONE */}
-        {teaserVideoId && (
-          <div className="flex items-center justify-center gap-3">
-            <button
-              onClick={() => setActiveTabMedia('live')}
-              className={`px-4 py-2 rounded-xl text-xs font-black font-sport uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
-                activeTabMedia === 'live' 
-                  ? 'bg-red-600 text-white shadow-lg shadow-red-600/30' 
-                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-              }`}
-            >
-              <Radio className="w-3.5 h-3.5" />
-              <span>{isLiveNow ? 'Canale Diretta Live' : 'Player Ufficiale Partita'}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTabMedia('teaser')}
-              className={`px-4 py-2 rounded-xl text-xs font-black font-sport uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
-                activeTabMedia === 'teaser' 
-                  ? 'bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/20' 
-                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-              }`}
-            >
-              <Film className="w-3.5 h-3.5" />
-              <span>Guarda Video Presentazione NVA</span>
-            </button>
-          </div>
-        )}
-
-        {/* SCHERMO PRINCIPALE DEL PLAYER */}
-        <div className="relative w-full aspect-video rounded-2xl sm:rounded-3xl overflow-hidden bg-black shadow-2xl border border-slate-800 ring-1 ring-white/10 group">
+      {/* ========================================================================= */}
+      {/* SCENARIO A: LIVE IN CORSO (PLAYER YOUTUBE IN PRIMO PIANO, HEADER COMPATTO) */}
+      {/* ========================================================================= */}
+      {isLiveNow ? (
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
           
-          {/* TAB 1: PLAYER LIVE DI YOUTUBE */}
-          {activeTabMedia === 'live' && (
-            liveVideoId ? (
+          {/* HEADER COMPATTO CON I DUE STEMMI (OCCUPA POCO SPAZIO IN ALTO) */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+            
+            <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shrink-0 shadow-md">
+                  {!nvaLogoError && (isNvaCasa ? logoCasaEffective : logoOspiteEffective) ? (
+                    <img 
+                      src={isNvaCasa ? logoCasaEffective : logoOspiteEffective} 
+                      alt="NVA" 
+                      className="w-full h-full object-contain"
+                      onError={(e) => { (e.target as any).onerror = null; setNvaLogoError(true); }}
+                    />
+                  ) : (
+                    <Shield className="w-6 h-6 text-slate-800" />
+                  )}
+                </div>
+
+                <span className="font-sport font-black text-xs text-amber-400 italic">VS</span>
+
+                <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shrink-0 shadow-md">
+                  {!oppLogoError && (!isNvaCasa ? logoCasaEffective : logoOspiteEffective) ? (
+                    <img 
+                      src={!isNvaCasa ? logoCasaEffective : logoOspiteEffective} 
+                      alt={nomeOspite} 
+                      className="w-full h-full object-contain"
+                      onError={(e) => { (e.target as any).onerror = null; setOppLogoError(true); }}
+                    />
+                  ) : (
+                    <Shield className="w-6 h-6 text-slate-600" />
+                  )}
+                </div>
+              </div>
+
+              <div className="overflow-hidden">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-red-600 animate-ping shrink-0" />
+                  <span className="text-[10px] uppercase font-mono font-bold text-red-400 tracking-wider">
+                    🔴 DIRETTA STREAMING DAL PALAZZETTO
+                  </span>
+                </div>
+                <h1 className="text-base sm:text-xl font-black font-sport uppercase tracking-wide text-white truncate">
+                  {diretta.titolo || `${nomeCasa} vs ${nomeOspite}`}
+                </h1>
+                {diretta.luogo && (
+                  <p className="text-[11px] text-slate-400 truncate flex items-center gap-1 font-mono">
+                    <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
+                    <span>{diretta.luogo}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={handleShareWhatsapp}
+                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-sport uppercase text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+              >
+                <MessageCircle className="w-3.5 h-3.5 fill-white" />
+                <span>WhatsApp</span>
+              </button>
+              <button
+                onClick={handleCopyLink}
+                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center gap-1.5 border border-slate-700 transition-colors cursor-pointer"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+                <span>{copied ? 'Copiato!' : 'Copia'}</span>
+              </button>
+            </div>
+
+          </div>
+
+          {/* PLAYER YOUTUBE A TUTTO SCHERMO */}
+          <div className="relative w-full aspect-video rounded-2xl sm:rounded-3xl overflow-hidden bg-black shadow-2xl border border-slate-800 ring-1 ring-white/10">
+            {liveVideoId ? (
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${liveVideoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`}
                 title={diretta.titolo}
@@ -488,167 +280,247 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                 allowFullScreen
               />
             ) : (
-              /* ======================================================== */
-              /* IMITATORE PLAYER TV / YOUTUBE IN ATTESA DELLA DIRETTA   */
-              /* ======================================================== */
-              <div 
-                onClick={handleSimulatedPlayClick}
-                className="absolute inset-0 flex flex-col justify-between p-4 sm:p-6 bg-gradient-to-br from-slate-950 via-zinc-950 to-black select-none cursor-pointer overflow-hidden group/player"
-              >
-                {/* Sfondo campo da volley stilizzato e luci palazzetto */}
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(245,158,11,0.15),transparent)] pointer-events-none" />
-                <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-slate-950 space-y-3">
+                <Radio className="w-10 h-10 text-red-500 animate-pulse" />
+                <h3 className="text-xl font-bold font-sport uppercase text-white">
+                  Collegamento in corso con il palazzetto
+                </h3>
+                <p className="text-xs text-slate-400 max-w-md">
+                  L'amministratore sta avviando la telecamera. Il video apparirà automaticamente tra pochissimo!
+                </p>
+              </div>
+            )}
+          </div>
 
-                {/* Top Player Overlay */}
-                <div className="relative z-10 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping" />
-                    <span className="px-2.5 py-1 rounded-md bg-red-600/90 text-white font-mono font-black text-[10px] uppercase tracking-wider">
-                      STANDBY LIVE
-                    </span>
-                    <span className="text-white font-sport font-black uppercase tracking-wider text-xs sm:text-sm hidden sm:inline drop-shadow">
-                      New Volley Academy TV • Segnale Palazzetto
-                    </span>
-                  </div>
+        </div>
+      ) : (
+        /* ========================================================================= */
+        /* SCENARIO B: PRE-MATCH IN ATTESA (BANNER D'INVITO + STEMMI + COUNTDOWN)     */
+        /* (Nessuna finta TV: solo l'avviso e il countdown chiaro e accattivante)     */
+        /* ========================================================================= */
+        <div className="relative overflow-hidden pt-6 pb-10 px-4 sm:px-6">
+          
+          <div className="max-w-4xl mx-auto space-y-6">
 
-                  <span className="px-2.5 py-0.5 rounded bg-black/60 border border-white/10 text-[10px] font-mono text-slate-300">
-                    1080p HD • LIVE
-                  </span>
+            {/* 1. BANNER PRINCIPALE: LA LIVE INIZIERÀ ALLE ORE... */}
+            <div className="rounded-3xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 p-[2px] shadow-2xl shadow-red-950/60">
+              <div className="bg-slate-950/95 rounded-[22px] p-6 sm:p-8 backdrop-blur-md text-center space-y-3.5">
+                
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-red-600/25 border border-red-500/40 text-red-300 font-sport font-black text-xs uppercase tracking-widest animate-pulse">
+                  <Radio className="w-4 h-4 text-red-400" />
+                  <span>DIRETTA STREAMING MATCH DAY</span>
+                </div>
+                
+                <div className="space-y-1.5 max-w-2xl mx-auto">
+                  <h1 className="text-2xl sm:text-4xl md:text-5xl font-black font-sport uppercase tracking-tight text-white leading-tight">
+                    LA LIVE INIZIERÀ ALLE ORE <span className="text-amber-400 underline decoration-red-500 decoration-4">{orarioInizio}</span>
+                  </h1>
+                  <p className="text-sm sm:text-lg font-sport uppercase font-bold text-amber-200 tracking-wider">
+                    ★ TORNA QUI A TIFARE IN DIRETTA CON NOI! ★
+                  </p>
+                  <p className="text-xs sm:text-sm text-slate-300 font-inter max-w-xl mx-auto leading-relaxed pt-1">
+                    Metti questa pagina tra i preferiti o attiva il promemoria: stasera saremo tutti collegati per sostenere le nostre pantere punto su punto dal palazzetto!
+                  </p>
                 </div>
 
-                {/* Center Clash & Play Button */}
-                <div className="relative z-10 flex flex-col items-center justify-center text-center space-y-3 sm:space-y-4 my-auto">
-                  
-                  {/* Pulsante Play Simulato con onde pulsanti */}
-                  <div className="relative">
-                    <div className="absolute -inset-3 rounded-full bg-red-600/30 blur-lg animate-pulse" />
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-tr from-red-600 to-rose-500 text-white flex items-center justify-center shadow-2xl ring-4 ring-white/20 group-hover/player:scale-110 transition-transform">
-                      <Play className="w-8 h-8 sm:w-10 sm:h-10 fill-white translate-x-0.5" />
-                    </div>
-                  </div>
-
-                  {/* Messaggio principale sullo schermo */}
-                  <div className="space-y-1.5 max-w-lg px-2">
-                    <h3 className="text-lg sm:text-2xl md:text-3xl font-black font-sport uppercase tracking-wider text-white drop-shadow-md">
-                      IL SEGNALE VIDEO SI ATTIVERÀ ALLE ORE {orarioInizio}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-slate-300 font-inter leading-relaxed drop-shadow">
-                      Le telecamere sul campo si accenderanno a ridosso dell'ingresso delle squadre.
-                      <br className="hidden sm:inline" />
-                      <strong className="text-amber-400 font-bold"> Torna qui stasera per tifare con noi in diretta streaming!</strong>
-                    </p>
-                  </div>
-
-                  {/* Toast avviso al click */}
-                  {playClickedNotice && (
-                    <div className="px-4 py-2 rounded-xl bg-amber-400 text-slate-950 font-bold font-sport uppercase text-xs shadow-xl animate-bounce">
-                      🔔 Segnale video pronto! La diretta partirà alle {orarioInizio}. Salva il link tra i preferiti!
-                    </div>
-                  )}
-
-                  {teaserVideoId && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveTabMedia('teaser');
-                      }}
-                      className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-sport uppercase text-xs flex items-center gap-1.5 border border-white/20 transition-all cursor-pointer"
+                {/* Pulsanti Rapidi nel Banner */}
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                  {googleCalendarUrl && (
+                    <a
+                      href={googleCalendarUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black font-sport italic uppercase text-xs flex items-center gap-2 shadow-lg shadow-amber-400/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
                     >
-                      <Film className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Guarda intanto la presentazione della società</span>
-                    </button>
+                      <CalendarPlus className="w-4 h-4 text-slate-950" />
+                      <span>Aggiungi Promemoria Calendario</span>
+                    </a>
                   )}
 
-                </div>
+                  <button
+                    onClick={handleShareWhatsapp}
+                    className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black font-sport italic uppercase text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  >
+                    <MessageCircle className="w-4 h-4 fill-white" />
+                    <span>Condividi su WhatsApp</span>
+                  </button>
 
-                {/* Bottom Player Controls (Imitazione YouTube Live) */}
-                <div className="relative z-10 flex items-center justify-between text-slate-400 text-xs pt-2 border-t border-white/10 bg-black/40 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 px-4 py-2.5">
-                  <div className="flex items-center gap-3">
-                    <Play className="w-4 h-4 text-white opacity-80" />
-                    <Volume2 className="w-4 h-4 text-white opacity-80" />
-                    <div className="flex items-center gap-1.5 text-[10px] font-mono">
-                      <span className="w-2 h-2 rounded-full bg-red-600" />
-                      <span className="text-white font-bold">STREAM IN ATTESA</span>
-                      <span className="text-slate-400 hidden sm:inline">| Inizio ore {orarioInizio}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">New Volley Academy TV</span>
-                    <Maximize2 className="w-4 h-4 text-white opacity-80" />
-                  </div>
+                  <button
+                    onClick={handleCopyLink}
+                    className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-2 border border-slate-700 transition-colors cursor-pointer"
+                  >
+                    {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-slate-400" />}
+                    <span>{copied ? 'Link Copiato!' : 'Copia Link Pagina'}</span>
+                  </button>
                 </div>
 
               </div>
-            )
-          )}
+            </div>
 
-          {/* TAB 2: TEASER PRESENTAZIONE SOCIETÀ */}
-          {activeTabMedia === 'teaser' && teaserVideoId && (
-            <iframe
-              src={`https://www.youtube-nocookie.com/embed/${teaserVideoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`}
-              title="Presentazione New Volley Academy"
-              className="w-full h-full border-0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            />
-          )}
+            {/* 2. SCONTRO DIRETTO CON STEMMI & CONTO ALLA ROVESCIA */}
+            <div className="bg-slate-900/60 border border-slate-800/90 rounded-3xl p-6 sm:p-8 space-y-5">
+              
+              <div className="flex items-center justify-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-400 text-xs font-sport uppercase tracking-wider font-bold">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{diretta.categoria || 'Match Ufficiale FIPAV'}</span>
+                </span>
+                {diretta.sottotitolo && (
+                  <span className="text-xs text-slate-400 font-mono hidden sm:inline">
+                    • {diretta.sottotitolo}
+                  </span>
+                )}
+              </div>
 
-        </div>
+              {/* STEMMI DELLE DUE SQUADRE */}
+              <div className="grid grid-cols-1 sm:grid-cols-7 items-center gap-4 sm:gap-2 text-center py-2">
+                
+                {/* SQUADRA CASA */}
+                <div className="sm:col-span-3 flex flex-col items-center sm:items-end space-y-2">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white border border-slate-200 p-2 flex items-center justify-center shadow-xl overflow-hidden">
+                    {!nvaLogoError && logoCasaEffective ? (
+                      <img 
+                        src={logoCasaEffective} 
+                        alt={nomeCasa} 
+                        className="w-full h-full object-contain filter drop-shadow"
+                        onError={(e) => {
+                          (e.target as any).onerror = null;
+                          setNvaLogoError(true);
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-slate-800 font-sport font-black uppercase text-center p-1 leading-none text-xs">
+                        <Shield className="w-8 h-8 mb-1 text-amber-500" />
+                        <span className="truncate max-w-full text-[10px]">{nomeCasa.slice(0, 6)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-black font-sport uppercase tracking-wide text-white leading-tight">
+                    {nomeCasa}
+                  </h2>
+                  <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-amber-400 bg-amber-400/10 px-2.5 py-0.5 rounded-md">
+                    CASA
+                  </span>
+                </div>
 
-        {/* 4. CALL TO ACTION & CONDIVISIONE */}
-        <div className="bg-slate-900/70 border border-slate-800 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-center sm:text-left">
-            <span className="text-[10px] uppercase font-mono tracking-wider text-amber-400 font-bold block">
-              NON PERDERE LA PARTITA
-            </span>
-            <p className="text-xs text-slate-300">
-              Invia il link al gruppo WhatsApp della squadra, ai parenti e ai tifosi.
-            </p>
-          </div>
+                {/* EMBLEMA "VS" CENTRALE */}
+                <div className="sm:col-span-1 flex flex-col items-center justify-center space-y-1">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-black font-sport italic text-base flex items-center justify-center shadow-lg shadow-amber-500/25 ring-4 ring-slate-950">
+                    VS
+                  </div>
+                </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-2.5 w-full sm:w-auto">
-            <button
-              onClick={handleCopyLink}
-              className="flex-1 sm:flex-initial bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 border border-slate-700 transition-all cursor-pointer"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span className="text-emerald-400 font-bold">Copiato!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4 text-slate-400" />
-                  <span>Copia Link Pagina</span>
-                </>
+                {/* SQUADRA OSPITE */}
+                <div className="sm:col-span-3 flex flex-col items-center sm:items-start space-y-2">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white border border-slate-200 p-2 flex items-center justify-center shadow-xl overflow-hidden">
+                    {!oppLogoError && logoOspiteEffective ? (
+                      <img 
+                        src={logoOspiteEffective} 
+                        alt={nomeOspite} 
+                        className="w-full h-full object-contain filter drop-shadow"
+                        onError={(e) => {
+                          (e.target as any).onerror = null;
+                          setOppLogoError(true);
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-slate-800 font-sport font-black uppercase text-center p-1 leading-none text-xs">
+                        <Shield className="w-8 h-8 mb-1 text-slate-500" />
+                        <span className="truncate max-w-full text-[10px]">{nomeOspite.slice(0, 6)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-black font-sport uppercase tracking-wide text-white leading-tight">
+                    {nomeOspite}
+                  </h2>
+                  <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-slate-400 bg-slate-800 px-2.5 py-0.5 rounded-md">
+                    OSPITE
+                  </span>
+                </div>
+
+              </div>
+
+              {/* DETTAGLI CAMPO & ORARIO */}
+              {(diretta.luogo || diretta.data_ora) && (
+                <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-mono text-slate-300 pt-3 border-t border-slate-800/60">
+                  {diretta.data_ora && (
+                    <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 px-3.5 py-1.5 rounded-xl">
+                      <Calendar className="w-4 h-4 text-amber-400" />
+                      <span className="font-bold text-white">{diretta.data_ora}</span>
+                    </div>
+                  )}
+                  {diretta.luogo && (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(diretta.luogo)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 bg-slate-950/80 hover:bg-slate-800 border border-slate-800 px-3.5 py-1.5 rounded-xl text-slate-300 hover:text-amber-400 transition-colors"
+                    >
+                      <MapPin className="w-4 h-4 text-amber-400" />
+                      <span className="truncate max-w-[280px]">{diretta.luogo}</span>
+                      <ExternalLink className="w-3 h-3 opacity-60" />
+                    </a>
+                  )}
+                </div>
               )}
-            </button>
 
-            <button
-              onClick={handleShareWhatsapp}
-              className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
-            >
-              <MessageCircle className="w-4 h-4 fill-white" />
-              <span>Condividi su WhatsApp</span>
-            </button>
+              {/* 3. CONTO ALLA ROVESCIA (COUNTDOWN AL FISCHIO D'INIZIO) */}
+              {targetMatchDate && !timeLeft.isPast && (
+                <div className="pt-2">
+                  <div className="text-center pb-2">
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold flex items-center justify-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      TEMPO RIMANENTE ALLA DIRETTA
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 sm:gap-4 max-w-md mx-auto">
+                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-2 sm:p-2.5 text-center">
+                      <span className="block text-2xl sm:text-3xl font-black font-sport text-amber-400">
+                        {String(timeLeft.days).padStart(2, '0')}
+                      </span>
+                      <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
+                        Giorni
+                      </span>
+                    </div>
+                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-2 sm:p-2.5 text-center">
+                      <span className="block text-2xl sm:text-3xl font-black font-sport text-amber-400">
+                        {String(timeLeft.hours).padStart(2, '0')}
+                      </span>
+                      <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
+                        Ore
+                      </span>
+                    </div>
+                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-2 sm:p-2.5 text-center">
+                      <span className="block text-2xl sm:text-3xl font-black font-sport text-amber-400">
+                        {String(timeLeft.minutes).padStart(2, '0')}
+                      </span>
+                      <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
+                        Minuti
+                      </span>
+                    </div>
+                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-2 sm:p-2.5 text-center">
+                      <span className="block text-2xl sm:text-3xl font-black font-sport text-white animate-pulse">
+                        {String(timeLeft.seconds).padStart(2, '0')}
+                      </span>
+                      <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
+                        Secondi
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-            {diretta.url_youtube && (
-              <a
-                href={diretta.url_youtube}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 sm:flex-initial bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <span>Apri su YouTube</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            )}
+            </div>
+
           </div>
-        </div>
 
-        {/* 5. MATCH DAY SPONSOR SHOWCASE (Valore fondamentale per gli Sponsor!) */}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 4. MATCH DAY SPONSOR SHOWCASE (Valore fondamentale per gli Sponsor!)      */}
+      {/* ========================================================================= */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6">
         <div className="bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 p-6 sm:p-8 rounded-3xl space-y-6">
           <div className="text-center space-y-1.5 max-w-xl mx-auto">
             <span className="text-[10px] uppercase font-mono tracking-widest text-amber-400 font-bold">
@@ -738,7 +610,6 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
             </Link>
           </div>
         </div>
-
       </div>
 
     </div>
