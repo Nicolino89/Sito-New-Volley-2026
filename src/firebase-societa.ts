@@ -4883,6 +4883,8 @@ export interface DirettaStreaming {
   aggiornato_il?: string;
 }
 
+export const OFFICIAL_NVA_LOGO = 'https://firebasestorage.googleapis.com/v0/b/new-volley-academy.firebasestorage.app/o/settings%2Flogo_1783320543830.webp?alt=media&token=1311d811-745b-44ae-af58-326e4add2e02';
+
 export const DEFAULT_DIRETTA_STREAMING: DirettaStreaming = {
   attiva: true,
   stato: 'in_programma',
@@ -4892,7 +4894,7 @@ export const DEFAULT_DIRETTA_STREAMING: DirettaStreaming = {
   sottotitolo: '3ª Giornata di Campionato Regionale FIPAV',
   squadra_casa: 'New Volley Academy',
   squadra_ospite: 'FENIX FAENZA RA',
-  logo_casa: '/logo.png',
+  logo_casa: OFFICIAL_NVA_LOGO,
   logo_ospite: 'https://www.pallavolofaenza.com/site_img/logo.png',
   categoria: 'Serie D Maschile',
   luogo: 'Pal. COMUNALE FABIO LOMBINI, CASTROCARO TERME E TERRA SOLE FC',

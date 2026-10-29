@@ -27,7 +27,8 @@ import {
   extractYouTubeVideoId,
   getProssimaGara,
   ProssimaGara,
-  RosaSquadra 
+  RosaSquadra,
+  OFFICIAL_NVA_LOGO
 } from '../../../firebase-societa';
 
 interface TabDirettaStreamingProps {
@@ -66,7 +67,7 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
     const sottotitoloDefault = `${gara.giornata || 'Campionato FIPAV'} • ${isCasa ? 'In Casa al Palazzetto' : 'In Trasferta'}`;
     
     // Assegnazione loghi ufficiali (NVA vs Avversario)
-    const myLogo = gara.logo_nva || '/logo.png';
+    const myLogo = gara.logo_nva || OFFICIAL_NVA_LOGO;
     const oppLogo = gara.logo_avversario || (gara.avversario?.toUpperCase().includes('FENIX') ? 'https://www.pallavolofaenza.com/site_img/logo.png' : '');
 
     setDiretta(prev => ({
@@ -459,17 +460,17 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
                     />
                     <div className="flex items-center gap-2 pt-1">
                       <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
-                        {diretta.logo_casa ? (
-                          <img src={diretta.logo_casa} alt="Logo Casa" className="w-full h-full object-contain" />
-                        ) : (
-                          <Shield className="w-5 h-5 text-slate-400" />
-                        )}
+                        <img 
+                          src={(diretta.logo_casa && diretta.logo_casa !== '/logo.png') ? diretta.logo_casa : OFFICIAL_NVA_LOGO} 
+                          alt="Logo Casa" 
+                          className="w-full h-full object-contain" 
+                        />
                       </div>
                       <input
                         type="text"
                         value={diretta.logo_casa || ''}
                         onChange={e => setDiretta(prev => ({ ...prev, logo_casa: e.target.value }))}
-                        placeholder="URL Logo Casa (es. /logo.png)"
+                        placeholder="URL Logo Casa"
                         className="w-full bg-white border border-slate-300 focus:border-amber-500 rounded-xl px-2.5 py-1.5 text-[11px] text-slate-700 font-mono"
                       />
                     </div>

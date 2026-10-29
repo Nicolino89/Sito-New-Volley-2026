@@ -21,7 +21,8 @@ import {
   extractYouTubeVideoId,
   parseMatchDateTime,
   Sponsor,
-  SocietaInfo 
+  SocietaInfo,
+  OFFICIAL_NVA_LOGO
 } from '../firebase-societa';
 
 interface DirettaLiveProps {
@@ -149,12 +150,31 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
   const nomeCasa = diretta.squadra_casa || 'New Volley Academy';
   const nomeOspite = diretta.squadra_ospite || 'Squadra Avversaria';
   const isNvaCasa = nomeCasa.toLowerCase().includes('new volley') || nomeCasa.toLowerCase().includes('nva');
+  const isNvaOspite = nomeOspite.toLowerCase().includes('new volley') || nomeOspite.toLowerCase().includes('nva');
   const isFenixCasa = nomeCasa.toUpperCase().includes('FENIX');
   const isFenixOspite = nomeOspite.toUpperCase().includes('FENIX');
 
-  // Risoluzione loghi ufficiali
-  const logoCasaEffective = diretta.logo_casa || (isNvaCasa ? '/logo.png' : isFenixCasa ? 'https://www.pallavolofaenza.com/site_img/logo.png' : '');
-  const logoOspiteEffective = diretta.logo_ospite || (!isNvaCasa ? '/logo.png' : isFenixOspite ? 'https://www.pallavolofaenza.com/site_img/logo.png' : '');
+  // Risoluzione loghi ufficiali (priorità a Firebase CDN per NVA e fallback locali)
+  const getLogoCasa = () => {
+    if (isNvaCasa) {
+      if (diretta.logo_casa && diretta.logo_casa !== '/logo.png') return diretta.logo_casa;
+      return OFFICIAL_NVA_LOGO;
+    }
+    if (isFenixCasa) return 'https://www.pallavolofaenza.com/site_img/logo.png';
+    return diretta.logo_casa || '';
+  };
+
+  const getLogoOspite = () => {
+    if (isNvaOspite) {
+      if (diretta.logo_ospite && diretta.logo_ospite !== '/logo.png') return diretta.logo_ospite;
+      return OFFICIAL_NVA_LOGO;
+    }
+    if (isFenixOspite) return 'https://www.pallavolofaenza.com/site_img/logo.png';
+    return diretta.logo_ospite || '';
+  };
+
+  const logoCasaEffective = getLogoCasa();
+  const logoOspiteEffective = getLogoOspite();
 
   return (
     <div className="min-h-screen bg-slate-950 text-white font-inter pb-24 selection:bg-amber-400 selection:text-slate-950">
@@ -203,15 +223,24 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
             <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
               <div className="flex items-center gap-2 shrink-0">
                 <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shrink-0 shadow-md">
-                  {!nvaLogoError && (isNvaCasa ? logoCasaEffective : logoOspiteEffective) ? (
+                  {(isNvaCasa ? logoCasaEffective : logoOspiteEffective) ? (
                     <img 
                       src={isNvaCasa ? logoCasaEffective : logoOspiteEffective} 
                       alt="NVA" 
                       className="w-full h-full object-contain"
-                      onError={(e) => { (e.target as any).onerror = null; setNvaLogoError(true); }}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        if (!target.dataset.triedFallback) {
+                          target.dataset.triedFallback = 'true';
+                          target.src = OFFICIAL_NVA_LOGO;
+                        } else if (!target.dataset.triedLocal) {
+                          target.dataset.triedLocal = 'true';
+                          target.src = '/images/logo-nva.png';
+                        }
+                      }}
                     />
                   ) : (
-                    <Shield className="w-6 h-6 text-slate-800" />
+                    <img src={OFFICIAL_NVA_LOGO} alt="NVA" className="w-full h-full object-contain" />
                   )}
                 </div>
 
@@ -378,16 +407,30 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                 {/* SQUADRA CASA */}
                 <div className="sm:col-span-3 flex flex-col items-center sm:items-end space-y-2">
                   <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white border border-slate-200 p-2 flex items-center justify-center shadow-xl overflow-hidden">
-                    {!nvaLogoError && logoCasaEffective ? (
+                    {logoCasaEffective ? (
                       <img 
                         src={logoCasaEffective} 
                         alt={nomeCasa} 
                         className="w-full h-full object-contain filter drop-shadow"
                         onError={(e) => {
-                          (e.target as any).onerror = null;
-                          setNvaLogoError(true);
+                          const target = e.target as HTMLImageElement;
+                          if (isNvaCasa) {
+                            if (!target.dataset.triedFallback) {
+                              target.dataset.triedFallback = 'true';
+                              target.src = OFFICIAL_NVA_LOGO;
+                            } else if (!target.dataset.triedLocal) {
+                              target.dataset.triedLocal = 'true';
+                              target.src = '/images/logo-nva.png';
+                            } else {
+                              setNvaLogoError(true);
+                            }
+                          } else {
+                            setNvaLogoError(true);
+                          }
                         }}
                       />
+                    ) : isNvaCasa ? (
+                      <img src={OFFICIAL_NVA_LOGO} alt={nomeCasa} className="w-full h-full object-contain filter drop-shadow" />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-slate-800 font-sport font-black uppercase text-center p-1 leading-none text-xs">
                         <Shield className="w-8 h-8 mb-1 text-amber-500" />
@@ -413,16 +456,30 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                 {/* SQUADRA OSPITE */}
                 <div className="sm:col-span-3 flex flex-col items-center sm:items-start space-y-2">
                   <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white border border-slate-200 p-2 flex items-center justify-center shadow-xl overflow-hidden">
-                    {!oppLogoError && logoOspiteEffective ? (
+                    {logoOspiteEffective ? (
                       <img 
                         src={logoOspiteEffective} 
                         alt={nomeOspite} 
                         className="w-full h-full object-contain filter drop-shadow"
                         onError={(e) => {
-                          (e.target as any).onerror = null;
-                          setOppLogoError(true);
+                          const target = e.target as HTMLImageElement;
+                          if (isNvaOspite) {
+                            if (!target.dataset.triedFallback) {
+                              target.dataset.triedFallback = 'true';
+                              target.src = OFFICIAL_NVA_LOGO;
+                            } else if (!target.dataset.triedLocal) {
+                              target.dataset.triedLocal = 'true';
+                              target.src = '/images/logo-nva.png';
+                            } else {
+                              setOppLogoError(true);
+                            }
+                          } else {
+                            setOppLogoError(true);
+                          }
                         }}
                       />
+                    ) : isNvaOspite ? (
+                      <img src={OFFICIAL_NVA_LOGO} alt={nomeOspite} className="w-full h-full object-contain filter drop-shadow" />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-slate-800 font-sport font-black uppercase text-center p-1 leading-none text-xs">
                         <Shield className="w-8 h-8 mb-1 text-slate-500" />

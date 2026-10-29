@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nva-cache-v4';
+const CACHE_NAME = 'nva-cache-v5';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -93,6 +93,11 @@ self.addEventListener('fetch', (event) => {
 
       return fetch(request).then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
+          const contentType = networkResponse.headers.get('content-type') || '';
+          // Do not cache SPA fallback HTML when requesting static files (images, js, etc.)
+          if (contentType.includes('text/html')) {
+            return networkResponse;
+          }
           const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(request, responseClone);
