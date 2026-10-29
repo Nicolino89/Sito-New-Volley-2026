@@ -12,10 +12,18 @@ import {
   ExternalLink, 
   FileText, 
   Inbox,
-  AlertCircle
+  AlertCircle,
+  BarChart3,
+  Printer,
+  Trophy,
+  ArrowUpRight,
+  TrendingUp
 } from 'lucide-react';
-import GestioneSponsor from '../../GestioneSponsor';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import GestioneSponsor, { SponsorDoc } from '../../GestioneSponsor';
 import { 
+  db,
+  isDemoMode,
   getSponsorPageConfig, 
   updateSponsorPageConfig, 
   getRichiesteSponsor, 
@@ -32,7 +40,7 @@ interface TabSponsorProps {
 }
 
 export default function TabSponsor({ showToast, caricaFileSuStorage }: TabSponsorProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'attivi' | 'ricerca'>('attivi');
+  const [activeSubTab, setActiveSubTab] = useState<'attivi' | 'ricerca' | 'report'>('attivi');
   
   // State configurazione pagina ricerca sponsor
   const [config, setConfig] = useState<SponsorPageConfig>(DEFAULT_SPONSOR_PAGE_CONFIG);
@@ -44,6 +52,10 @@ export default function TabSponsor({ showToast, caricaFileSuStorage }: TabSponso
   const [loadingRichieste, setLoadingRichieste] = useState(false);
   const [filtroStato, setFiltroStato] = useState<'tutti' | 'nuovo' | 'contattato' | 'completato'>('tutti');
 
+  // State report e statistiche visibilità sponsor
+  const [sponsorsReport, setSponsorsReport] = useState<SponsorDoc[]>([]);
+  const [loadingReport, setLoadingReport] = useState(false);
+
   const notify = (msg: string, type: 'success' | 'error') => {
     if (showToast) showToast(msg, type);
     else alert(msg);
@@ -52,6 +64,56 @@ export default function TabSponsor({ showToast, caricaFileSuStorage }: TabSponso
   useEffect(() => {
     if (activeSubTab === 'ricerca') {
       caricaDatiRicerca();
+    }
+  }, [activeSubTab]);
+
+  useEffect(() => {
+    if (activeSubTab === 'report') {
+      if (isDemoMode || !db) {
+        setLoadingReport(false);
+        return;
+      }
+      setLoadingReport(true);
+      const q = query(collection(db, 'sponsors'), orderBy('ordine', 'asc'));
+      const unsub = onSnapshot(
+        q,
+        (snapshot) => {
+          const list: SponsorDoc[] = [];
+          let localClicks: Record<string, { clicks: number; ultimoClick: string }> = {};
+          try {
+            const raw = localStorage.getItem('nva_sponsor_clicks');
+            if (raw) localClicks = JSON.parse(raw);
+          } catch (e) {}
+
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const localCount = localClicks[docSnap.id]?.clicks || 0;
+            const firestoreCount = typeof data.clickCount === 'number' ? data.clickCount : 0;
+            const totalClicks = Math.max(firestoreCount, localCount);
+            list.push({
+              id: docSnap.id,
+              nomeSponsor: data.nomeSponsor || '',
+              linkSito: data.linkSito || '',
+              tipologia: data.tipologia || 'Partner Locale',
+              logo: {
+                url: data.logo?.url || data.logoUrl || '',
+                positionY: typeof data.logo?.positionY === 'number' ? data.logo.positionY : 50
+              },
+              squadreAssociate: data.squadreAssociate || [],
+              ordine: typeof data.ordine === 'number' ? data.ordine : 1,
+              clickCount: totalClicks,
+              ultimoClick: data.ultimoClick || localClicks[docSnap.id]?.ultimoClick || null
+            });
+          });
+          setSponsorsReport(list);
+          setLoadingReport(false);
+        },
+        (err) => {
+          console.error("Errore recupero report sponsor:", err);
+          setLoadingReport(false);
+        }
+      );
+      return () => unsub();
     }
   }, [activeSubTab]);
 
@@ -159,6 +221,18 @@ export default function TabSponsor({ showToast, caricaFileSuStorage }: TabSponso
                 {conteggioNuovi}
               </span>
             )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('report')}
+            className={`flex-1 sm:flex-none px-4 py-2 text-xs font-barlow font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+              activeSubTab === 'report'
+                ? 'bg-black text-[#FFE600] shadow'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-amber-500" />
+            <span>Report & Visibilità</span>
           </button>
         </div>
       </div>
@@ -481,6 +555,176 @@ export default function TabSponsor({ showToast, caricaFileSuStorage }: TabSponso
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* SOTTO-SCHEDA 3: REPORT & VISIBILITÀ PARTNER */}
+      {activeSubTab === 'report' && (
+        <div className="space-y-6">
+          {/* Header Report & Tasto Stampa */}
+          <div className="bg-gradient-to-r from-slate-900 via-zinc-900 to-black text-white p-6 rounded-2xl border border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-lg">
+            <div className="space-y-1">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold flex items-center gap-1.5">
+                <TrendingUp className="w-3.5 h-3.5" />
+                Rendicontazione ROI Partnership Commerciali
+              </span>
+              <h3 className="text-xl font-sport font-black uppercase tracking-wide text-white">
+                Riepilogo Visibilità & Click Sponsor
+              </h3>
+              <p className="text-xs text-zinc-400 max-w-xl">
+                Dati in tempo reale sulle interazioni degli utenti con i partner commerciali sul portale NVA (Home, Diretta Streaming e Schede Squadre).
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-zinc-950 font-barlow font-bold uppercase text-xs tracking-wider rounded-xl shadow-md transition-all active:scale-95 shrink-0 cursor-pointer"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Stampa Report Ufficiale</span>
+            </button>
+          </div>
+
+          {/* 3 KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-2">
+              <span className="text-xs font-mono uppercase text-slate-500 font-semibold block">Click Totali Partner</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-sport font-black text-slate-900">
+                  {sponsorsReport.reduce((acc, s) => acc + (s.clickCount || 0), 0)}
+                </span>
+                <span className="text-xs text-emerald-600 font-bold flex items-center">
+                  <ArrowUpRight className="w-3.5 h-3.5 inline" /> Live
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400">Reindirizzamenti ai siti web ufficiali delle aziende</p>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-2">
+              <span className="text-xs font-mono uppercase text-slate-500 font-semibold block">Top Partner Cliccato</span>
+              <div className="flex items-center gap-2 truncate">
+                <Trophy className="w-5 h-5 text-amber-500 shrink-0" />
+                <span className="text-lg font-bold text-slate-900 truncate">
+                  {[...sponsorsReport].sort((a, b) => (b.clickCount || 0) - (a.clickCount || 0))[0]?.nomeSponsor || 'Nessun dato'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                {[...sponsorsReport].sort((a, b) => (b.clickCount || 0) - (a.clickCount || 0))[0]?.clickCount || 0} click registrati
+              </p>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-2">
+              <span className="text-xs font-mono uppercase text-slate-500 font-semibold block">Aziende Censite</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-sport font-black text-slate-900">
+                  {sponsorsReport.length}
+                </span>
+                <span className="text-xs text-slate-500 font-mono">partner attivi</span>
+              </div>
+              <p className="text-[11px] text-slate-400">Main, Gold, Tecnici e Partner Locali</p>
+            </div>
+          </div>
+
+          {/* Tabella dettagliata per Sponsor */}
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h4 className="font-barlow font-bold uppercase text-slate-900 text-sm tracking-wider flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-amber-600" />
+                <span>Dettaglio Prestazioni per Azienda Partner</span>
+              </h4>
+              <span className="text-xs text-slate-500 font-mono">
+                Stagione Sportiva 2025/2026
+              </span>
+            </div>
+
+            {loadingReport ? (
+              <div className="p-12 text-center text-xs text-slate-500">
+                Caricamento dati report in corso...
+              </div>
+            ) : sponsorsReport.length === 0 ? (
+              <div className="p-12 text-center text-xs text-slate-500">
+                Nessun partner commerciale presente.
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {[...sponsorsReport]
+                  .sort((a, b) => (b.clickCount || 0) - (a.clickCount || 0))
+                  .map((sp, idx) => {
+                    const totale = sponsorsReport.reduce((acc, s) => acc + (s.clickCount || 0), 0);
+                    const pct = totale > 0 ? Math.round(((sp.clickCount || 0) / totale) * 100) : 0;
+                    return (
+                      <div key={sp.id} className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-slate-50/80 transition-colors">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="w-6 text-center font-mono text-xs font-bold text-slate-400">
+                            #{idx + 1}
+                          </span>
+                          <div className="w-12 h-12 rounded-xl border border-slate-200 bg-white p-1 flex items-center justify-center shrink-0 shadow-xs">
+                            {sp.logo?.url ? (
+                              <img src={sp.logo.url} alt={sp.nomeSponsor} className="max-h-full max-w-full object-contain" />
+                            ) : (
+                              <Building2 className="w-6 h-6 text-slate-400" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h5 className="font-inter font-bold text-sm text-slate-900 truncate">
+                                {sp.nomeSponsor}
+                              </h5>
+                              <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase ${
+                                sp.tipologia === 'Main Sponsor' ? 'bg-amber-100 text-amber-900 border border-amber-300' :
+                                sp.tipologia === 'Gold Partner' ? 'bg-yellow-50 text-yellow-800 border border-yellow-200' :
+                                'bg-slate-100 text-slate-700'
+                              }`}>
+                                {sp.tipologia}
+                              </span>
+                            </div>
+                            {sp.linkSito && (
+                              <a 
+                                href={sp.linkSito} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-xs text-amber-600 hover:underline flex items-center gap-1 mt-0.5 truncate max-w-xs"
+                              >
+                                <span>{sp.linkSito}</span>
+                                <ExternalLink className="w-3 h-3 shrink-0" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
+                          <div className="w-32 hidden md:block">
+                            <div className="flex justify-between text-[10px] font-mono text-slate-500 mb-1">
+                              <span>Quota</span>
+                              <span>{pct}%</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <span className="text-xl font-sport font-black text-slate-900 block leading-tight">
+                              {sp.clickCount || 0}
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400 uppercase">Click Ricevuti</span>
+                          </div>
+
+                          <div className="text-right text-[11px] font-mono text-slate-500 hidden sm:block min-w-[110px]">
+                            <span className="block text-slate-400 text-[10px] uppercase">Ultimo click</span>
+                            <span>
+                              {sp.ultimoClick 
+                                ? new Date(sp.ultimoClick).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+                                : 'Nessun click'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

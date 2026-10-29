@@ -26,6 +26,7 @@ import {
   getSocietaConfig,
   getSponsorPageConfig,
   inviaRichiestaSponsor,
+  trackSponsorClick,
   SponsorPageConfig,
   DEFAULT_SPONSOR_PAGE_CONFIG
 } from '../firebase-societa';
@@ -219,6 +220,7 @@ export default function SponsorPage() {
           href={sponsor.linkSito}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => trackSponsorClick(sponsor.id, sponsor.nomeSponsor)}
           className="group block bg-white rounded-2xl border border-slate-200 overflow-hidden hover:border-[#FFE600] hover:shadow-xl transition-all duration-200 shadow-xs"
         >
           {renderCardInner(sponsor, logoHeightClass, isMain)}

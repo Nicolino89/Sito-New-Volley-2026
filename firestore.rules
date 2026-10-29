@@ -89,15 +89,19 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // 4. sponsors & sponsor
+    // 4. sponsors & sponsor (Include supporto al click tracking pubblico)
     match /sponsors/{sponsorId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || 
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clickCount', 'ultimoClick']);
     }
 
     match /sponsor/{sponsorId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || 
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clickCount', 'ultimoClick']);
     }
 
     // 5. news_blog

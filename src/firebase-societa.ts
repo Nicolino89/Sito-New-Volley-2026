@@ -194,6 +194,8 @@ export interface Sponsor {
   squadreAssociate?: string[]; // IDs delle squadre associate
   ordine: number;
   attivo?: boolean;
+  clickCount?: number;
+  ultimoClick?: string;
 }
 
 /**
@@ -1908,6 +1910,56 @@ export async function getSponsorAll(): Promise<Sponsor[]> {
     return sponsor.sort((a, b) => (a.ordine || 0) - (b.ordine || 0));
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, collectionName);
+  }
+}
+
+/**
+ * Registra il click/interazione di un visitatore sul logo o link di uno Sponsor.
+ * Invia l'evento a Google Analytics 4, aggiorna LocalStorage e incrementa il contatore su Firestore.
+ */
+export async function trackSponsorClick(sponsorId: string, nomeSponsor?: string): Promise<void> {
+  if (!sponsorId) return;
+
+  // 1. Telemetria Google Analytics 4
+  try {
+    if (typeof window !== 'undefined' && typeof (window as any).gtag === 'function') {
+      (window as any).gtag('event', 'sponsor_click', {
+        sponsor_id: sponsorId,
+        sponsor_name: nomeSponsor || sponsorId,
+        page_location: window.location.href,
+        page_path: window.location.pathname
+      });
+    }
+  } catch (e) {
+    // Non-blocking telemetry
+  }
+
+  // 2. Backup offline e incremento rapido in LocalStorage
+  try {
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem('nva_sponsor_clicks');
+      const stats = raw ? JSON.parse(raw) : {};
+      stats[sponsorId] = {
+        clicks: (stats[sponsorId]?.clicks || 0) + 1,
+        ultimoClick: new Date().toISOString()
+      };
+      localStorage.setItem('nva_sponsor_clicks', JSON.stringify(stats));
+    }
+  } catch (e) {
+    // Non-blocking
+  }
+
+  // 3. Aggiornamento contatore su Firestore
+  if (!isDemoMode && db) {
+    try {
+      const sponsorRef = doc(db, 'sponsors', sponsorId);
+      await updateDoc(sponsorRef, {
+        clickCount: increment(1),
+        ultimoClick: new Date().toISOString()
+      });
+    } catch (err) {
+      // Ignora silenziosamente errori di rete o regole restrittive
+    }
   }
 }
 

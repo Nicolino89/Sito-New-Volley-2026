@@ -24,7 +24,8 @@ import {
   Sponsor,
   SocietaInfo,
   OFFICIAL_NVA_LOGO,
-  getKnownTeamLogo
+  getKnownTeamLogo,
+  trackSponsorClick
 } from '../firebase-societa';
 
 interface DirettaLiveProps {
@@ -784,6 +785,7 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                     href={sp.linkSito || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => trackSponsorClick(sp.id, sp.nomeSponsor)}
                     className="bg-white p-3 sm:p-4 rounded-2xl shadow-md hover:scale-105 transition-transform border border-slate-200 flex items-center justify-center min-w-[140px] max-w-[200px] h-20"
                     title={sp.nomeSponsor}
                   >
@@ -817,6 +819,7 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                     href={sp.linkSito || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => trackSponsorClick(sp.id, sp.nomeSponsor)}
                     className="bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 p-2.5 sm:p-3 rounded-xl transition-all flex items-center justify-center min-w-[100px] max-w-[140px] h-14"
                     title={sp.nomeSponsor}
                   >

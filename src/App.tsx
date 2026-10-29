@@ -22,6 +22,7 @@ import { Footer } from './components/Footer';
 import ErrorBoundary from './components/ErrorBoundary';
 import LoadingFallback from './components/LoadingFallback';
 import WhatsAppFloatingButton from './components/WhatsAppFloatingButton';
+import PwaInstallPrompt from './components/PwaInstallPrompt';
 import VoltexCampPill from './components/VoltexCampPill';
 import DirettaLivePill from './components/DirettaLivePill';
 
@@ -997,6 +998,9 @@ export default function App() {
         <WhatsAppFloatingButton 
           phoneNumber={societaInfo?.contatti?.whatsapp || '+39 351 321 0332'} 
         />
+
+        {/* PWA INSTALL PROMPT (Android prompt & iOS Add to Home guide) */}
+        <PwaInstallPrompt />
 
         {/* COOKIE CONSENT BANNER & PREFERENCES (GDPR & Garante Privacy) */}
         <CookieBanner />

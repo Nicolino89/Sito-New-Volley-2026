@@ -15,6 +15,8 @@ export interface SponsorDoc {
   };
   squadreAssociate?: string[];
   ordine: number;
+  clickCount?: number;
+  ultimoClick?: string | null;
 }
 
 export default function GestioneSponsor() {
@@ -68,7 +70,9 @@ export default function GestioneSponsor() {
               positionY: typeof data.logo?.positionY === 'number' ? data.logo.positionY : 50
             },
             squadreAssociate: data.squadreAssociate || [],
-            ordine: typeof data.ordine === 'number' ? data.ordine : 1
+            ordine: typeof data.ordine === 'number' ? data.ordine : 1,
+            clickCount: typeof data.clickCount === 'number' ? data.clickCount : 0,
+            ultimoClick: data.ultimoClick || null
           });
         });
         setSponsors(list);

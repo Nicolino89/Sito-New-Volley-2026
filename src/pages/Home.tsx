@@ -49,6 +49,7 @@ import {
   caricaBlobSuStorage,
   getSponsorAll,
   getSponsorPerLivello,
+  trackSponsorClick,
   getNewsAll,
   getProssimaGara,
   getDirettaStreaming,
@@ -1284,6 +1285,7 @@ export default function Home({
                         rel="noopener noreferrer" 
                         key={sponsor.id} 
                         id={`sponsor-link-${sponsor.id}`}
+                        onClick={() => trackSponsorClick(sponsor.id, sponsor.nomeSponsor || sponsor.nome)}
                         className="block bg-white/95 backdrop-blur-sm border border-slate-200/90 rounded-2xl p-4 hover:border-[#FFE600] hover:shadow-md transition-all group shadow-sm"
                       >
                         <div className="flex items-center gap-4">
@@ -1328,6 +1330,7 @@ export default function Home({
                         target="_blank" 
                         rel="noopener noreferrer" 
                         key={sponsor.id} 
+                        onClick={() => trackSponsorClick(sponsor.id, sponsor.nomeSponsor || sponsor.nome)}
                         className="bg-white border border-zinc-200 p-3 rounded-lg hover:border-brand-yellow hover:shadow-md transition-all text-center group block shadow-sm"
                       >
                         <div className="h-12 w-full flex items-center justify-center">
