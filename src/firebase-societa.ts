@@ -4933,6 +4933,10 @@ export function extractYouTubeVideoId(url?: string | null): string | null {
   if (shortMatch) return shortMatch[1];
   const liveMatch = cleanUrl.match(/youtube\.com\/live\/([a-zA-Z0-9_-]{11})/);
   if (liveMatch) return liveMatch[1];
+  const studioMatch = cleanUrl.match(/studio\.youtube\.com\/video\/([a-zA-Z0-9_-]{11})/);
+  if (studioMatch) return studioMatch[1];
+  const shortsMatch = cleanUrl.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
+  if (shortsMatch) return shortsMatch[1];
   const embedMatch = cleanUrl.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
   if (embedMatch) return embedMatch[1];
   return null;

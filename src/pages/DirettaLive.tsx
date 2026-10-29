@@ -459,6 +459,48 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
             )}
           </div>
 
+          {/* BARRA UTILITY SOTTO AL PLAYER YOUTUBE */}
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="space-y-1 max-w-xl">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping shrink-0" />
+                <span className="font-sport font-black uppercase text-amber-400 tracking-wider">
+                  {diretta.categoria || 'Campionato FIPAV'} {diretta.sottotitolo ? `• ${diretta.sottotitolo}` : ''}
+                </span>
+              </div>
+              <p className="text-slate-300 font-inter text-xs sm:text-sm">
+                {diretta.descrizione || 'Tifa le nostre pantere in campo! Condividi il link con amici e compagni di squadra.'}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {liveVideoId && (
+                <a
+                  href={`https://www.youtube.com/watch?v=${liveVideoId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-sport uppercase text-xs font-black flex items-center gap-1.5 shadow-md shadow-red-600/20 transition-all hover:scale-105"
+                  title="Apri nel player nativo o nell'app YouTube (utile per Smart TV o Chat)"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Apri su YouTube</span>
+                </a>
+              )}
+              {diretta.luogo && (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(diretta.luogo)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center gap-1.5 border border-slate-700 transition-colors"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline truncate max-w-[180px]">{diretta.luogo}</span>
+                  <span className="sm:hidden">Mappa</span>
+                </a>
+              )}
+            </div>
+          </div>
+
         </div>
       ) : (
         /* ========================================================================= */
