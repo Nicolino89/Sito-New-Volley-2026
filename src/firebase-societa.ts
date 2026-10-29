@@ -5084,7 +5084,8 @@ export function isRuoloLibero(ruolo?: string): boolean {
  * 2. I Liberi vanno sempre in fondo alla rosa, ordinati tra di loro per numero di maglia crescente
  * 3. Chi non ha numero valido o ha 0 / 1 identico per tutta la squadra riceve comunque un ordine alfabetico certo (Cognome, poi Nome)
  */
-export function sortGiocatoriSquadra(giocatori: Giocatore[]): Giocatore[] {
+export function sortGiocatoriSquadra(giocatori?: Giocatore[]): Giocatore[] {
+  if (!giocatori || !Array.isArray(giocatori) || giocatori.length === 0) return [];
   return [...giocatori].sort((a, b) => {
     // 1. I liberi vanno sempre in fondo
     const isLibA = isRuoloLibero(a.ruolo);
@@ -5128,7 +5129,8 @@ export function sortGiocatoriSquadra(giocatori: Giocatore[]): Giocatore[] {
  * non-liberi ordinati per numero, liberi in fondo ordinati per numero,
  * senza numero o con 0/1 ordinati alfabeticamente per nome.
  */
-export function sortRosterStorico(roster: AtletaRosterStorico[]): AtletaRosterStorico[] {
+export function sortRosterStorico(roster?: AtletaRosterStorico[]): AtletaRosterStorico[] {
+  if (!roster || !Array.isArray(roster) || roster.length === 0) return [];
   return [...roster].sort((a, b) => {
     const isLibA = isRuoloLibero(a.ruolo);
     const isLibB = isRuoloLibero(b.ruolo);

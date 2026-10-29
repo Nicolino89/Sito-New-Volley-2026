@@ -56,6 +56,14 @@ export default function TabSponsor({ showToast, caricaFileSuStorage }: TabSponso
   const [sponsorsReport, setSponsorsReport] = useState<SponsorDoc[]>([]);
   const [loadingReport, setLoadingReport] = useState(false);
 
+  const handlePrintReport = () => {
+    document.body.classList.add('printing-sponsor-report');
+    window.print();
+    setTimeout(() => {
+      document.body.classList.remove('printing-sponsor-report');
+    }, 1500);
+  };
+
   const notify = (msg: string, type: 'success' | 'error') => {
     if (showToast) showToast(msg, type);
     else alert(msg);
@@ -566,9 +574,24 @@ export default function TabSponsor({ showToast, caricaFileSuStorage }: TabSponso
 
       {/* SOTTO-SCHEDA 3: REPORT & VISIBILITÀ PARTNER */}
       {activeSubTab === 'report' && (
-        <div className="space-y-6">
-          {/* Header Report & Tasto Stampa */}
-          <div className="bg-gradient-to-r from-slate-900 via-zinc-900 to-black text-white p-6 rounded-2xl border border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-lg">
+        <div id="sponsor-report-printable" className="space-y-6">
+          {/* Header di stampa visibile solo quando si stampa/esporta PDF */}
+          <div className="hidden print:block pb-6 border-b-2 border-slate-900 mb-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-2xl font-black uppercase tracking-wide text-slate-950 font-sport">New Volley Academy Forlì</h1>
+                <p className="text-xs text-slate-600 font-mono">S.S.D. a R.L. - Cod. FIPAV 08-042 - www.newvolleyacademy.it</p>
+                <p className="text-sm font-bold text-amber-600 mt-2">REPORT RENDICONTAZIONE PARTNER COMMERCIALI & VISIBILITÀ WEB</p>
+              </div>
+              <div className="text-right text-xs text-slate-500 font-mono">
+                <p className="font-bold text-slate-800">Stagione 2025/2026</p>
+                <p>Generato il: {new Date().toLocaleDateString('it-IT')}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Header Report & Tasto Stampa a schermo */}
+          <div className="bg-gradient-to-r from-slate-900 via-zinc-900 to-black text-white p-6 rounded-2xl border border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-lg print:hidden">
             <div className="space-y-1">
               <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold flex items-center gap-1.5">
                 <TrendingUp className="w-3.5 h-3.5" />
@@ -583,7 +606,7 @@ export default function TabSponsor({ showToast, caricaFileSuStorage }: TabSponso
             </div>
             <button
               type="button"
-              onClick={() => window.print()}
+              onClick={handlePrintReport}
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-zinc-950 font-barlow font-bold uppercase text-xs tracking-wider rounded-xl shadow-md transition-all active:scale-95 shrink-0 cursor-pointer"
             >
               <Printer className="w-4 h-4" />
@@ -730,6 +753,17 @@ export default function TabSponsor({ showToast, caricaFileSuStorage }: TabSponso
                   })}
               </div>
             )}
+          </div>
+
+          {/* Footer firma visibile solo in stampa */}
+          <div className="hidden print:flex justify-between items-end pt-12 text-xs text-slate-600">
+            <div>
+              <p className="font-bold text-slate-900">New Volley Academy Forlì</p>
+              <p className="text-[10px] text-slate-500">Direzione Marketing & Relazioni Esterne</p>
+            </div>
+            <div className="text-right border-t border-slate-400 pt-2 min-w-[200px]">
+              <p className="text-[10px] text-slate-500">Timbro e Firma per presa visione</p>
+            </div>
           </div>
         </div>
       )}

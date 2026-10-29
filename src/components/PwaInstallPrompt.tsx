@@ -24,13 +24,17 @@ export default function PwaInstallPrompt() {
     const isIosDevice = /iphone|ipad|ipod/.test(ua);
     const isSafari = ua.includes('safari') && !ua.includes('crios') && !ua.includes('fxios') && !ua.includes('chrome');
 
+    let timerId: any = null;
+
     if (isIosDevice && isSafari) {
       setIsIos(true);
       // Su iOS mostra il banner dopo 4 secondi di navigazione per non essere invadenti
-      const timer = setTimeout(() => {
+      timerId = setTimeout(() => {
         setShowPrompt(true);
       }, 4000);
-      return () => clearTimeout(timer);
+      return () => {
+        if (timerId) clearTimeout(timerId);
+      };
     }
 
     // Listener Android / Desktop prima installazione
@@ -38,13 +42,16 @@ export default function PwaInstallPrompt() {
       e.preventDefault();
       setDeferredPrompt(e);
       // Mostra dopo 3 secondi
-      setTimeout(() => {
+      timerId = setTimeout(() => {
         setShowPrompt(true);
       }, 3000);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => {
+      if (timerId) clearTimeout(timerId);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    };
   }, []);
 
   const handleInstallClick = async () => {
@@ -72,10 +79,10 @@ export default function PwaInstallPrompt() {
 
   return (
     <>
-      {/* Banner Bottom per l'installazione */}
+      {/* Banner Bottom per l'installazione (Posizionato in basso a sinistra su desktop e sollevato su mobile per non coprire WhatsApp) */}
       <aside 
         aria-label="Installa l'App New Volley Academy"
-        className="fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:w-96 z-50 bg-zinc-950/95 backdrop-blur-md border border-amber-500/30 rounded-2xl p-4 shadow-2xl shadow-black/80 text-white animate-in fade-in slide-in-from-bottom duration-300"
+        className="fixed bottom-24 left-3 right-3 md:bottom-6 md:left-6 md:right-auto md:w-96 z-40 bg-zinc-950/95 backdrop-blur-md border border-amber-500/30 rounded-2xl p-4 shadow-2xl shadow-black/80 text-white animate-in fade-in slide-in-from-bottom duration-300"
       >
         <div className="flex items-start gap-3">
           <img 
