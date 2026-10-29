@@ -182,57 +182,63 @@ export default function TabSponsor({ showToast, caricaFileSuStorage }: TabSponso
 
   return (
     <div className="space-y-6 animate-fade-in" id="admin-tab-sponsor">
-      {/* Header con Switcher Sotto-schede */}
-      <div className="bg-white border border-slate-200 p-5 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
-        <div className="space-y-0.5">
-          <h2 className="text-xl font-black italic tracking-tight text-slate-950 uppercase font-sport skew-x-[-6deg]">
-            SPONSOR & PARTNERSHIP
-          </h2>
-          <p className="text-[11px] text-slate-500">
-            Gestisci sia i partner attivi che la pagina di reclutamento nuovi sponsor con le relative richieste ricevute.
-          </p>
+      {/* Header con Switcher Sotto-schede Spazioso e Non Collassato */}
+      <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div className="space-y-0.5">
+            <h2 className="text-xl font-black italic tracking-tight text-slate-950 uppercase font-sport skew-x-[-6deg]">
+              SPONSOR & PARTNERSHIP
+            </h2>
+            <p className="text-xs text-slate-500 font-inter">
+              Gestione partner attivi, pagina reclutamento e statistiche di visibilità / click.
+            </p>
+          </div>
         </div>
 
-        {/* Tab Buttons */}
-        <div className="flex bg-slate-100 p-1 rounded-xl gap-1 w-full sm:w-auto">
+        {/* Tab Buttons a tutta larghezza in griglia a 3 colonne, mai compressi */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200/60">
           <button
             type="button"
             onClick={() => setActiveSubTab('attivi')}
-            className={`flex-1 sm:flex-none px-4 py-2 text-xs font-barlow font-bold uppercase tracking-wider rounded-lg transition-all ${
+            className={`w-full py-2.5 px-4 text-xs font-barlow font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeSubTab === 'attivi'
-                ? 'bg-black text-[#FFE600] shadow'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-black text-[#FFE600] shadow-sm'
+                : 'text-slate-600 hover:text-slate-950 hover:bg-slate-200/60'
             }`}
           >
-            Sponsor Attivi
+            <Building2 className="w-4 h-4 shrink-0" />
+            <span className="truncate">Sponsor Attivi</span>
           </button>
+
           <button
             type="button"
             onClick={() => setActiveSubTab('ricerca')}
-            className={`flex-1 sm:flex-none px-4 py-2 text-xs font-barlow font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+            className={`w-full py-2.5 px-4 text-xs font-barlow font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeSubTab === 'ricerca'
-                ? 'bg-black text-[#FFE600] shadow'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-black text-[#FFE600] shadow-sm'
+                : 'text-slate-600 hover:text-slate-950 hover:bg-slate-200/60'
             }`}
           >
-            <span>Pagina Sponsor & Richieste</span>
+            <Inbox className="w-4 h-4 shrink-0" />
+            <span className="truncate">Reclutamento & Richieste</span>
             {conteggioNuovi > 0 && (
-              <span className="bg-[#FFE600] text-black text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold">
+              <span className="bg-[#FFE600] text-black text-[10px] font-mono px-2 py-0.5 rounded-full font-black shrink-0">
                 {conteggioNuovi}
               </span>
             )}
           </button>
+
           <button
             type="button"
             onClick={() => setActiveSubTab('report')}
-            className={`flex-1 sm:flex-none px-4 py-2 text-xs font-barlow font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+            className={`w-full py-2.5 px-4 text-xs font-barlow font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeSubTab === 'report'
-                ? 'bg-black text-[#FFE600] shadow'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-black text-[#FFE600] shadow-sm'
+                : 'text-slate-600 hover:text-slate-950 hover:bg-slate-200/60'
             }`}
           >
-            <BarChart3 className="w-3.5 h-3.5 text-amber-500" />
-            <span>Report & Visibilità</span>
+            <BarChart3 className="w-4 h-4 text-amber-500 shrink-0" />
+            <span className="truncate">Report & Visibilità</span>
           </button>
         </div>
       </div>
