@@ -839,11 +839,11 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
 
           <div className="text-center pt-2">
             <Link
-              to="/societa?tab=sponsor"
-              className="text-xs font-semibold text-slate-400 hover:text-amber-400 transition-colors inline-flex items-center gap-1.5"
+              to="/sponsor#diventa-partner"
+              className="text-xs font-semibold text-slate-400 hover:text-amber-400 transition-colors inline-flex items-center gap-1.5 group cursor-pointer"
             >
               <span>Diventa partner di New Volley Academy</span>
-              <ExternalLink className="w-3 h-3" />
+              <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 transition-colors" />
             </Link>
           </div>
         </div>
