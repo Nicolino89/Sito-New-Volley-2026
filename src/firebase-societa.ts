@@ -4860,6 +4860,7 @@ export interface DirettaStreaming {
   attiva: boolean;
   stato: 'live' | 'in_programma' | 'terminata';
   url_youtube: string;
+  url_video_presentazione?: string;
   titolo: string;
   sottotitolo?: string;
   data_ora?: string;
@@ -4873,18 +4874,19 @@ export interface DirettaStreaming {
 }
 
 export const DEFAULT_DIRETTA_STREAMING: DirettaStreaming = {
-  attiva: false,
+  attiva: true,
   stato: 'in_programma',
   url_youtube: '',
-  titolo: 'Serie D: New Volley Academy in Diretta Streaming',
-  sottotitolo: 'Match Ufficiale di Campionato FIPAV',
+  url_video_presentazione: '',
+  titolo: 'Serie D Maschile: New Volley Academy vs FENIX FAENZA RA',
+  sottotitolo: '3ª Giornata di Campionato Regionale FIPAV',
   squadra_casa: 'New Volley Academy',
-  squadra_ospite: '',
-  categoria: 'Serie D Femminile',
-  luogo: 'Palazzetto G. Marabini, Forlì',
-  data_ora: '',
+  squadra_ospite: 'FENIX FAENZA RA',
+  categoria: 'Serie D Maschile',
+  luogo: 'Pal. COMUNALE FABIO LOMBINI, CASTROCARO TERME E TERRA SOLE FC',
+  data_ora: '29/10/26 21:15',
   mostra_chat: false,
-  descrizione: 'Guarda la partita ufficiale della New Volley Academy in diretta streaming. Tifa per le nostre atlete!',
+  descrizione: 'Guarda la partita ufficiale della New Volley Academy in diretta streaming. Tifa per le nostre pantere!',
   aggiornato_il: new Date().toISOString()
 };
 
@@ -4900,6 +4902,47 @@ export function extractYouTubeVideoId(url?: string | null): string | null {
   if (liveMatch) return liveMatch[1];
   const embedMatch = cleanUrl.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
   if (embedMatch) return embedMatch[1];
+  return null;
+}
+
+export function parseMatchDateTime(dataOraStr?: string): Date | null {
+  if (!dataOraStr) return null;
+  const clean = dataOraStr.trim();
+  
+  // Format 1: 29/10/26 21:15 or 29/10/2026 21:15
+  const matchNum = clean.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+(\d{1,2}):(\d{2})/);
+  if (matchNum) {
+    const day = parseInt(matchNum[1], 10);
+    const month = parseInt(matchNum[2], 10) - 1;
+    let year = parseInt(matchNum[3], 10);
+    if (year < 100) year += 2000;
+    const hour = parseInt(matchNum[4], 10);
+    const minute = parseInt(matchNum[5], 10);
+    return new Date(year, month, day, hour, minute, 0);
+  }
+
+  // Format 2: "GIO 29 OTT • 21:15" or "29 OTT 21:15"
+  const mesiMap: Record<string, number> = {
+    'GEN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAG': 4, 'GIU': 5,
+    'LUG': 6, 'AGO': 7, 'SET': 8, 'OTT': 9, 'NOV': 10, 'DIC': 11
+  };
+  const matchText = clean.toUpperCase().match(/(\d{1,2})\s+([A-Z]{3}).*?(\d{1,2}):(\d{2})/);
+  if (matchText) {
+    const day = parseInt(matchText[1], 10);
+    const mStr = matchText[2];
+    const month = mesiMap[mStr] !== undefined ? mesiMap[mStr] : 9;
+    const hour = parseInt(matchText[3], 10);
+    const minute = parseInt(matchText[4], 10);
+    const year = 2026;
+    return new Date(year, month, day, hour, minute, 0);
+  }
+
+  // Format 3: Standard ISO or Date parseable
+  const parsed = new Date(clean);
+  if (!isNaN(parsed.getTime())) {
+    return parsed;
+  }
+
   return null;
 }
 

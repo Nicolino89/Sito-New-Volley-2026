@@ -834,6 +834,57 @@ export default function Home({
               {/* Colonna Sinistra: Brand & Call To Actions */}
               <div className="lg:col-span-7 space-y-6 max-w-full overflow-hidden">
                 
+                {/* 🔴 LIVE / MATCH DAY BROADCAST HERO ALERT */}
+                {(() => {
+                  const isLive = direttaStreaming?.stato === 'live';
+                  const isInProg = direttaStreaming?.stato === 'in_programma';
+                  const isDirectActive = direttaStreaming && (direttaStreaming.attiva || isLive || isInProg);
+
+                  if (!isDirectActive) return null;
+
+                  return (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="w-full mb-1"
+                    >
+                      <Link
+                        to="/diretta"
+                        className="inline-flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white border border-red-400/40 shadow-xl shadow-red-950/60 backdrop-blur-md transition-all duration-200 hover:scale-[1.01] cursor-pointer group max-w-full"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                          <Radio className="w-4 h-4 text-white animate-pulse" />
+                        </div>
+                        <div className="flex flex-col text-left overflow-hidden">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] uppercase font-mono font-black tracking-widest text-amber-200 flex items-center gap-1.5">
+                              {isLive ? (
+                                <>
+                                  <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                                  🔴 ORA IN DIRETTA STREAMING
+                                </>
+                              ) : (
+                                <>
+                                  <Clock className="w-3 h-3 text-amber-200" />
+                                  ⏰ DIRETTA STREAMING IN PROGRAMMA
+                                </>
+                              )}
+                            </span>
+                            {direttaStreaming.categoria && (
+                              <span className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-black/40 text-[9px] font-bold text-white/90">
+                                {direttaStreaming.categoria}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs sm:text-sm font-black font-sport uppercase tracking-wider text-white truncate group-hover:underline">
+                            {direttaStreaming.titolo || 'Guarda la Partita Live'} {direttaStreaming.data_ora ? `• ${direttaStreaming.data_ora}` : ''} →
+                          </span>
+                        </div>
+                      </Link>
+                    </motion.div>
+                  );
+                })()}
+
                 {/* Tagline / Badge */}
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFE600]/10 border border-[#FFE600]/30 text-[#FFE600] text-xs font-bold tracking-widest uppercase max-w-full truncate">
                   <span className="w-2 h-2 rounded-full bg-[#FFE600] animate-ping shrink-0" />
@@ -1018,7 +1069,7 @@ export default function Home({
                   </div>
 
                   {/* Tasto Diretto alla Diretta Streaming (Se attiva o in programma) */}
-                  {direttaStreaming?.attiva && (
+                  {direttaStreaming && (direttaStreaming.attiva || direttaStreaming.stato === 'live' || direttaStreaming.stato === 'in_programma') && (
                     <div className="pt-3 mt-3 border-t border-zinc-800">
                       <Link
                         to="/diretta"

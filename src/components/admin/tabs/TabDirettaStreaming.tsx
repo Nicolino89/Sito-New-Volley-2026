@@ -24,6 +24,8 @@ import {
   getDirettaStreaming, 
   salvaDirettaStreaming, 
   extractYouTubeVideoId,
+  getProssimaGara,
+  ProssimaGara,
   RosaSquadra 
 } from '../../../firebase-societa';
 
@@ -34,27 +36,55 @@ interface TabDirettaStreamingProps {
 
 export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabDirettaStreamingProps) {
   const [diretta, setDiretta] = useState<DirettaStreaming>(DEFAULT_DIRETTA_STREAMING);
+  const [garaMaschile, setGaraMaschile] = useState<ProssimaGara | null>(null);
+  const [garaFemminile, setGaraFemminile] = useState<ProssimaGara | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    getDirettaStreaming()
-      .then(d => setDiretta(d))
-      .catch(err => {
-        console.warn("Errore caricamento diretta:", err);
-      })
-      .finally(() => setIsLoading(false));
+    Promise.all([
+      getDirettaStreaming(),
+      getProssimaGara("Serie D Maschile"),
+      getProssimaGara("Serie D Femminile")
+    ]).then(([d, gm, gf]) => {
+      setDiretta(d);
+      setGaraMaschile(gm);
+      setGaraFemminile(gf);
+    }).catch(err => {
+      console.warn("Errore caricamento dati diretta:", err);
+    }).finally(() => setIsLoading(false));
   }, []);
 
   const videoId = extractYouTubeVideoId(diretta.url_youtube);
+  const teaserVideoId = extractYouTubeVideoId(diretta.url_video_presentazione);
+
+  const handleImportMatchData = (gara: ProssimaGara) => {
+    const isCasa = gara.casa ?? true;
+    const titoloDefault = `${gara.categoria}: ${isCasa ? 'New Volley Academy vs ' + gara.avversario : gara.avversario + ' vs New Volley Academy'}`;
+    const sottotitoloDefault = `${gara.giornata || 'Campionato FIPAV'} • ${isCasa ? 'In Casa al Palazzetto' : 'In Trasferta'}`;
+    
+    setDiretta(prev => ({
+      ...prev,
+      titolo: titoloDefault,
+      categoria: gara.categoria,
+      squadra_casa: isCasa ? 'New Volley Academy' : gara.avversario,
+      squadra_ospite: isCasa ? gara.avversario : 'New Volley Academy',
+      data_ora: gara.data_ora || '',
+      luogo: gara.luogo || '',
+      sottotitolo: sottotitoloDefault,
+      attiva: true,
+      stato: prev.stato === 'live' ? 'live' : 'in_programma'
+    }));
+    showToast(`Dati di ${gara.categoria} caricati! Clicca "Salva" per confermare.`, "success");
+  };
 
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setIsSaving(true);
     try {
       await salvaDirettaStreaming(diretta);
-      showToast("Configurazione diretta streaming salvata con successo!", "success");
+      showToast("Configurazione diretta streaming salvata e attiva!", "success");
     } catch (err: any) {
       console.error(err);
       showToast("Errore durante il salvataggio della diretta: " + (err.message || ''), "error");
@@ -130,6 +160,73 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
         </div>
       </div>
 
+      {/* 1.5 IMPORTA DATI DALLA PROSSIMA PARTITA (1-CLICK SYNC) */}
+      <div className="bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-slate-900/5 border border-amber-300/40 p-5 rounded-3xl shadow-sm space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+            <h4 className="font-sport font-black uppercase text-sm tracking-wider text-slate-900">
+              ⚡ Carica Dati Istantaneamente dalle Prossime Gare FIPAV
+            </h4>
+          </div>
+          <span className="text-[10px] text-slate-500 font-mono">
+            Compila titolo, avversario, palazzetto e orario con 1 solo clic
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          {garaMaschile && (
+            <button
+              type="button"
+              onClick={() => handleImportMatchData(garaMaschile)}
+              className="p-3.5 rounded-2xl bg-white border border-slate-200 hover:border-amber-400 hover:shadow-md transition-all text-left group cursor-pointer"
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="font-bold text-xs font-sport uppercase tracking-wider text-slate-900 group-hover:text-amber-600 transition-colors flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  🏐 Serie D Maschile
+                </span>
+                <span className="text-[10px] font-mono font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full">
+                  {garaMaschile.data_ora || 'Prossima Gara'}
+                </span>
+              </div>
+              <div className="text-xs font-bold text-slate-800 truncate">
+                vs {garaMaschile.avversario}
+              </div>
+              <div className="text-[10px] text-slate-500 truncate mt-0.5 flex items-center gap-1">
+                <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                <span className="truncate">{garaMaschile.luogo}</span>
+              </div>
+            </button>
+          )}
+
+          {garaFemminile && (
+            <button
+              type="button"
+              onClick={() => handleImportMatchData(garaFemminile)}
+              className="p-3.5 rounded-2xl bg-white border border-slate-200 hover:border-amber-400 hover:shadow-md transition-all text-left group cursor-pointer"
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="font-bold text-xs font-sport uppercase tracking-wider text-slate-900 group-hover:text-amber-600 transition-colors flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  🏐 Serie D Femminile
+                </span>
+                <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded-full">
+                  {garaFemminile.data_ora || 'Prossima Gara'}
+                </span>
+              </div>
+              <div className="text-xs font-bold text-slate-800 truncate">
+                vs {garaFemminile.avversario}
+              </div>
+              <div className="text-[10px] text-slate-500 truncate mt-0.5 flex items-center gap-1">
+                <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                <span className="truncate">{garaFemminile.luogo}</span>
+              </div>
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* 2. FORM CONFIGURAZIONE */}
       <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
@@ -172,7 +269,7 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => setDiretta(prev => ({ ...prev, stato: 'live' }))}
+                  onClick={() => setDiretta(prev => ({ ...prev, stato: 'live', attiva: true }))}
                   className={`py-2.5 px-3 rounded-xl border text-xs font-bold font-sport uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
                     diretta.stato === 'live'
                       ? 'bg-red-600 text-white border-red-700 shadow-md ring-2 ring-red-400/30'
@@ -185,7 +282,7 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
 
                 <button
                   type="button"
-                  onClick={() => setDiretta(prev => ({ ...prev, stato: 'in_programma' }))}
+                  onClick={() => setDiretta(prev => ({ ...prev, stato: 'in_programma', attiva: true }))}
                   className={`py-2.5 px-3 rounded-xl border text-xs font-bold font-sport uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
                     diretta.stato === 'in_programma'
                       ? 'bg-amber-500 text-slate-950 border-amber-600 shadow-md ring-2 ring-amber-400/30'
@@ -234,6 +331,29 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
                     ✓ ID Video riconosciuto: {videoId}
                   </span>
                 )}
+              </p>
+            </div>
+
+            {/* VIDEO PRESENTAZIONE / TEASER ATTESA */}
+            <div className="space-y-1.5 pt-2 border-t border-slate-100">
+              <label className="block text-[11px] font-mono font-bold uppercase text-slate-700 flex items-center justify-between">
+                <span>Video Teaser / Presentazione Societaria (Opzionale nell'attesa)</span>
+                <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">Consigliato</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={diretta.url_video_presentazione || ''}
+                  onChange={e => setDiretta(prev => ({ ...prev, url_video_presentazione: e.target.value }))}
+                  placeholder="Es. https://www.youtube.com/watch?v=... video promo, presentazione o trailer"
+                  className="w-full bg-slate-50 border border-slate-300 focus:border-amber-500 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-mono transition-colors outline-none pr-10"
+                />
+                {teaserVideoId && (
+                  <CheckCircle className="w-4 h-4 text-emerald-500 absolute right-3 top-3" />
+                )}
+              </div>
+              <p className="text-[10px] text-slate-500 font-inter">
+                Se inserito, gli utenti che aprono la pagina prima dell'inizio della diretta potranno riprodurre questo video mentre vedono il conto alla rovescia e gli sponsor!
               </p>
             </div>
 

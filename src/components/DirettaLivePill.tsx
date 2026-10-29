@@ -14,11 +14,13 @@ export const DirettaLivePill: React.FC = () => {
       .catch(() => {});
   }, [location.pathname]);
 
-  if (isDirettaPage || !diretta || !diretta.attiva) {
+  const isLiveNow = diretta?.stato === 'live';
+  const isInProgramma = diretta?.stato === 'in_programma';
+  const isEffectivelyActive = diretta && (diretta.attiva || isLiveNow || isInProgramma);
+
+  if (isDirettaPage || !isEffectivelyActive) {
     return null;
   }
-
-  const isLiveNow = diretta.stato === 'live';
 
   return (
     <Link
