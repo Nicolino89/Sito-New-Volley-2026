@@ -940,6 +940,20 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                               {row.pos}
                             </td>
                             <td className="p-3.5 font-sport uppercase text-sm tracking-wide flex items-center gap-2">
+                              {row.logo ? (
+                                <img 
+                                  src={row.logo} 
+                                  alt={row.squadra} 
+                                  className="w-5 h-5 object-contain shrink-0" 
+                                  onError={(e) => { (e.target as any).style.display = 'none'; }}
+                                />
+                              ) : isMyTeam ? (
+                                <img 
+                                  src="/logo.png" 
+                                  alt="NVA" 
+                                  className="w-5 h-5 object-contain shrink-0" 
+                                />
+                              ) : null}
                               <span>{row.squadra}</span>
                               {isMyTeam && (
                                 <span className="bg-black text-brand-yellow text-[9px] font-sans font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">

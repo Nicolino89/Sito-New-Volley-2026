@@ -64,19 +64,25 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
     const titoloDefault = `${gara.categoria}: ${isCasa ? 'New Volley Academy vs ' + gara.avversario : gara.avversario + ' vs New Volley Academy'}`;
     const sottotitoloDefault = `${gara.giornata || 'Campionato FIPAV'} • ${isCasa ? 'In Casa al Palazzetto' : 'In Trasferta'}`;
     
+    // Assegnazione loghi ufficiali (NVA vs Avversario)
+    const myLogo = gara.logo_nva || '/logo.png';
+    const oppLogo = gara.logo_avversario || (gara.avversario?.toUpperCase().includes('FENIX') ? 'https://www.pallavolofaenza.com/site_img/logo.png' : '');
+
     setDiretta(prev => ({
       ...prev,
       titolo: titoloDefault,
       categoria: gara.categoria,
       squadra_casa: isCasa ? 'New Volley Academy' : gara.avversario,
       squadra_ospite: isCasa ? gara.avversario : 'New Volley Academy',
+      logo_casa: isCasa ? myLogo : oppLogo,
+      logo_ospite: isCasa ? oppLogo : myLogo,
       data_ora: gara.data_ora || '',
       luogo: gara.luogo || '',
       sottotitolo: sottotitoloDefault,
       attiva: true,
       stato: prev.stato === 'live' ? 'live' : 'in_programma'
     }));
-    showToast(`Dati di ${gara.categoria} caricati! Clicca "Salva" per confermare.`, "success");
+    showToast(`Dati e loghi di ${gara.categoria} caricati! Clicca "Salva" per confermare.`, "success");
   };
 
   const handleSave = async (e?: React.FormEvent) => {
@@ -428,6 +434,76 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
                   placeholder="Es. 4ª Giornata di Campionato Regionale • Ingresso Libero"
                   className="w-full bg-slate-50 border border-slate-300 focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-slate-900 font-inter"
                 />
+              </div>
+
+              {/* SQUADRE E LOGHI UFFICIALI */}
+              <div className="pt-2 border-t border-slate-100 space-y-3">
+                <h6 className="text-[11px] font-bold text-slate-800 uppercase font-sport tracking-wider flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Squadre e Loghi Ufficiali Scontro Diretto</span>
+                </h6>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* SQUADRA CASA */}
+                  <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                    <span className="text-[10px] uppercase font-mono font-bold text-amber-600 block">
+                      Squadra di Casa
+                    </span>
+                    <input
+                      type="text"
+                      value={diretta.squadra_casa || ''}
+                      onChange={e => setDiretta(prev => ({ ...prev, squadra_casa: e.target.value }))}
+                      placeholder="Es. New Volley Academy"
+                      className="w-full bg-white border border-slate-300 focus:border-amber-500 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 font-bold"
+                    />
+                    <div className="flex items-center gap-2 pt-1">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+                        {diretta.logo_casa ? (
+                          <img src={diretta.logo_casa} alt="Logo Casa" className="w-full h-full object-contain" />
+                        ) : (
+                          <Shield className="w-5 h-5 text-slate-400" />
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        value={diretta.logo_casa || ''}
+                        onChange={e => setDiretta(prev => ({ ...prev, logo_casa: e.target.value }))}
+                        placeholder="URL Logo Casa (es. /logo.png)"
+                        className="w-full bg-white border border-slate-300 focus:border-amber-500 rounded-xl px-2.5 py-1.5 text-[11px] text-slate-700 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  {/* SQUADRA OSPITE */}
+                  <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                    <span className="text-[10px] uppercase font-mono font-bold text-slate-600 block">
+                      Squadra Ospite
+                    </span>
+                    <input
+                      type="text"
+                      value={diretta.squadra_ospite || ''}
+                      onChange={e => setDiretta(prev => ({ ...prev, squadra_ospite: e.target.value }))}
+                      placeholder="Es. FENIX FAENZA RA"
+                      className="w-full bg-white border border-slate-300 focus:border-amber-500 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 font-bold"
+                    />
+                    <div className="flex items-center gap-2 pt-1">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+                        {diretta.logo_ospite ? (
+                          <img src={diretta.logo_ospite} alt="Logo Ospite" className="w-full h-full object-contain" />
+                        ) : (
+                          <Shield className="w-5 h-5 text-slate-400" />
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        value={diretta.logo_ospite || ''}
+                        onChange={e => setDiretta(prev => ({ ...prev, logo_ospite: e.target.value }))}
+                        placeholder="URL Logo Ospite (da FIPAV o web)"
+                        className="w-full bg-white border border-slate-300 focus:border-amber-500 rounded-xl px-2.5 py-1.5 text-[11px] text-slate-700 font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 

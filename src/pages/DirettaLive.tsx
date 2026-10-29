@@ -154,6 +154,12 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
   const nomeCasa = diretta.squadra_casa || 'New Volley Academy';
   const nomeOspite = diretta.squadra_ospite || 'Squadra Avversaria';
   const isNvaCasa = nomeCasa.toLowerCase().includes('new volley') || nomeCasa.toLowerCase().includes('nva');
+  const isFenixCasa = nomeCasa.toUpperCase().includes('FENIX');
+  const isFenixOspite = nomeOspite.toUpperCase().includes('FENIX');
+
+  // Risoluzione intelligente loghi (NVA ufficiale + avversari come FENIX FAENZA)
+  const logoCasaEffective = diretta.logo_casa || (isNvaCasa ? '/logo.png' : isFenixCasa ? 'https://www.pallavolofaenza.com/site_img/logo.png' : '');
+  const logoOspiteEffective = diretta.logo_ospite || (!isNvaCasa ? '/logo.png' : isFenixOspite ? 'https://www.pallavolofaenza.com/site_img/logo.png' : '');
 
   return (
     <div className="min-h-screen bg-slate-950 text-white font-inter pb-20 selection:bg-amber-400 selection:text-slate-950">
@@ -220,16 +226,25 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
             
             {/* SQUADRA CASA */}
             <div className="sm:col-span-3 flex flex-col items-center sm:items-end space-y-2">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-900 border border-slate-700/80 p-2 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-                {isNvaCasa ? (
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-900 border border-slate-700/80 p-2 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform overflow-hidden">
+                {logoCasaEffective ? (
                   <img 
-                    src="/logo.png" 
-                    alt="New Volley Academy" 
+                    src={logoCasaEffective} 
+                    alt={nomeCasa} 
                     className="w-full h-full object-contain filter drop-shadow"
-                    onError={(e)=>{ (e.target as any).src = '/images/voltex-logo.png'; }}
+                    onError={(e)=>{ 
+                      if (isNvaCasa) {
+                        (e.target as any).src = '/logo.png';
+                      } else {
+                        (e.target as any).style.display = 'none';
+                      }
+                    }}
                   />
                 ) : (
-                  <Shield className="w-10 h-10 text-slate-400" />
+                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 font-sport font-black uppercase text-center p-1 leading-none text-xs">
+                    <Shield className="w-8 h-8 mb-1 text-slate-500" />
+                    <span className="truncate max-w-full text-[9px]">{nomeCasa.slice(0, 6)}</span>
+                  </div>
                 )}
               </div>
               <h2 className="text-lg sm:text-xl md:text-2xl font-black font-sport uppercase tracking-wide text-white leading-tight">
@@ -249,16 +264,25 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
 
             {/* SQUADRA OSPITE */}
             <div className="sm:col-span-3 flex flex-col items-center sm:items-start space-y-2">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-900 border border-slate-700/80 p-2 flex items-center justify-center shadow-lg">
-                {!isNvaCasa ? (
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-900 border border-slate-700/80 p-2 flex items-center justify-center shadow-lg overflow-hidden">
+                {logoOspiteEffective ? (
                   <img 
-                    src="/logo.png" 
-                    alt="New Volley Academy" 
+                    src={logoOspiteEffective} 
+                    alt={nomeOspite} 
                     className="w-full h-full object-contain filter drop-shadow"
-                    onError={(e)=>{ (e.target as any).src = '/images/voltex-logo.png'; }}
+                    onError={(e)=>{ 
+                      if (!isNvaCasa) {
+                        (e.target as any).src = '/logo.png';
+                      } else {
+                        (e.target as any).style.display = 'none';
+                      }
+                    }}
                   />
                 ) : (
-                  <Shield className="w-10 h-10 text-slate-400" />
+                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 font-sport font-black uppercase text-center p-1 leading-none text-xs">
+                    <Shield className="w-8 h-8 mb-1 text-slate-500" />
+                    <span className="truncate max-w-full text-[9px]">{nomeOspite.slice(0, 6)}</span>
+                  </div>
                 )}
               </div>
               <h2 className="text-lg sm:text-xl md:text-2xl font-black font-sport uppercase tracking-wide text-white leading-tight">

@@ -118,6 +118,9 @@ export interface ProssimaGara {
   punti_nva: number | null;
   punti_avversario: number | null;
   link_mappa?: string;
+  logo_avversario?: string;
+  logo_casa?: string;
+  logo_nva?: string;
 }
 
 /**
@@ -268,6 +271,7 @@ export interface RigaClassifica {
   setVinti?: number;
   setPersi?: number;
   isMyTeam?: boolean;
+  logo?: string;
 }
 
 export interface PartitaCampionato {
@@ -283,7 +287,10 @@ export interface PartitaCampionato {
   setNva?: number | null;
   setAvversario?: number | null;
   parzialiSet?: string; // es. "25-21, 22-25, 25-18, 25-20"
-  terminata: boolean;
+  terminata?: boolean;
+  logo_avversario?: string;
+  logo_casa?: string;
+  logo_ospite?: string;
   note?: string;
 }
 
@@ -4867,6 +4874,8 @@ export interface DirettaStreaming {
   luogo?: string;
   squadra_casa?: string;
   squadra_ospite?: string;
+  logo_casa?: string;
+  logo_ospite?: string;
   categoria?: string;
   mostra_chat?: boolean;
   descrizione?: string;
@@ -4882,6 +4891,8 @@ export const DEFAULT_DIRETTA_STREAMING: DirettaStreaming = {
   sottotitolo: '3ª Giornata di Campionato Regionale FIPAV',
   squadra_casa: 'New Volley Academy',
   squadra_ospite: 'FENIX FAENZA RA',
+  logo_casa: '/logo.png',
+  logo_ospite: 'https://www.pallavolofaenza.com/site_img/logo.png',
   categoria: 'Serie D Maschile',
   luogo: 'Pal. COMUNALE FABIO LOMBINI, CASTROCARO TERME E TERRA SOLE FC',
   data_ora: '29/10/26 21:15',

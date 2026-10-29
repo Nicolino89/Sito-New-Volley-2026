@@ -177,7 +177,10 @@ export default function TabGareFipav({
           giornata: upcoming.giornata,
           casa: upcoming.casa,
           punti_nva: null,
-          punti_avversario: null
+          punti_avversario: null,
+          logo_avversario: upcoming.logo_avversario || '',
+          logo_casa: upcoming.casa ? '/logo.png' : (upcoming.logo_casa || upcoming.logo_avversario || ''),
+          logo_nva: '/logo.png'
         });
       }
 
@@ -297,7 +300,10 @@ export default function TabGareFipav({
           giornata: upcoming.giornata,
           casa: upcoming.casa,
           punti_nva: null,
-          punti_avversario: null
+          punti_avversario: null,
+          logo_avversario: upcoming.logo_avversario || '',
+          logo_casa: upcoming.casa ? '/logo.png' : (upcoming.logo_casa || upcoming.logo_avversario || ''),
+          logo_nva: '/logo.png'
         });
       }
 

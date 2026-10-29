@@ -141,6 +141,44 @@ function extractVenueFromTooltip(cell?: Element | null, isHome: boolean = true):
 }
 
 /**
+ * Extract and normalize team logo URL from HTML table cell
+ */
+export function extractLogoFromCell(td: Element | null | undefined, baseUrl: string = 'https://crer.portalefipav.net'): string {
+  if (!td) return '';
+  const img = td.querySelector('img');
+  if (!img) return '';
+  const rawSrc = img.getAttribute('src') || img.getAttribute('data-src') || img.getAttribute('data-original') || '';
+  if (!rawSrc) return '';
+  const clean = rawSrc.trim();
+  if (
+    clean.includes('blank.gif') || 
+    clean.includes('pixel.gif') || 
+    clean.includes('spacer.gif') || 
+    clean.includes('1x1') ||
+    clean.includes('info_16') ||
+    clean.includes('ico_')
+  ) {
+    return '';
+  }
+  if (clean.startsWith('http://') || clean.startsWith('https://') || clean.startsWith('data:image/')) {
+    return clean;
+  }
+  if (clean.startsWith('//')) {
+    return `https:${clean}`;
+  }
+  if (clean.startsWith('/')) {
+    return `${baseUrl}${clean}`;
+  }
+  if (clean.startsWith('./')) {
+    return `${baseUrl}/${clean.slice(2)}`;
+  }
+  if (clean.startsWith('../')) {
+    return `${baseUrl}/${clean.replace(/^(\.\.\/)+/, '')}`;
+  }
+  return `${baseUrl}/${clean}`;
+}
+
+/**
  * Parse HTML content (from either portalefipav.net or fipavromagna.it / general FIPAV)
  */
 export function parseFipavHtml(
@@ -158,9 +196,17 @@ export function parseFipavHtml(
 
   const classifica: RigaClassifica[] = [];
   const partite: PartitaCampionato[] = [];
+  const teamLogosMap: Record<string, string> = {};
 
   // Auto-detect page URL from OpenGraph meta tags if present
   const ogUrl = doc.querySelector('meta[property="og:url"], meta[name="og:url"]')?.getAttribute('content') || undefined;
+  let detectedBaseUrl = 'https://crer.portalefipav.net';
+  if (ogUrl && ogUrl.startsWith('http')) {
+    try {
+      const u = new URL(ogUrl);
+      detectedBaseUrl = `${u.protocol}//${u.host}`;
+    } catch (_) {}
+  }
 
   // ==========================================
   // 1. PARSE STANDINGS (CLASSIFICA)
@@ -174,7 +220,8 @@ export function parseFipavHtml(
       r => !r.closest('thead') && r.querySelectorAll('td').length >= 3
     );
     for (const r of rows) {
-      const cells = Array.from(r.querySelectorAll('td')).map(td => cleanString(td.textContent || ''));
+      const rawTdList = Array.from(r.querySelectorAll('td'));
+      const cells = rawTdList.map(td => cleanString(td.textContent || ''));
       if (cells.length >= 3) {
         const pos = parseInt(cells[0].replace(/[^\d]/g, ''), 10);
         const teamName = cells[1];
@@ -190,6 +237,11 @@ export function parseFipavHtml(
             ? (cleanString(teamName).toLowerCase() === customOfficialName.toLowerCase().trim() || isNvaTeam(teamName, customOfficialName, myTeamName))
             : isNvaTeam(teamName, myTeamName, myTeamName);
 
+          const teamLogo = extractLogoFromCell(rawTdList[1], detectedBaseUrl) || extractLogoFromCell(r, detectedBaseUrl);
+          if (teamLogo) {
+            teamLogosMap[teamName.toUpperCase()] = teamLogo;
+          }
+
           classifica.push({
             pos,
             squadra: teamName,
@@ -199,7 +251,8 @@ export function parseFipavHtml(
             perse,
             setVinti,
             setPersi,
-            isMyTeam
+            isMyTeam,
+            logo: teamLogo || (isMyTeam ? '/logo.png' : '')
           });
         }
       }
@@ -318,6 +371,16 @@ export function parseFipavHtml(
         const isHome = isNvaTeam(homeTeam, customOfficialName || myTeamName);
         const isAway = isNvaTeam(awayTeam, customOfficialName || myTeamName);
 
+        // Estrazione loghi ufficiali delle due squadre dal codice sorgente
+        const rawHomeLogo = extractLogoFromCell(cells[3], detectedBaseUrl);
+        const rawAwayLogo = extractLogoFromCell(cells[4], detectedBaseUrl);
+        if (rawHomeLogo) teamLogosMap[homeTeam.toUpperCase()] = rawHomeLogo;
+        if (rawAwayLogo) teamLogosMap[awayTeam.toUpperCase()] = rawAwayLogo;
+
+        const homeLogo = rawHomeLogo || teamLogosMap[homeTeam.toUpperCase()] || (isHome ? '/logo.png' : '');
+        const awayLogo = rawAwayLogo || teamLogosMap[awayTeam.toUpperCase()] || (isAway ? '/logo.png' : '');
+        const opponentLogo = isHome ? awayLogo : homeLogo;
+
         if (isHome || isAway) {
           const opponent = isHome ? awayTeam : homeTeam;
           let setNva: number | null = null;
@@ -348,7 +411,10 @@ export function parseFipavHtml(
             setNva,
             setAvversario,
             parzialiSet: parziali.trim() || '',
-            terminata
+            terminata,
+            logo_casa: homeLogo,
+            logo_ospite: awayLogo,
+            logo_avversario: opponentLogo
           });
           matchIdx++;
         }
@@ -560,6 +626,9 @@ export function parseFipavHtml(
   let prossimaGara: ProssimaGara | null = null;
   const unplayed = partite.find(p => !p.terminata);
   if (unplayed) {
+    const oppName = unplayed.avversario;
+    const oppLogo = unplayed.logo_avversario || teamLogosMap[oppName.toUpperCase()] || '';
+    const myLogo = '/logo.png';
     prossimaGara = {
       id: myTeamName.toLowerCase().includes('masch') ? 'serie_d_maschile' : 'serie_d_femminile',
       categoria: myTeamName.toLowerCase().includes('masch') ? 'Serie D Maschile' : 'Serie D Femminile',
@@ -569,7 +638,10 @@ export function parseFipavHtml(
       giornata: unplayed.giornata,
       casa: unplayed.casa,
       punti_nva: null,
-      punti_avversario: null
+      punti_avversario: null,
+      logo_avversario: oppLogo,
+      logo_casa: unplayed.casa ? myLogo : oppLogo,
+      logo_nva: myLogo
     };
   }
 
