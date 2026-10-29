@@ -14,6 +14,7 @@ import {
   CalendarPlus
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { updatePageMeta } from '../utils/seoHelper';
 import { 
   DirettaStreaming, 
   DEFAULT_DIRETTA_STREAMING, 
@@ -72,7 +73,23 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
     const fetchDiretta = () => {
       getDirettaStreaming()
         .then(d => {
-          setDiretta(d);
+          setDiretta(prev => {
+            if (
+              prev.attiva === d.attiva &&
+              prev.stato === d.stato &&
+              prev.url_youtube === d.url_youtube &&
+              prev.titolo === d.titolo &&
+              prev.data_ora === d.data_ora &&
+              prev.luogo === d.luogo &&
+              prev.squadra_casa === d.squadra_casa &&
+              prev.squadra_ospite === d.squadra_ospite &&
+              prev.logo_casa === d.logo_casa &&
+              prev.logo_ospite === d.logo_ospite
+            ) {
+              return prev;
+            }
+            return d;
+          });
         })
         .catch(err => console.warn("Errore caricamento diretta:", err))
         .finally(() => setIsLoading(false));
@@ -179,6 +196,91 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
   const logoCasaEffective = getLogoCasa();
   const logoOspiteEffective = getLogoOspite();
 
+  // 1. Aggiornamento Dinamico Meta Tag SEO / OpenGraph
+  useEffect(() => {
+    const metaTitle = diretta.attiva && diretta.titolo
+      ? (isLiveNow ? `🔴 ORA IN DIRETTA: ${diretta.titolo}` : `⏰ PROSSIMA DIRETTA: ${diretta.titolo}`)
+      : "Diretta Streaming Match | New Volley Academy";
+
+    const metaDescription = diretta.descrizione || 
+      `Segui la diretta streaming ufficiale della New Volley Academy Forlì. Tifa per le nostre pantere punto su punto dal palazzetto!`;
+
+    updatePageMeta({
+      title: metaTitle,
+      description: metaDescription,
+      url: "https://newvolleyacademy.it/diretta",
+      image: isNvaCasa ? OFFICIAL_NVA_LOGO : (logoCasaEffective || OFFICIAL_NVA_LOGO)
+    });
+  }, [diretta.titolo, diretta.descrizione, diretta.attiva, isLiveNow, isNvaCasa, logoCasaEffective]);
+
+  // 2. Schema.org JSON-LD (SportsEvent & BroadcastEvent) per indicizzazione ricca su Google
+  useEffect(() => {
+    const scriptId = 'jsonld-diretta-schema';
+    let scriptTag = document.getElementById(scriptId) as HTMLScriptElement | null;
+    if (!scriptTag) {
+      scriptTag = document.createElement('script');
+      scriptTag.id = scriptId;
+      scriptTag.type = 'application/ld+json';
+      document.head.appendChild(scriptTag);
+    }
+
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "SportsEvent",
+      "name": diretta.titolo || "Partita New Volley Academy Forlì",
+      "description": diretta.descrizione || "Diretta streaming della partita ufficiale New Volley Academy Forlì",
+      "startDate": targetMatchDate ? targetMatchDate.toISOString() : undefined,
+      "eventStatus": isLiveNow 
+        ? "https://schema.org/EventLive" 
+        : (diretta.stato === 'terminata' ? "https://schema.org/EventCompleted" : "https://schema.org/EventScheduled"),
+      "location": {
+        "@type": "Place",
+        "name": diretta.luogo || "Palazzetto dello Sport",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Forlì",
+          "addressRegion": "FC",
+          "addressCountry": "IT"
+        }
+      },
+      "competitor": [
+        {
+          "@type": "SportsTeam",
+          "name": nomeCasa,
+          "logo": logoCasaEffective || undefined
+        },
+        {
+          "@type": "SportsTeam",
+          "name": nomeOspite,
+          "logo": logoOspiteEffective || undefined
+        }
+      ],
+      "organizer": {
+        "@type": "SportsOrganization",
+        "name": "New Volley Academy Forlì",
+        "url": "https://newvolleyacademy.it",
+        "logo": OFFICIAL_NVA_LOGO
+      },
+      ...(liveVideoId ? {
+        "video": {
+          "@type": "VideoObject",
+          "name": diretta.titolo,
+          "description": diretta.descrizione,
+          "embedUrl": `https://www.youtube-nocookie.com/embed/${liveVideoId}`,
+          "thumbnailUrl": `https://img.youtube.com/vi/${liveVideoId}/hqdefault.jpg`,
+          "uploadDate": new Date().toISOString()
+        }
+      } : {})
+    };
+
+    scriptTag.textContent = JSON.stringify(jsonLd);
+
+    return () => {
+      const el = document.getElementById(scriptId);
+      if (el) el.remove();
+    };
+  }, [diretta, targetMatchDate, isLiveNow, nomeCasa, nomeOspite, logoCasaEffective, logoOspiteEffective, liveVideoId]);
+
   return (
     <div className="min-h-screen bg-slate-950 text-white font-inter pb-24 selection:bg-amber-400 selection:text-slate-950">
       
@@ -253,11 +355,11 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
         <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
           
           {/* HEADER COMPATTO CON I DUE STEMMI (OCCUPA POCO SPAZIO IN ALTO) */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 shadow-lg backdrop-blur-md">
             
-            <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shrink-0 shadow-md">
+            <div className="flex items-center gap-3 overflow-hidden min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shrink-0 shadow-md">
                   {(isNvaCasa ? logoCasaEffective : logoOspiteEffective) ? (
                     <img 
                       src={isNvaCasa ? logoCasaEffective : logoOspiteEffective} 
@@ -281,7 +383,7 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
 
                 <span className="font-sport font-black text-xs text-amber-400 italic">VS</span>
 
-                <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shrink-0 shadow-md">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shrink-0 shadow-md">
                   {!oppLogoError && (!isNvaCasa ? logoCasaEffective : logoOspiteEffective) ? (
                     <img 
                       src={!isNvaCasa ? logoCasaEffective : logoOspiteEffective} 
@@ -295,18 +397,18 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                 </div>
               </div>
 
-              <div className="overflow-hidden">
+              <div className="overflow-hidden min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-red-600 animate-ping shrink-0" />
-                  <span className="text-[10px] uppercase font-mono font-bold text-red-400 tracking-wider">
+                  <span className="text-[9px] sm:text-[10px] uppercase font-mono font-bold text-red-400 tracking-wider">
                     🔴 DIRETTA STREAMING DAL PALAZZETTO
                   </span>
                 </div>
-                <h1 className="text-base sm:text-xl font-black font-sport uppercase tracking-wide text-white truncate">
+                <h1 className="text-sm sm:text-xl font-black font-sport uppercase tracking-wide text-white truncate">
                   {diretta.titolo || `${nomeCasa} vs ${nomeOspite}`}
                 </h1>
                 {diretta.luogo && (
-                  <p className="text-[11px] text-slate-400 truncate flex items-center gap-1 font-mono">
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 truncate flex items-center gap-1 font-mono">
                     <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
                     <span>{diretta.luogo}</span>
                   </p>
@@ -314,17 +416,17 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
               <button
                 onClick={handleShareWhatsapp}
-                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-sport uppercase text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-sport uppercase text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer min-h-[38px]"
               >
                 <MessageCircle className="w-3.5 h-3.5 fill-white" />
-                <span>WhatsApp</span>
+                <span className="hidden sm:inline">WhatsApp</span>
               </button>
               <button
                 onClick={handleCopyLink}
-                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center gap-1.5 border border-slate-700 transition-colors cursor-pointer"
+                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center gap-1.5 border border-slate-700 transition-colors cursor-pointer min-h-[38px]"
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
                 <span>{copied ? 'Copiato!' : 'Copia'}</span>
@@ -342,6 +444,7 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                 className="w-full h-full border-0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
+                loading="lazy"
               />
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-slate-950 space-y-3">
@@ -388,33 +491,33 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                 </div>
 
                 {/* Pulsanti Rapidi nel Banner */}
-                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 pt-2">
                   {googleCalendarUrl && (
                     <a
                       href={googleCalendarUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black font-sport italic uppercase text-xs flex items-center gap-2 shadow-lg shadow-amber-400/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black font-sport italic uppercase text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-400/20 transition-all hover:scale-105 active:scale-95 cursor-pointer min-h-[42px]"
                     >
                       <CalendarPlus className="w-4 h-4 text-slate-950" />
-                      <span>Aggiungi Promemoria Calendario</span>
+                      <span>Promemoria Calendario</span>
                     </a>
                   )}
 
                   <button
                     onClick={handleShareWhatsapp}
-                    className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black font-sport italic uppercase text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                    className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black font-sport italic uppercase text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all hover:scale-105 active:scale-95 cursor-pointer min-h-[42px]"
                   >
                     <MessageCircle className="w-4 h-4 fill-white" />
-                    <span>Condividi su WhatsApp</span>
+                    <span>WhatsApp</span>
                   </button>
 
                   <button
                     onClick={handleCopyLink}
-                    className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-2 border border-slate-700 transition-colors cursor-pointer"
+                    className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer min-h-[42px]"
                   >
                     {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-slate-400" />}
-                    <span>{copied ? 'Link Copiato!' : 'Copia Link Pagina'}</span>
+                    <span>{copied ? 'Copiato!' : 'Copia Link'}</span>
                   </button>
                 </div>
 
@@ -436,12 +539,12 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                 )}
               </div>
 
-              {/* STEMMI DELLE DUE SQUADRE */}
-              <div className="grid grid-cols-1 sm:grid-cols-7 items-center gap-4 sm:gap-2 text-center py-2">
+              {/* STEMMI DELLE DUE SQUADRE: RESPONSIVE SIDE-BY-SIDE ON ALL SCREENS */}
+              <div className="flex items-center justify-between sm:justify-around gap-2 sm:gap-6 py-2 px-1 sm:px-4">
                 
                 {/* SQUADRA CASA */}
-                <div className="sm:col-span-3 flex flex-col items-center sm:items-end space-y-2">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white border border-slate-200 p-2 flex items-center justify-center shadow-xl overflow-hidden">
+                <div className="flex-1 flex flex-col items-center text-center space-y-2 min-w-0">
+                  <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl bg-white border border-slate-200 p-1.5 sm:p-2 flex items-center justify-center shadow-xl overflow-hidden shrink-0">
                     {logoCasaEffective ? (
                       <img 
                         src={logoCasaEffective} 
@@ -468,29 +571,29 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                       <img src={OFFICIAL_NVA_LOGO} alt={nomeCasa} className="w-full h-full object-contain filter drop-shadow" />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-slate-800 font-sport font-black uppercase text-center p-1 leading-none text-xs">
-                        <Shield className="w-8 h-8 mb-1 text-amber-500" />
-                        <span className="truncate max-w-full text-[10px]">{nomeCasa.slice(0, 6)}</span>
+                        <Shield className="w-6 h-6 sm:w-8 sm:h-8 mb-1 text-amber-500" />
+                        <span className="truncate max-w-full text-[9px] sm:text-[10px]">{nomeCasa.slice(0, 6)}</span>
                       </div>
                     )}
                   </div>
-                  <h2 className="text-lg sm:text-xl md:text-2xl font-black font-sport uppercase tracking-wide text-white leading-tight">
+                  <h2 className="text-xs sm:text-xl md:text-2xl font-black font-sport uppercase tracking-wide text-white leading-tight line-clamp-2 max-w-[130px] sm:max-w-[240px]">
                     {nomeCasa}
                   </h2>
-                  <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-amber-400 bg-amber-400/10 px-2.5 py-0.5 rounded-md">
+                  <span className="text-[9px] sm:text-[10px] uppercase font-mono font-bold tracking-wider text-amber-400 bg-amber-400/10 px-2 sm:px-2.5 py-0.5 rounded-md">
                     CASA
                   </span>
                 </div>
 
                 {/* EMBLEMA "VS" CENTRALE */}
-                <div className="sm:col-span-1 flex flex-col items-center justify-center space-y-1">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-black font-sport italic text-base flex items-center justify-center shadow-lg shadow-amber-500/25 ring-4 ring-slate-950">
+                <div className="shrink-0 flex flex-col items-center justify-center px-1 sm:px-3">
+                  <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-black font-sport italic text-xs sm:text-base flex items-center justify-center shadow-lg shadow-amber-500/25 ring-2 sm:ring-4 ring-slate-950">
                     VS
                   </div>
                 </div>
 
                 {/* SQUADRA OSPITE */}
-                <div className="sm:col-span-3 flex flex-col items-center sm:items-start space-y-2">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white border border-slate-200 p-2 flex items-center justify-center shadow-xl overflow-hidden">
+                <div className="flex-1 flex flex-col items-center text-center space-y-2 min-w-0">
+                  <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl bg-white border border-slate-200 p-1.5 sm:p-2 flex items-center justify-center shadow-xl overflow-hidden shrink-0">
                     {logoOspiteEffective ? (
                       <img 
                         src={logoOspiteEffective} 
@@ -517,15 +620,15 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                       <img src={OFFICIAL_NVA_LOGO} alt={nomeOspite} className="w-full h-full object-contain filter drop-shadow" />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-slate-800 font-sport font-black uppercase text-center p-1 leading-none text-xs">
-                        <Shield className="w-8 h-8 mb-1 text-slate-500" />
-                        <span className="truncate max-w-full text-[10px]">{nomeOspite.slice(0, 6)}</span>
+                        <Shield className="w-6 h-6 sm:w-8 sm:h-8 mb-1 text-slate-500" />
+                        <span className="truncate max-w-full text-[9px] sm:text-[10px]">{nomeOspite.slice(0, 6)}</span>
                       </div>
                     )}
                   </div>
-                  <h2 className="text-lg sm:text-xl md:text-2xl font-black font-sport uppercase tracking-wide text-white leading-tight">
+                  <h2 className="text-xs sm:text-xl md:text-2xl font-black font-sport uppercase tracking-wide text-white leading-tight line-clamp-2 max-w-[130px] sm:max-w-[240px]">
                     {nomeOspite}
                   </h2>
-                  <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-slate-400 bg-slate-800 px-2.5 py-0.5 rounded-md">
+                  <span className="text-[9px] sm:text-[10px] uppercase font-mono font-bold tracking-wider text-slate-400 bg-slate-800 px-2 sm:px-2.5 py-0.5 rounded-md">
                     OSPITE
                   </span>
                 </div>
@@ -566,35 +669,35 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                     </span>
                   </div>
                   <div className="grid grid-cols-4 gap-2 sm:gap-4 max-w-md mx-auto">
-                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-2 sm:p-2.5 text-center">
-                      <span className="block text-2xl sm:text-3xl font-black font-sport text-amber-400">
+                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-2 sm:p-2.5 text-center shadow-inner">
+                      <span className="block text-xl sm:text-3xl font-black font-sport text-amber-400 tabular-nums">
                         {String(timeLeft.days).padStart(2, '0')}
                       </span>
-                      <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
+                      <span className="text-[8px] sm:text-[9px] font-mono text-slate-400 uppercase tracking-wider">
                         Giorni
                       </span>
                     </div>
-                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-2 sm:p-2.5 text-center">
-                      <span className="block text-2xl sm:text-3xl font-black font-sport text-amber-400">
+                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-2 sm:p-2.5 text-center shadow-inner">
+                      <span className="block text-xl sm:text-3xl font-black font-sport text-amber-400 tabular-nums">
                         {String(timeLeft.hours).padStart(2, '0')}
                       </span>
-                      <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
+                      <span className="text-[8px] sm:text-[9px] font-mono text-slate-400 uppercase tracking-wider">
                         Ore
                       </span>
                     </div>
-                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-2 sm:p-2.5 text-center">
-                      <span className="block text-2xl sm:text-3xl font-black font-sport text-amber-400">
+                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-2 sm:p-2.5 text-center shadow-inner">
+                      <span className="block text-xl sm:text-3xl font-black font-sport text-amber-400 tabular-nums">
                         {String(timeLeft.minutes).padStart(2, '0')}
                       </span>
-                      <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
+                      <span className="text-[8px] sm:text-[9px] font-mono text-slate-400 uppercase tracking-wider">
                         Minuti
                       </span>
                     </div>
-                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-2 sm:p-2.5 text-center">
-                      <span className="block text-2xl sm:text-3xl font-black font-sport text-white animate-pulse">
+                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-2 sm:p-2.5 text-center shadow-inner">
+                      <span className="block text-xl sm:text-3xl font-black font-sport text-white animate-pulse tabular-nums">
                         {String(timeLeft.seconds).padStart(2, '0')}
                       </span>
-                      <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
+                      <span className="text-[8px] sm:text-[9px] font-mono text-slate-400 uppercase tracking-wider">
                         Secondi
                       </span>
                     </div>
