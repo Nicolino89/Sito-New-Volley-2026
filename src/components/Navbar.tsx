@@ -61,7 +61,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="bg-[#0A0B0E] border-b border-zinc-850 relative z-40 w-full select-none" id="site-branding-header">
+    <header className="bg-[#0A0B0E] border-b border-zinc-850 relative z-[60] w-full select-none" id="site-branding-header">
       
       {/* ========================================================================= */}
       {/* DESKTOP HEADER (Opzione 2C: Blocco Obliquo Giallo + Navigazione Estesa)    */}
