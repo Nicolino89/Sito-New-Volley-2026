@@ -13,7 +13,8 @@ import {
   db, 
   isDemoMode,
   OFFICIAL_NVA_LOGO,
-  getKnownTeamLogo
+  getKnownTeamLogo,
+  sortGiocatoriSquadra
 } from '../firebase-societa';
 import { collection, getDocs, query } from 'firebase/firestore';
 import { 
@@ -348,12 +349,15 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
     }
   }, [team?.id]);
 
-  // Filter athletes that belong to this team's roster (support both id_atleti and giocatori_ids)
+  // Filter and sort athletes belonging to this team's roster
+  // Regola federale: ordinati per numero di maglia crescente, liberi in fondo,
+  // atleti senza numero o con 0/1 ordinati alfabeticamente per cognome e nome
   const teamPlayers = React.useMemo(() => {
     if (!team) return [];
-    return giocatori.filter(p => 
+    const list = giocatori.filter(p => 
       team.id_atleti?.includes(p.id) || ((team as any).giocatori_ids || []).includes(p.id)
     );
+    return sortGiocatoriSquadra(list);
   }, [team, giocatori]);
 
   const [searchParams] = useSearchParams();

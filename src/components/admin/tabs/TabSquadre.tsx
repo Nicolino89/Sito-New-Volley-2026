@@ -41,6 +41,7 @@ import {
   getGenereSquadra,
   GenereSquadra,
   sortSquadreByImportance,
+  sortGiocatoriSquadra,
   db
 } from '../../../firebase-societa';
 import { collection, getDocs } from 'firebase/firestore';
@@ -283,7 +284,7 @@ export default function TabSquadre({
         matched.push(idMap.get(cleanId)!);
       }
     });
-    return matched;
+    return sortGiocatoriSquadra(matched);
   }, [giocatoriAll, activeSquad]);
 
   // Sincronizzazione automatica e pulizia degli ID orfani o duplicati dalla rosa della squadra attiva

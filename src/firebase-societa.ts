@@ -5017,4 +5017,91 @@ export async function salvaDirettaStreaming(config: Partial<DirettaStreaming>): 
   }
 }
 
+/**
+ * Riconosce se un ruolo corrisponde a Libero (es. 'Libero', 'libero', 'L', '2° Libero')
+ */
+export function isRuoloLibero(ruolo?: string): boolean {
+  if (!ruolo) return false;
+  const clean = ruolo.trim().toLowerCase();
+  return clean === 'l' || clean.includes('libero');
+}
+
+/**
+ * Ordina l'organico di una squadra secondo i requisiti societari e gli standard della pallavolo:
+ * 1. Giocatori di movimento (non liberi) ordinati per numero di maglia crescente (1, 2, 3...)
+ * 2. I Liberi vanno sempre in fondo alla rosa, ordinati tra di loro per numero di maglia crescente
+ * 3. Chi non ha numero valido o ha 0 / 1 identico per tutta la squadra riceve comunque un ordine alfabetico certo (Cognome, poi Nome)
+ */
+export function sortGiocatoriSquadra(giocatori: Giocatore[]): Giocatore[] {
+  return [...giocatori].sort((a, b) => {
+    // 1. I liberi vanno sempre in fondo
+    const isLibA = isRuoloLibero(a.ruolo);
+    const isLibB = isRuoloLibero(b.ruolo);
+    if (!isLibA && isLibB) return -1;
+    if (isLibA && !isLibB) return 1;
+
+    // 2. Lettura e normalizzazione numero di maglia
+    const rawNumA = (a as any).numero_maglia ?? (a as any).numero;
+    const rawNumB = (b as any).numero_maglia ?? (b as any).numero;
+
+    const numA = (rawNumA !== undefined && rawNumA !== null && rawNumA !== '') ? Number(rawNumA) : NaN;
+    const numB = (rawNumB !== undefined && rawNumB !== null && rawNumB !== '') ? Number(rawNumB) : NaN;
+
+    const hasNumA = !isNaN(numA) && numA > 0;
+    const hasNumB = !isNaN(numB) && numB > 0;
+
+    if (hasNumA && hasNumB) {
+      if (numA !== numB) {
+        return numA - numB;
+      }
+      // Se hanno lo stesso numero (es. form default a #1), ordina per cognome e poi nome
+      const cmpCognome = (a.cognome || '').localeCompare(b.cognome || '', 'it', { sensitivity: 'base' });
+      if (cmpCognome !== 0) return cmpCognome;
+      return (a.nome || '').localeCompare(b.nome || '', 'it', { sensitivity: 'base' });
+    }
+
+    // Chi ha un numero reale positivo viene prima di chi non ha numero o ha 0
+    if (hasNumA && !hasNumB) return -1;
+    if (!hasNumA && hasNumB) return 1;
+
+    // 3. Quelli senza numero o con 0: ordina per cognome e poi per nome
+    const cmpCognome = (a.cognome || '').localeCompare(b.cognome || '', 'it', { sensitivity: 'base' });
+    if (cmpCognome !== 0) return cmpCognome;
+    return (a.nome || '').localeCompare(b.nome || '', 'it', { sensitivity: 'base' });
+  });
+}
+
+/**
+ * Ordina il roster storico (archivio squadre) con la medesima logica:
+ * non-liberi ordinati per numero, liberi in fondo ordinati per numero,
+ * senza numero o con 0/1 ordinati alfabeticamente per nome.
+ */
+export function sortRosterStorico(roster: AtletaRosterStorico[]): AtletaRosterStorico[] {
+  return [...roster].sort((a, b) => {
+    const isLibA = isRuoloLibero(a.ruolo);
+    const isLibB = isRuoloLibero(b.ruolo);
+    if (!isLibA && isLibB) return -1;
+    if (isLibA && !isLibB) return 1;
+
+    const rawNumA = a.numero;
+    const rawNumB = b.numero;
+
+    const numA = (rawNumA !== undefined && rawNumA !== null && rawNumA !== ('' as any)) ? Number(rawNumA) : NaN;
+    const numB = (rawNumB !== undefined && rawNumB !== null && rawNumB !== ('' as any)) ? Number(rawNumB) : NaN;
+
+    const hasNumA = !isNaN(numA) && numA > 0;
+    const hasNumB = !isNaN(numB) && numB > 0;
+
+    if (hasNumA && hasNumB) {
+      if (numA !== numB) return numA - numB;
+      return (a.nome || '').localeCompare(b.nome || '', 'it', { sensitivity: 'base' });
+    }
+
+    if (hasNumA && !hasNumB) return -1;
+    if (!hasNumA && hasNumB) return 1;
+
+    return (a.nome || '').localeCompare(b.nome || '', 'it', { sensitivity: 'base' });
+  });
+}
+
 

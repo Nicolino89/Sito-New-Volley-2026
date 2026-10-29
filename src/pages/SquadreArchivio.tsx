@@ -37,6 +37,7 @@ import {
   getStoricoGiocatore,
   RecordStoricoCarriera,
   formatRuoloGiocatore,
+  sortRosterStorico,
   db
 } from '../firebase-societa';
 import { collection, getDocs } from 'firebase/firestore';
@@ -559,6 +560,10 @@ function CardSquadraStorica({
     return (squadra.roster || []).find(r => r.capitano);
   }, [squadra.roster]);
 
+  const sortedRoster = useMemo(() => {
+    return sortRosterStorico(squadra.roster || []);
+  }, [squadra.roster]);
+
   return (
     <article className="relative bg-[#0f1118] border-2 border-zinc-800/90 hover:border-amber-400/60 rounded-3xl overflow-hidden shadow-2xl transition-all duration-300 group">
       
@@ -758,7 +763,7 @@ function CardSquadraStorica({
             {/* TAB 1: ROSTER ATLETI */}
             {tabAttivo === 'roster' && (
               <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1 no-scrollbar">
-                {(squadra.roster || []).map((atleta, idx) => {
+                {sortedRoster.map((atleta, idx) => {
                   const match = findRegisteredPlayer(atleta, giocatori, squadreInCorso);
                   const isRegistered = !!match.giocatore;
 
@@ -912,6 +917,10 @@ function ModalLightboxFotoSquadra({ squadra, initialIndex = 0, onClose }: ModalL
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose, fotoList.length]);
 
+  const sortedRoster = useMemo(() => {
+    return sortRosterStorico(squadra.roster || []);
+  }, [squadra.roster]);
+
   return (
     <div 
       className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex flex-col justify-between p-4 sm:p-8 animate-fadeIn select-none overscroll-contain safe-bottom"
@@ -992,9 +1001,9 @@ function ModalLightboxFotoSquadra({ squadra, initialIndex = 0, onClose }: ModalL
       >
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-zinc-500 uppercase font-bold">Atleti in foto:</span>
-          {(squadra.roster || []).map((a, i) => (
+          {sortedRoster.map((a, i) => (
             <span key={i} className="text-zinc-300">
-              #{a.numero ?? '-'} {a.nome}{a.capitano ? ' (C)' : ''}{i < squadra.roster.length - 1 ? ' • ' : ''}
+              #{a.numero ?? '-'} {a.nome}{a.capitano ? ' (C)' : ''}{i < sortedRoster.length - 1 ? ' • ' : ''}
             </span>
           ))}
         </div>

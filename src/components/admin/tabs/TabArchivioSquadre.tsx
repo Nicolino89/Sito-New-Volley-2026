@@ -32,6 +32,7 @@ import {
   RosaSquadra, 
   Giocatore,
   formatRuoloGiocatore,
+  sortRosterStorico,
   db
 } from '../../../firebase-societa';
 import { 
@@ -237,7 +238,7 @@ export default function TabArchivioSquadre({
         secondo: sq.allenatori?.secondo || '',
         dirigente: sq.allenatori?.dirigente_accompagnatore || ''
       },
-      roster: rosterCostruito.length > 0 ? rosterCostruito : prev.roster
+      roster: rosterCostruito.length > 0 ? sortRosterStorico(rosterCostruito) : prev.roster
     }));
 
     showToast(`Dati importati da "${sq.nome_squadra}"!`, "info");
