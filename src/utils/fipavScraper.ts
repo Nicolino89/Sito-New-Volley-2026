@@ -3,7 +3,7 @@
  * Dedicated parser for crer.portalefipav.net, portalefipav.net, fipavromagna.it, and fipav-er.it
  */
 
-import { ProssimaGara, RigaClassifica, PartitaCampionato, OFFICIAL_NVA_LOGO, getKnownTeamLogo } from '../firebase-societa';
+import { ProssimaGara, RigaClassifica, PartitaCampionato, OFFICIAL_NVA_LOGO, getKnownTeamLogo, cleanTeamDisplayName } from '../firebase-societa';
 
 /**
  * Clean up strings
@@ -224,7 +224,7 @@ export function parseFipavHtml(
       const cells = rawTdList.map(td => cleanString(td.textContent || ''));
       if (cells.length >= 3) {
         const pos = parseInt(cells[0].replace(/[^\d]/g, ''), 10);
-        const teamName = cells[1];
+        const teamName = cleanTeamDisplayName(cells[1]);
         const punti = parseInt(cells[2].replace(/[^\d]/g, ''), 10) || 0;
         const giocate = cells[3] ? parseInt(cells[3].replace(/[^\d]/g, ''), 10) || 0 : 0;
         const vinte = cells[4] ? parseInt(cells[4].replace(/[^\d]/g, ''), 10) || 0 : 0;
@@ -271,7 +271,7 @@ export function parseFipavHtml(
 
       const firstNum = parseInt(cells[0].replace(/[^\d]/g, ''), 10);
       if (!isNaN(firstNum) && firstNum > 0 && firstNum < 30) {
-        const teamName = cells[1];
+        const teamName = cleanTeamDisplayName(cells[1]);
         const points = parseInt(cells[2].replace(/[^\d]/g, ''), 10);
 
         if (teamName && teamName.length >= 2 && !isNaN(points)) {

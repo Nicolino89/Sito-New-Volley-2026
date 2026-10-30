@@ -61,6 +61,9 @@ import {
   getSquadreAll,
   isSquadraMaschile,
   isSquadraFemminile,
+  OFFICIAL_NVA_LOGO,
+  getKnownTeamLogo,
+  cleanTeamDisplayName,
   // Types
   SocietaInfo,
   ConfigHome,
@@ -72,6 +75,7 @@ import {
 } from '../firebase-societa';
 import { sanitizeLuogoDisplay } from '../utils/fipavScraper';
 import { slugify } from './News';
+import TeamLogoBadge from '../components/TeamLogoBadge';
 
 declare module '../firebase-societa' {
   interface ConfigHome {
@@ -376,7 +380,7 @@ export default function Home({
   });
   const [hasUserSelectedCategory, setHasUserSelectedCategory] = useState<boolean>(false);
 
-  // Sincronizza automaticamente la categoria quando arrivano i dati aggiornati da Firestore
+  // Sincronizza automaticamente la categoria quando arrivano i dati aggiornati
   useEffect(() => {
     if (!hasUserSelectedCategory && prossimeGare && prossimeGare.length > 0) {
       setSelectedMatchCategory(getClosestMatchCategory(prossimeGare));
@@ -740,8 +744,100 @@ export default function Home({
   const heroBgPositionY = configHome?.heroBgPositionY !== undefined ? configHome.heroBgPositionY : '50';
   const heroAlignment = configHome?.hero_foto_url && (configHome as any).heroAlignment ? (configHome as any).heroAlignment : 'left';
 
+  // Calcolo dinamico della Prossima Gara: integra i calendari ufficiali delle rose squadre
+  // per assicurare che la card mostri sempre la prossima gara reale non terminata
+  const effectiveProssimeGare = React.useMemo(() => {
+    const list = [...(prossimeGare || [])];
+    const now = Date.now();
+
+    const getUpcomingForCategory = (cat: 'Serie D Maschile' | 'Serie D Femminile') => {
+      const isM = cat === 'Serie D Maschile';
+      const team = squadreList.find(s => {
+        const matchGenere = isM ? isSquadraMaschile(s) : isSquadraFemminile(s);
+        const name = (s.nome_squadra || '').toUpperCase();
+        const camp = (s.campionato || '').toUpperCase();
+        const isSerieD = s.category === 'SERIE_D' || name.includes('SERIE D') || camp.includes('SERIE D');
+        return matchGenere && isSerieD;
+      });
+
+      if (!team || !team.partite || team.partite.length === 0) return null;
+
+      // Trova la prima gara non terminata
+      const unplayed = team.partite.find(p => !p.terminata);
+      if (!unplayed) return null;
+
+      const oppName = cleanTeamDisplayName(unplayed.avversario);
+      const garaObj: ProssimaGara = {
+        id: isM ? 'serie_d_maschile' : 'serie_d_femminile',
+        categoria: cat,
+        avversario: oppName,
+        data_ora: `${unplayed.data} ${unplayed.ora}`,
+        luogo: unplayed.luogo || (unplayed.casa ? 'PalaMaroncelli, Forlì' : 'Trasferta'),
+        link_mappa: unplayed.link_mappa || '',
+        giornata: unplayed.giornata || '',
+        casa: unplayed.casa,
+        punti_nva: null,
+        punti_avversario: null,
+        logo_avversario: unplayed.logo_avversario || getKnownTeamLogo(oppName) || '',
+        logo_casa: unplayed.casa ? OFFICIAL_NVA_LOGO : (unplayed.logo_casa || unplayed.logo_avversario || getKnownTeamLogo(oppName) || ''),
+        logo_nva: OFFICIAL_NVA_LOGO
+      };
+      return garaObj;
+    };
+
+    // Aggiorna Serie D Maschile
+    const dynamicM = getUpcomingForCategory('Serie D Maschile');
+    const existingMIdx = list.findIndex(g => g?.categoria === 'Serie D Maschile');
+    if (dynamicM) {
+      if (existingMIdx >= 0) {
+        const existingM = list[existingMIdx];
+        const existingDate = parseMatchDate(existingM?.data_ora);
+        if (!existingDate || (existingDate.getTime() + 3 * 3600 * 1000 < now) || existingM.giornata !== dynamicM.giornata) {
+          list[existingMIdx] = dynamicM;
+        }
+      } else {
+        list.push(dynamicM);
+      }
+    }
+
+    // Aggiorna Serie D Femminile
+    const dynamicF = getUpcomingForCategory('Serie D Femminile');
+    const existingFIdx = list.findIndex(g => g?.categoria === 'Serie D Femminile');
+    if (dynamicF) {
+      if (existingFIdx >= 0) {
+        const existingF = list[existingFIdx];
+        const existingDate = parseMatchDate(existingF?.data_ora);
+        if (!existingDate || (existingDate.getTime() + 3 * 3600 * 1000 < now) || existingF.giornata !== dynamicF.giornata) {
+          list[existingFIdx] = dynamicF;
+        }
+      } else {
+        list.push(dynamicF);
+      }
+    }
+
+    return list;
+  }, [prossimeGare, squadreList]);
+
+  // Sincronizza automaticamente la categoria al caricamento dei calendari
+  useEffect(() => {
+    if (!hasUserSelectedCategory && effectiveProssimeGare && effectiveProssimeGare.length > 0) {
+      setSelectedMatchCategory(getClosestMatchCategory(effectiveProssimeGare));
+    }
+  }, [effectiveProssimeGare, hasUserSelectedCategory]);
+
+  // Auto-sync a Firestore matches/ quando loggati come admin
+  useEffect(() => {
+    if (currentUser && effectiveProssimeGare && effectiveProssimeGare.length > 0) {
+      effectiveProssimeGare.forEach(gara => {
+        if (gara && gara.id) {
+          updateProssimaGara(gara).catch(() => {});
+        }
+      });
+    }
+  }, [currentUser, effectiveProssimeGare]);
+
   // Get active match for view rendering
-  const activeGara = prossimeGare.find(g => g?.categoria === (selectedMatchCategory === 'D Maschile' ? "Serie D Maschile" : "Serie D Femminile")) || prossimeGare[0];
+  const activeGara = effectiveProssimeGare.find(g => g?.categoria === (selectedMatchCategory === 'D Maschile' ? "Serie D Maschile" : "Serie D Femminile")) || effectiveProssimeGare[0];
 
   // Navigazione diretta alla classifica della squadra di Serie D selezionata
   const handleGoToClassifica = () => {
@@ -978,41 +1074,87 @@ export default function Home({
                   </div>
 
                   {/* Squadre */}
-                  <div className="py-4 space-y-3">
-                    {/* Squadra 1 */}
-                    <div className="flex items-center justify-between bg-zinc-950/60 p-3 rounded-xl border border-zinc-800/80">
-                      <div className="flex items-center gap-2.5">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                          activeGara ? (activeGara.casa ? 'bg-[#FFE600] text-zinc-950' : 'bg-zinc-800 text-zinc-300') : 'bg-[#FFE600] text-zinc-950'
-                        }`}>
-                          {activeGara ? (activeGara.casa ? 'Casa' : 'Ospiti') : 'Casa'}
-                        </span>
-                        <span className="font-bold text-sm sm:text-base text-white uppercase tracking-wide truncate max-w-[180px] sm:max-w-none">
-                          {activeGara ? (activeGara.casa ? (societaSettings?.navbarTitleDraft ?? societaSettings?.navbarTitle ?? "NEW VOLLEY ACADEMY") : activeGara.avversario) : "NEW VOLLEY ACADEMY"}
-                        </span>
-                      </div>
-                      <span className="text-base font-bold text-brand-yellow">
-                        {activeGara?.punti_nva !== null && activeGara?.punti_nva !== undefined ? activeGara.punti_nva : "-"}
-                      </span>
-                    </div>
+                  {(() => {
+                    const isNvaCasa = activeGara ? activeGara.casa : true;
+                    const nvaName = societaSettings?.navbarTitleDraft ?? societaSettings?.navbarTitle ?? "NEW VOLLEY ACADEMY";
+                    const nvaLogo = activeGara?.logo_nva || OFFICIAL_NVA_LOGO;
+                    const nvaScore = activeGara?.punti_nva !== null && activeGara?.punti_nva !== undefined ? activeGara.punti_nva : "-";
 
-                    {/* Squadra 2 */}
-                    <div className="flex items-center justify-between bg-zinc-950/60 p-3 rounded-xl border border-zinc-800/80">
-                      <div className="flex items-center gap-2.5">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                          activeGara ? (!activeGara.casa ? 'bg-[#FFE600] text-zinc-950' : 'bg-zinc-800 text-zinc-300') : 'bg-zinc-800 text-zinc-300'
+                    const oppRawName = activeGara?.avversario || "RAINBOW EMMECI FC";
+                    const oppName = cleanTeamDisplayName(oppRawName);
+                    const oppLogo = activeGara?.logo_avversario || getKnownTeamLogo(oppName);
+                    const oppScore = activeGara?.punti_avversario !== null && activeGara?.punti_avversario !== undefined ? activeGara.punti_avversario : "-";
+
+                    const team1 = isNvaCasa 
+                      ? { label: 'Casa', name: nvaName, logo: nvaLogo, isNva: true, score: nvaScore }
+                      : { label: 'Casa', name: oppName, logo: oppLogo, isNva: false, score: oppScore };
+
+                    const team2 = isNvaCasa
+                      ? { label: 'Ospiti', name: oppName, logo: oppLogo, isNva: false, score: oppScore }
+                      : { label: 'Ospiti', name: nvaName, logo: nvaLogo, isNva: true, score: nvaScore };
+
+                    return (
+                      <div className="py-4 space-y-3">
+                        {/* Squadra 1 (Casa) */}
+                        <div className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
+                          team1.isNva ? 'bg-zinc-950/80 border-amber-500/30' : 'bg-zinc-950/50 border-zinc-800/80'
                         }`}>
-                          {activeGara ? (!activeGara.casa ? 'Casa' : 'Ospiti') : 'Ospiti'}
-                        </span>
-                        <span className="font-bold text-sm sm:text-base text-zinc-300 uppercase tracking-wide truncate max-w-[180px] sm:max-w-none">
-                          {activeGara ? (!activeGara.casa ? (societaSettings?.navbarTitleDraft ?? societaSettings?.navbarTitle ?? "NEW VOLLEY ACADEMY") : activeGara.avversario) : "RAINBOW EMMECI FC"}
-                        </span>
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className={`px-2 py-0.5 rounded text-[10px] uppercase flex-shrink-0 ${
+                              team1.isNva ? 'bg-[#FFE600] text-zinc-950 font-black' : 'bg-zinc-800 text-zinc-300 font-bold'
+                            }`}>
+                              {team1.label}
+                            </span>
+                            <TeamLogoBadge
+                              teamName={team1.name}
+                              logoUrl={team1.logo}
+                              size="sm"
+                              isMyTeam={team1.isNva}
+                            />
+                            <span className={`text-sm sm:text-base font-bold uppercase tracking-wide truncate ${
+                              team1.isNva ? 'text-white' : 'text-zinc-300'
+                            }`}>
+                              {team1.name}
+                            </span>
+                          </div>
+                          <span className={`text-base font-bold flex-shrink-0 ml-3 ${
+                            team1.isNva ? 'text-[#FFE600]' : 'text-zinc-400'
+                          }`}>
+                            {team1.score}
+                          </span>
+                        </div>
+
+                        {/* Squadra 2 (Ospiti) */}
+                        <div className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
+                          team2.isNva ? 'bg-zinc-950/80 border-amber-500/30' : 'bg-zinc-950/50 border-zinc-800/80'
+                        }`}>
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className={`px-2 py-0.5 rounded text-[10px] uppercase flex-shrink-0 ${
+                              team2.isNva ? 'bg-[#FFE600] text-zinc-950 font-black' : 'bg-zinc-800 text-zinc-300 font-bold'
+                            }`}>
+                              {team2.label}
+                            </span>
+                            <TeamLogoBadge
+                              teamName={team2.name}
+                              logoUrl={team2.logo}
+                              size="sm"
+                              isMyTeam={team2.isNva}
+                            />
+                            <span className={`text-sm sm:text-base font-bold uppercase tracking-wide truncate ${
+                              team2.isNva ? 'text-white' : 'text-zinc-300'
+                            }`}>
+                              {team2.name}
+                            </span>
+                          </div>
+                          <span className={`text-base font-bold flex-shrink-0 ml-3 ${
+                            team2.isNva ? 'text-[#FFE600]' : 'text-zinc-400'
+                          }`}>
+                            {team2.score}
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-base font-bold text-zinc-400">
-                        {activeGara?.punti_avversario !== null && activeGara?.punti_avversario !== undefined ? activeGara.punti_avversario : "-"}
-                      </span>
-                    </div>
-                  </div>
+                    );
+                  })()}
 
                   {/* Match Footer Info con Link Diretto a Google Maps */}
                   <div className="pt-3 border-t border-zinc-800 flex items-center justify-between text-[11px] text-zinc-400">

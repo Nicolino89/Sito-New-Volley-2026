@@ -14,8 +14,10 @@ import {
   isDemoMode,
   OFFICIAL_NVA_LOGO,
   getKnownTeamLogo,
-  sortGiocatoriSquadra
+  sortGiocatoriSquadra,
+  cleanTeamDisplayName
 } from '../firebase-societa';
+import TeamLogoBadge from '../components/TeamLogoBadge';
 import { collection, getDocs, query } from 'firebase/firestore';
 import { 
   ArrowLeft, 
@@ -807,10 +809,17 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                             })()}
                           </div>
                           
-                          <h3 className="text-lg font-barlow font-bold uppercase tracking-wide text-zinc-950">
-                            {match.casa 
-                              ? `${team.nome_visualizzato_gare || team.nome_squadra || 'NVA'} vs ${match.avversario}` 
-                              : `${match.avversario} vs ${team.nome_visualizzato_gare || team.nome_squadra || 'NVA'}`}
+                          <h3 className="text-lg font-barlow font-bold uppercase tracking-wide text-zinc-950 flex items-center gap-2 flex-wrap">
+                            <TeamLogoBadge 
+                              teamName={match.avversario}
+                              logoUrl={match.logo_avversario}
+                              size="sm"
+                            />
+                            <span>
+                              {match.casa 
+                                ? `${team.nome_visualizzato_gare || team.nome_squadra || 'NVA'} vs ${cleanTeamDisplayName(match.avversario)}` 
+                                : `${cleanTeamDisplayName(match.avversario)} vs ${team.nome_visualizzato_gare || team.nome_squadra || 'NVA'}`}
+                            </span>
                           </h3>
 
                           {match.parzialiSet && (
@@ -945,18 +954,16 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                             <td className="p-3.5 text-center font-bold text-sm">
                               {row.pos}
                             </td>
-                            <td className="p-3.5 font-sport uppercase text-sm tracking-wide flex items-center gap-2">
-                              {((row.logo && row.logo !== '/logo.png') || isMyTeam || getKnownTeamLogo(row.squadra)) ? (
-                                <img 
-                                  src={isMyTeam ? OFFICIAL_NVA_LOGO : ((row.logo && row.logo !== '/logo.png') ? row.logo : (getKnownTeamLogo(row.squadra) || OFFICIAL_NVA_LOGO))} 
-                                  alt={row.squadra} 
-                                  className="w-5 h-5 object-contain shrink-0" 
-                                  onError={(e) => { (e.target as any).style.display = 'none'; }}
-                                />
-                              ) : null}
-                              <span>{row.squadra}</span>
+                            <td className="p-3.5 font-sport uppercase text-sm tracking-wide flex items-center gap-2.5">
+                              <TeamLogoBadge
+                                teamName={row.squadra}
+                                logoUrl={row.logo}
+                                isMyTeam={isMyTeam}
+                                size="sm"
+                              />
+                              <span className="truncate">{cleanTeamDisplayName(row.squadra)}</span>
                               {isMyTeam && (
-                                <span className="bg-black text-brand-yellow text-[9px] font-sans font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                <span className="bg-black text-brand-yellow text-[9px] font-sans font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0">
                                   {team.nome_visualizzato_gare || team.nome_squadra || 'IL NOSTRO CLUB'}
                                 </span>
                               )}

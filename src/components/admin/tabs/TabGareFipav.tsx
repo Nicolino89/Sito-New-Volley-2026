@@ -32,8 +32,10 @@ import {
   getGenereSquadra,
   sortSquadreByImportance,
   OFFICIAL_NVA_LOGO,
-  getKnownTeamLogo
+  getKnownTeamLogo,
+  cleanTeamDisplayName
 } from '../../../firebase-societa';
+import TeamLogoBadge from '../../TeamLogoBadge';
 import { scrapeFipavFullData, parseFipavHtml, sanitizeLuogoDisplay, mergePartite } from '../../../utils/fipavScraper';
 
 
@@ -257,6 +259,27 @@ export default function TabGareFipav({
           tipo_classifica: 'FIPAV_SYNC',
           link_esterno_classifica: linkEsterno || fipavUrl || res.detectedUrl || activeTeam.fipav_url
         } as any);
+
+        // Aggiorna anche la Prossima Gara sulla Home con la prima non disputata del calendario
+        const upcoming = (partite || []).find(p => !p.terminata);
+        if (upcoming && activeTeam.nome_squadra.toLowerCase().includes('serie d')) {
+          const isMaschile = getGenereSquadra(activeTeam) === 'M';
+          await updateProssimaGara({
+            id: isMaschile ? 'serie_d_maschile' : 'serie_d_femminile',
+            categoria: isMaschile ? 'Serie D Maschile' : 'Serie D Femminile',
+            avversario: cleanTeamDisplayName(upcoming.avversario),
+            data_ora: `${upcoming.data} ${upcoming.ora}`,
+            luogo: upcoming.luogo || 'PalaMaroncelli, Forlì',
+            link_mappa: upcoming.link_mappa || '',
+            giornata: upcoming.giornata,
+            casa: upcoming.casa,
+            punti_nva: null,
+            punti_avversario: null,
+            logo_avversario: upcoming.logo_avversario || getKnownTeamLogo(upcoming.avversario) || '',
+            logo_casa: upcoming.casa ? OFFICIAL_NVA_LOGO : (upcoming.logo_casa || upcoming.logo_avversario || getKnownTeamLogo(upcoming.avversario) || ''),
+            logo_nva: OFFICIAL_NVA_LOGO
+          });
+        }
 
         await loadAllData();
         setShowHtmlPaste(false);

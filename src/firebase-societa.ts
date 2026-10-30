@@ -4938,9 +4938,33 @@ export interface DirettaStreaming {
 
 export const OFFICIAL_NVA_LOGO = 'https://firebasestorage.googleapis.com/v0/b/new-volley-academy.firebasestorage.app/o/settings%2Flogo_1783320543830.webp?alt=media&token=1311d811-745b-44ae-af58-326e4add2e02';
 
+/**
+ * Pulisce il nome della squadra rimuovendo eventuali simboli di trend/variazione FIPAV
+ * (es. '— SENZASPINE DINAMO' -> 'SENZASPINE DINAMO', '▲ VOLLEY CESENA' -> 'VOLLEY CESENA')
+ */
+export function cleanTeamDisplayName(rawName?: string | null): string {
+  if (!rawName) return '';
+  return rawName
+    .replace(/^[\s\u2010-\u2015\-=\u25B2\u25BC\u25B4\u25BE\u2191\u2193\d\.\s]+/, '')
+    .trim();
+}
+
+/**
+ * Ricava le iniziali (2 lettere) per generare lo scudetto / badge grafico della squadra
+ */
+export function getTeamInitials(name?: string | null): string {
+  if (!name) return 'VB';
+  const clean = cleanTeamDisplayName(name);
+  const words = clean.split(/\s+/).filter(w => w.length > 1 && !['DI', 'DEL', 'DELLA', 'DA', 'IN', 'IL', 'LA', 'LE', 'FC', 'BO', 'RA', 'RN', 'FE', 'MO', 'RE', 'A.S.D.', 'ASD', 'SSD'].includes(w.toUpperCase()));
+  if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+  return clean.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || 'VB';
+}
+
 export function getKnownTeamLogo(teamName?: string | null): string {
   if (!teamName) return '';
-  const clean = teamName.toUpperCase().trim();
+  const clean = cleanTeamDisplayName(teamName).toUpperCase().trim();
   if (clean.includes('NEW VOLLEY') || clean.includes('NVA') || clean.includes('SALFEP')) {
     return OFFICIAL_NVA_LOGO;
   }
