@@ -53,7 +53,6 @@ export default function TeamLogoBadge({
         src={finalLogoUrl}
         alt={cleanName}
         referrerPolicy="no-referrer"
-        crossOrigin="anonymous"
         className={`${sizeClasses} object-contain shrink-0 ${className}`}
         loading="lazy"
         decoding="async"

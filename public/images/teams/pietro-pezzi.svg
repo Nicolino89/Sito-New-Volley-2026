@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0c2340"/>
+      <stop offset="100%" stop-color="#1b365d"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f9d423"/>
+      <stop offset="100%" stop-color="#ff4e50"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield outline -->
+  <path d="M 100 10 L 175 40 L 175 110 C 175 155 100 190 100 190 C 100 190 25 155 25 110 L 25 40 Z" fill="url(#bgGrad)" stroke="#f9d423" stroke-width="6"/>
+  <!-- Inner border -->
+  <path d="M 100 22 L 163 47 L 163 108 C 163 146 100 176 100 176 C 100 176 37 146 37 108 L 37 47 Z" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.4"/>
+  <!-- Volleyball seams (stylized) -->
+  <circle cx="100" cy="90" r="38" fill="none" stroke="#f9d423" stroke-width="3"/>
+  <path d="M 68 80 C 85 85 95 105 100 128" fill="none" stroke="#f9d423" stroke-width="2.5"/>
+  <path d="M 132 80 C 115 85 105 105 100 128" fill="none" stroke="#f9d423" stroke-width="2.5"/>
+  <path d="M 85 58 C 98 75 115 75 130 65" fill="none" stroke="#f9d423" stroke-width="2.5"/>
+  <!-- Monogram text -->
+  <text x="100" y="98" font-family="Arial, sans-serif" font-weight="900" font-size="28" fill="#ffffff" text-anchor="middle" letter-spacing="1">PP</text>
+  <!-- Banner text -->
+  <text x="100" y="152" font-family="Arial, sans-serif" font-weight="800" font-size="12" fill="#f9d423" text-anchor="middle" letter-spacing="1.5">RAVENNA</text>
+</svg>

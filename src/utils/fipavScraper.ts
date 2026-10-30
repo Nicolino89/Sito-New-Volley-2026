@@ -296,7 +296,8 @@ export function parseFipavHtml(
             perse,
             setVinti,
             setPersi,
-            isMyTeam
+            isMyTeam,
+            logo: isMyTeam ? OFFICIAL_NVA_LOGO : (getKnownTeamLogo(teamName) || '')
           });
         }
       }
@@ -314,7 +315,7 @@ export function parseFipavHtml(
       if (parts.length >= 3) {
         const firstNum = parseInt(parts[0].replace(/[^\d]/g, ''), 10);
         if (!isNaN(firstNum) && firstNum > 0 && firstNum <= 30) {
-          const teamName = parts[1];
+          const teamName = cleanTeamDisplayName(parts[1]);
           const points = parseInt(parts[2].replace(/[^\d]/g, ''), 10);
           if (teamName && teamName.length >= 2 && !isNaN(points) && !teamName.toLowerCase().includes('squadra')) {
             const giocate = parts[3] ? parseInt(parts[3].replace(/[^\d]/g, ''), 10) || 0 : 0;
@@ -336,7 +337,8 @@ export function parseFipavHtml(
               perse,
               setVinti,
               setPersi,
-              isMyTeam
+              isMyTeam,
+              logo: isMyTeam ? OFFICIAL_NVA_LOGO : (getKnownTeamLogo(teamName) || '')
             });
           }
         }

@@ -4965,18 +4965,87 @@ export function getTeamInitials(name?: string | null): string {
 export function getKnownTeamLogo(teamName?: string | null): string {
   if (!teamName) return '';
   const clean = cleanTeamDisplayName(teamName).toUpperCase().trim();
+
+  // 1. New Volley Academy
   if (clean.includes('NEW VOLLEY') || clean.includes('NVA') || clean.includes('SALFEP')) {
     return OFFICIAL_NVA_LOGO;
   }
+
+  // 2. Fenix Faenza
   if (clean.includes('FENIX') || clean.includes('FAENZA')) {
     return '/images/teams/fenix-faenza.png';
   }
+
+  // 3. Pallavolo Alfonsine
   if (clean.includes('ALFONSINE') || clean.includes('ALFOVOLLEY')) {
     return '/images/teams/alfonsine.png';
   }
-  if (clean.includes('RUBICONE')) {
-    return 'https://www.rubiconeinvolley.it/wp-content/uploads/2018/01/logo-Rubicone-In-Volley-72x72.png';
+
+  // 4. Dinamo Bellaria / Senzaspine
+  if (clean.includes('DINAMO') || clean.includes('SENZASPINE') || clean.includes('BELLARIA')) {
+    return '/images/teams/dinamo-bellaria.png';
   }
+
+  // 5. Sa.Ma. Portomaggiore
+  if (clean.includes('PORTOMAGGIORE') || clean.includes('SA.MA') || clean.includes('SAMA')) {
+    return '/images/teams/portomaggiore.png';
+  }
+
+  // 6. CPMI Savena Volley Pianoro
+  if (clean.includes('SAVENA') || clean.includes('CPMI')) {
+    return '/images/teams/savena-volley.png';
+  }
+
+  // 7. Pietro Pezzi Ravenna
+  if (clean.includes('PIETRO PEZZI') || clean.includes('PEZZI')) {
+    return '/images/teams/pietro-pezzi.png';
+  }
+
+  // 8. FOM Industrie / Viserba Volley Rimini
+  if (clean.includes('FOM') || clean.includes('VISERBA')) {
+    return '/images/teams/fom-viserba.png';
+  }
+
+  // 9. Rainbow Emmeci Forlimpopoli
+  if (clean.includes('RAINBOW') || clean.includes('EMMECI') || clean.includes('FORLIMPOPOLI')) {
+    return '/images/teams/rainbow-forlimpopoli.png';
+  }
+
+  // 10. BCC Romagnolo Cesena FC / Volley Club Cesena
+  if (clean.includes('CESENA') || clean.includes('ROMAGNOLO')) {
+    return '/images/teams/cesena-volley.png';
+  }
+
+  // 11. Arredo Uno SPX FE / San Pio X Ferrara
+  if (clean.includes('SPX') || clean.includes('SAN PIO') || clean.includes('ARREDO UNO')) {
+    return '/images/teams/san-pio-x.jpg';
+  }
+
+  // 12. Bogasport Bologna
+  if (clean.includes('BOGA') || clean.includes('BOGASPORT')) {
+    return '/images/teams/bogasport.webp';
+  }
+
+  // 13. Argenta Volley
+  if (clean.includes('ARGENTA')) {
+    return '/images/teams/argenta-volley.jpg';
+  }
+
+  // 14. Piumè San Marino / Beach & Park Volley
+  if (clean.includes('SAN MARINO') || clean.includes('PIUME') || clean.includes('PIUMÈ') || clean.includes('BEACH & PARK')) {
+    return '/images/teams/san-marino.png';
+  }
+
+  // 15. Pallavolo Bologna
+  if (clean.includes('PALLAVOLO BOLOGNA') || (clean.includes('BOLOGNA') && !clean.includes('BOGA') && !clean.includes('SAVENA'))) {
+    return '/images/teams/pallavolo-bologna.png';
+  }
+
+  // 16. Rubicone In Volley
+  if (clean.includes('RUBICONE')) {
+    return '/images/teams/rubicone.png';
+  }
+
   return '';
 }
 
