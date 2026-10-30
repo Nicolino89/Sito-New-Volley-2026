@@ -6,7 +6,8 @@ const STATIC_ASSETS = [
   '/icon-192.png',
   '/icon-512.png',
   '/apple-touch-icon.png',
-  '/logo.png'
+  '/logo.png',
+  '/favicon.ico'
 ];
 
 // Install Event: cache static shell with robust per-URL handling
