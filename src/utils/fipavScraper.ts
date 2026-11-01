@@ -179,7 +179,255 @@ export function extractLogoFromCell(td: Element | null | undefined, baseUrl: str
 }
 
 /**
- * Parse HTML content (from either portalefipav.net or fipavromagna.it / general FIPAV)
+ * Detect if the HTML belongs to Centro Sportivo Italiano (CSI Live)
+ */
+export function isCsiHtml(html: string): boolean {
+  if (!html) return false;
+  const lower = html.toLowerCase();
+  return (
+    lower.includes('centrosportivoitaliano.it') ||
+    lower.includes('csi l!ve') ||
+    lower.includes('csi-live') ||
+    lower.includes('label-giornata') ||
+    lower.includes('sticky-col pos-col position') ||
+    (lower.includes('/modulistica/logo/') && lower.includes('row-card'))
+  );
+}
+
+/**
+ * Dedicated parser for Centro Sportivo Italiano (CSI Live)
+ * Handles live.centrosportivoitaliano.it schedules, standings, venues and club logos
+ */
+export function parseCsiHtml(
+  html: string,
+  myTeamName: string = "New Volley Academy",
+  customOfficialName?: string
+): {
+  classifica: RigaClassifica[];
+  partite: PartitaCampionato[];
+  prossimaGara: ProssimaGara | null;
+  detectedUrl?: string;
+} {
+  const isMatchMyTeam = (name: string): boolean => {
+    if (!name) return false;
+    const n = name.toLowerCase().trim();
+    if (customOfficialName && customOfficialName.trim()) {
+      const c = customOfficialName.toLowerCase().trim();
+      if (n === c || n.includes(c) || c.includes(n)) return true;
+    }
+    if (myTeamName) {
+      const m = myTeamName.toLowerCase().trim();
+      if (n === m || n.includes(m) || m.includes(n)) return true;
+    }
+    return isNvaTeam(name, customOfficialName, myTeamName);
+  };
+
+  const classifica: RigaClassifica[] = [];
+  const teamLogosMap: Record<string, string> = {};
+
+  // 1. Auto-detect exact CSI page URL if present in navigation link
+  let detectedUrl: string | undefined = undefined;
+  const urlMatch = html.match(/href=["'](\/[^"']*\/[A-Z0-9]+\/\?j=[^"']+)["'][^>]*>([^<]+)<\/a>/i);
+  if (urlMatch) {
+    detectedUrl = `https://live.centrosportivoitaliano.it${urlMatch[1]}`;
+  }
+
+  // Helper to extract CSI venue
+  const extractCsiVenue = (cardStr: string): string => {
+    const m = cardStr.match(/class=["']btn btn-gara["'][^>]*data-bs-title=["']([^"']+)["']/i)
+      || cardStr.match(/data-bs-title=["']([^"']*(?:Via|Palazzetto|Palestra|Pal\.|Pala)[^"']*)["']/i);
+    if (!m) return "Palasport";
+    return m[1].replace(/\s*\([A-Z0-9]+\)\s*$/i, "").trim();
+  };
+
+  // Helper to extract CSI alert note
+  const extractCsiAlert = (cardStr: string): string | undefined => {
+    const m = cardStr.match(/data-bs-title=["'](Variazione[^"']+)["']/i);
+    return m ? m[1].trim() : undefined;
+  };
+
+  // 2. PARSE STANDINGS TABLE
+  const tableStart = html.indexOf('<table');
+  if (tableStart !== -1) {
+    const tableEnd = html.indexOf('</table>', tableStart);
+    const tableHtml = html.slice(tableStart, tableEnd !== -1 ? tableEnd + 8 : undefined);
+    const trMatches = tableHtml.split(/<tr[^>]*>/i).slice(1);
+
+    for (const tr of trMatches) {
+      if (tr.includes('<th')) continue; // Skip header
+
+      const posMatch = tr.match(/class=["']sticky-col pos-col position["']>(\d+)/i) || tr.match(/<td[^>]*>(\d+)<\/td>/i);
+      const pos = posMatch ? parseInt(posMatch[1], 10) : 0;
+
+      const logoMatch = tr.match(/<img[^>]+src=["']([^"']+)["']/i);
+      const logo = logoMatch ? logoMatch[1] : '';
+
+      const nameMatch = tr.match(/<span>([^<]+)<\/span><\/a>/i) || tr.match(/<a[^>]*>[\s\S]*?<span>([^<]+)<\/span>/i);
+      const rawName = nameMatch ? cleanTeamDisplayName(nameMatch[1]) : '';
+      if (!rawName) continue;
+
+      if (logo) {
+        teamLogosMap[rawName.toUpperCase()] = logo;
+      }
+
+      const tdStats = tr.match(/<td class=["']stats-cell[^>]*>([\s\S]*?)<\/td>/gi) || [];
+      const statValues = tdStats.map(td => td.replace(/<[^>]+>/g, '').trim());
+
+      const punti = parseInt(statValues[0] || '0', 10) || 0;
+      const giocate = parseInt(statValues[1] || '0', 10) || 0;
+      const vinte = parseInt(statValues[2] || '0', 10) || 0;
+      const perse = parseInt(statValues[3] || '0', 10) || 0;
+      const setVinti = parseInt(statValues[4] || '0', 10) || 0;
+      const setPersi = parseInt(statValues[5] || '0', 10) || 0;
+
+      const isMyTeam = isMatchMyTeam(rawName);
+
+      if (pos > 0) {
+        classifica.push({
+          pos,
+          squadra: rawName,
+          punti,
+          giocate,
+          vinte,
+          perse,
+          setVinti,
+          setPersi,
+          isMyTeam,
+          logo: isMyTeam ? OFFICIAL_NVA_LOGO : (logo || getKnownTeamLogo(rawName) || '')
+        });
+      }
+    }
+  }
+
+  // 3. PARSE MATCH SCHEDULE & RESULTS
+  const partite: PartitaCampionato[] = [];
+  const gRegex = /<div class=["']label-giornata[^>]*>([\s\S]*?)<\/div>/gi;
+  const sections: { title: string; index: number }[] = [];
+  let gMatch: RegExpExecArray | null;
+
+  while ((gMatch = gRegex.exec(html)) !== null) {
+    sections.push({
+      title: cleanString(gMatch[1].replace(/<[^>]+>/g, ' ')),
+      index: gMatch.index
+    });
+  }
+
+  // Calculate andata giornate count for sequential numbering
+  const andataCount = sections.filter(s => s.title.toLowerCase().includes('andata')).length || 7;
+
+  let matchCounter = 1;
+  for (let i = 0; i < sections.length; i++) {
+    const cur = sections[i];
+    const nxt = sections[i + 1] ? sections[i + 1].index : (tableStart !== -1 ? tableStart : html.length);
+    const chunk = html.slice(cur.index, nxt);
+
+    const isRitorno = cur.title.toLowerCase().includes('ritorno');
+    const numMatch = cur.title.match(/giornata\s+(\d+)/i);
+    let giornataNum = numMatch ? parseInt(numMatch[1], 10) : i + 1;
+    if (isRitorno && numMatch && andataCount > 0) {
+      giornataNum = andataCount + parseInt(numMatch[1], 10);
+    }
+    const giornataLabel = `${giornataNum}ª Giornata`;
+
+    const cards = chunk.split(/class=["']row-card["']/i).slice(1);
+    for (const card of cards) {
+      const teams = Array.from(card.matchAll(/class=["']nome-squadra["']>([^<]+)<\/span>/gi)).map(m => cleanTeamDisplayName(m[1]));
+      const homeTeam = teams[0] || '';
+      const awayTeam = teams[1] || '';
+
+      const isHome = isMatchMyTeam(homeTeam);
+      const isAway = isMatchMyTeam(awayTeam);
+
+      if (isHome || isAway) {
+        const dateMatch = card.match(/<span>(\d{2}\/\d{2}\/\d{2,4})<\/span>\s*<span[^>]*>(\d{1,2}:\d{2})<\/span>/i);
+        const data = dateMatch ? dateMatch[1] : '';
+        const ora = dateMatch ? dateMatch[2] : '';
+
+        const logos = Array.from(card.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)).map(m => m[1]);
+        const homeLogo = logos[0] || teamLogosMap[homeTeam.toUpperCase()] || getKnownTeamLogo(homeTeam) || '';
+        const awayLogo = logos[1] || teamLogosMap[awayTeam.toUpperCase()] || getKnownTeamLogo(awayTeam) || '';
+
+        const opponent = isHome ? awayTeam : homeTeam;
+        const opponentLogo = isHome ? awayLogo : homeLogo;
+        const luogo = extractCsiVenue(card);
+        const note = extractCsiAlert(card);
+
+        // Scores
+        const scoreMatches = Array.from(card.matchAll(/<div class=["']d-flex flex-column\s*["']>\s*<span>([^<]+)<\/span>\s*<span>([^<]+)<\/span>/gi));
+        let setNva: number | null = null;
+        let setAvversario: number | null = null;
+        let terminata = false;
+
+        if (scoreMatches.length > 0) {
+          const s1 = scoreMatches[0][1].trim();
+          const s2 = scoreMatches[0][2].trim();
+          if (s1 !== '-' && s2 !== '-' && !isNaN(parseInt(s1, 10)) && !isNaN(parseInt(s2, 10))) {
+            const h = parseInt(s1, 10);
+            const a = parseInt(s2, 10);
+            setNva = isHome ? h : a;
+            setAvversario = isHome ? a : h;
+            terminata = true;
+          }
+        }
+
+        partite.push({
+          id: `p_csi_${matchCounter++}_${Date.now()}`,
+          giornata: giornataLabel,
+          data,
+          ora,
+          avversario: opponent,
+          casa: isHome,
+          luogo,
+          link_mappa: luogo ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(luogo)}` : '',
+          risultato: terminata ? `${setNva} - ${setAvversario}` : '',
+          setNva,
+          setAvversario,
+          parzialiSet: '',
+          terminata,
+          logo_casa: isHome ? OFFICIAL_NVA_LOGO : opponentLogo,
+          logo_ospite: isHome ? opponentLogo : OFFICIAL_NVA_LOGO,
+          logo_avversario: opponentLogo,
+          note
+        });
+      }
+    }
+  }
+
+  // 4. NEXT MATCH
+  let prossimaGara: ProssimaGara | null = null;
+  const unplayed = partite.find(p => !p.terminata);
+  if (unplayed) {
+    const oppLogo = unplayed.logo_avversario || teamLogosMap[unplayed.avversario.toUpperCase()] || getKnownTeamLogo(unplayed.avversario) || '';
+    prossimaGara = {
+      id: myTeamName.toLowerCase().includes('femm') ? 'serie_d_femminile' : 'serie_d_maschile',
+      categoria: myTeamName.toLowerCase().includes('femm') ? 'Serie D Femminile' : 'Serie D Maschile',
+      avversario: unplayed.avversario,
+      data_ora: `${unplayed.data} ${unplayed.ora}`,
+      luogo: unplayed.luogo,
+      giornata: unplayed.giornata,
+      casa: unplayed.casa,
+      punti_nva: null,
+      punti_avversario: null,
+      link_mappa: unplayed.link_mappa,
+      logo_avversario: oppLogo,
+      logo_casa: unplayed.casa ? OFFICIAL_NVA_LOGO : oppLogo,
+      logo_ospite: unplayed.casa ? oppLogo : OFFICIAL_NVA_LOGO,
+      logo_nva: OFFICIAL_NVA_LOGO
+    };
+  }
+
+  const sortedClassifica = Array.from(new Map(classifica.map(item => [item.pos, item])).values()).sort((a, b) => a.pos - b.pos);
+
+  return {
+    classifica: sortedClassifica,
+    partite,
+    prossimaGara,
+    detectedUrl
+  };
+}
+
+/**
+ * Parse HTML content (from either portalefipav.net, fipavromagna.it, general FIPAV or CSI Live)
  */
 export function parseFipavHtml(
   html: string, 
@@ -191,6 +439,11 @@ export function parseFipavHtml(
   prossimaGara: ProssimaGara | null;
   detectedUrl?: string;
 } {
+  // Auto-dispatch if this is a CSI page
+  if (isCsiHtml(html)) {
+    return parseCsiHtml(html, myTeamName, customOfficialName);
+  }
+
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
 

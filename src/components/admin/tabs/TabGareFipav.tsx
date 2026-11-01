@@ -202,13 +202,13 @@ export default function TabGareFipav({
   // Handle Pasted HTML / Source Extraction
   const handleImportPastedHtml = async (mode: 'ALL' | 'ONLY_CLASSIFICA' | 'ONLY_GARE' = 'ALL') => {
     if (!pastedHtml.trim()) {
-      showToast("Incolla prima il codice sorgente o il testo della pagina FIPAV.", "error");
+      showToast("Incolla prima il codice sorgente o il testo della pagina FIPAV o CSI.", "error");
       return;
     }
     try {
       const res = parseFipavHtml(pastedHtml, activeTeam.nome_squadra, squadraFipavUfficiale);
       if (res.classifica.length === 0 && res.partite.length === 0) {
-        showToast("Nessun dato riconosciuto nel testo incollato. Assicurati di copiare la pagina o la tabella del campionato.", "error");
+        showToast("Nessun dato riconosciuto nel testo incollato. Assicurati di copiare la pagina o la tabella del campionato (FIPAV o CSI).", "error");
         return;
       }
 
@@ -216,7 +216,14 @@ export default function TabGareFipav({
       if (res.detectedUrl) {
         if (!fipavUrl) setFipavUrl(res.detectedUrl);
         if (!linkEsterno) setLinkEsterno(res.detectedUrl);
+        if (res.detectedUrl.includes('centrosportivoitaliano.it')) {
+          setNomePortaleEsterno('Portale Ufficiale CSI Live');
+        }
       }
+
+      const detectedPortaleName = res.detectedUrl?.includes('centrosportivoitaliano.it') 
+        ? 'Portale Ufficiale CSI Live' 
+        : ((activeTeam as any).nome_portale_esterno || nomePortaleEsterno || 'Portale Ufficiale FIPAV / CSI');
 
       if (mode === 'ONLY_GARE') {
         if (res.partite.length === 0) {
@@ -234,7 +241,8 @@ export default function TabGareFipav({
           partite: mergedPartite,
           classifica: activeTeam.classifica || classifica, // Non tocca la classifica!
           tipo_classifica: (activeTeam as any).tipo_classifica || tipoClassifica || 'LINK_ESTERNO',
-          link_esterno_classifica: linkEsterno || fipavUrl || res.detectedUrl || activeTeam.fipav_url
+          link_esterno_classifica: linkEsterno || fipavUrl || res.detectedUrl || activeTeam.fipav_url,
+          nome_portale_esterno: detectedPortaleName
         } as any);
 
         await loadAllData();
@@ -257,7 +265,8 @@ export default function TabGareFipav({
           classifica: res.classifica,
           partite: partite, // Calendario esistente intatto!
           tipo_classifica: 'FIPAV_SYNC',
-          link_esterno_classifica: linkEsterno || fipavUrl || res.detectedUrl || activeTeam.fipav_url
+          link_esterno_classifica: linkEsterno || fipavUrl || res.detectedUrl || activeTeam.fipav_url,
+          nome_portale_esterno: detectedPortaleName
         } as any);
 
         // Aggiorna anche la Prossima Gara sulla Home con la prima non disputata del calendario
@@ -308,7 +317,8 @@ export default function TabGareFipav({
         classifica: newClassifica,
         partite: mergedPartite,
         tipo_classifica: targetTipoClassifica,
-        link_esterno_classifica: linkEsterno || fipavUrl || res.detectedUrl || activeTeam.fipav_url
+        link_esterno_classifica: linkEsterno || fipavUrl || res.detectedUrl || activeTeam.fipav_url,
+        nome_portale_esterno: detectedPortaleName
       } as any);
 
       // Aggiorna la Prossima Gara sulla Home con la prima non disputata
@@ -655,10 +665,10 @@ export default function TabGareFipav({
                       type="button"
                       onClick={() => setShowHtmlPaste(true)}
                       className="bg-zinc-900 hover:bg-black text-brand-yellow font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 shadow border border-zinc-750 cursor-pointer transition-all"
-                      title="Sincronizza calendario e classifica incollando il codice sorgente FIPAV"
+                      title="Sincronizza calendario e classifica incollando il codice sorgente FIPAV o CSI"
                     >
                       <Code className="w-4 h-4 text-brand-yellow" />
-                      <span>📋 Sincronizza / Incolla da FIPAV</span>
+                      <span>📋 Sincronizza / Incolla da FIPAV o CSI</span>
                     </button>
 
                     <button
@@ -812,10 +822,10 @@ export default function TabGareFipav({
                           onChange={() => setTipoClassifica('FIPAV_SYNC')}
                           className="text-amber-500"
                         />
-                        <span className="font-bold text-zinc-900 text-xs uppercase">⚡ Sincronizzazione FIPAV</span>
+                        <span className="font-bold text-zinc-900 text-xs uppercase">⚡ Sincronizzazione FIPAV / CSI</span>
                       </div>
                       <p className="text-xs text-zinc-500 leading-relaxed">
-                        Incolla il link della scheda campionato FIPAV e scarica classifica e calendario in 1 click.
+                        Incolla il link o il sorgente della scheda campionato FIPAV o CSI e carica classifica e calendario in 1 click.
                       </p>
                     </label>
 
@@ -863,16 +873,16 @@ export default function TabGareFipav({
                   </div>
                 </div>
 
-                {/* --- OPZIONE 1: FIPAV SYNC PANEL --- */}
+                {/* --- OPZIONE 1: FIPAV / CSI SYNC PANEL --- */}
                 {tipoClassifica === 'FIPAV_SYNC' && (
                   <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-4 text-white shadow-md">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
                       <div>
                         <span className="text-xs font-bold text-brand-yellow uppercase tracking-wider block">
-                          Sincronizzazione Automatica FIPAV / CRER
+                          Sincronizzazione Automatica FIPAV / CRER / CSI
                         </span>
                         <p className="text-xs text-zinc-300 mt-0.5">
-                          Incolla il link della pagina del girone FIPAV (es. <code>crer.portalefipav.net</code> o <code>fipavromagna.it</code>).
+                          Incolla il link o il sorgente del girone FIPAV o CSI (es. <code>crer.portalefipav.net</code>, <code>fipavromagna.it</code> o <code>live.centrosportivoitaliano.it</code>).
                         </p>
                       </div>
 
@@ -881,10 +891,10 @@ export default function TabGareFipav({
                           type="button"
                           onClick={() => setShowHtmlPaste(true)}
                           className="bg-zinc-800 hover:bg-zinc-700 text-brand-yellow font-bold px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-1.5 uppercase tracking-wider border border-zinc-700 cursor-pointer transition-all"
-                          title="Se il link è protetto da firewall, incolla il sorgente della pagina per importare in 1 secondo"
+                          title="Incolla il codice sorgente della pagina FIPAV o CSI per importare calendario, classifica, palestre e loghi in 1 secondo"
                         >
                           <Code className="w-3.5 h-3.5 text-brand-yellow" />
-                          <span>📋 Incolla Sorgente FIPAV</span>
+                          <span>📋 Incolla Sorgente FIPAV / CSI</span>
                         </button>
 
                         <button
@@ -893,7 +903,7 @@ export default function TabGareFipav({
                           className="bg-brand-yellow hover:bg-yellow-400 text-black font-bold px-5 py-2.5 rounded-xl text-xs flex items-center gap-2 uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer shadow"
                         >
                           <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                          {isSyncing ? 'Scaricamento...' : '⚡ Sincronizza da FIPAV'}
+                          {isSyncing ? 'Scaricamento...' : '⚡ Sincronizza da Link'}
                         </button>
                       </div>
                     </div>
@@ -901,7 +911,7 @@ export default function TabGareFipav({
                     <div className="flex gap-2">
                       <input
                         type="url"
-                        placeholder="https://crer.portalefipav.net/risultati-classifiche.aspx?..."
+                        placeholder="https://crer.portalefipav.net/... oppure https://live.centrosportivoitaliano.it/..."
                         value={fipavUrl}
                         onChange={(e) => setFipavUrl(e.target.value)}
                         className="flex-1 bg-zinc-950 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-xs text-brand-yellow font-mono focus:outline-none focus:border-brand-yellow"
@@ -992,10 +1002,10 @@ export default function TabGareFipav({
                       <div className="space-y-0.5">
                         <span className="font-bold text-brand-yellow flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
                           <Code className="w-4 h-4" />
-                          Importazione Rapida via Codice Sorgente FIPAV (Ctrl+U)
+                          Importazione Rapida via Codice Sorgente FIPAV o CSI (Ctrl+U)
                         </span>
                         <p className="text-zinc-400 text-xs">
-                          Se la sincronizzazione automatica dal server è protetta da firewall, copia e incolla direttamente il sorgente per aggiornare sia le gare che la classifica in 1 click.
+                          Incolla direttamente il codice sorgente della pagina FIPAV o CSI per aggiornare sia le gare che la classifica in 1 click (riconosce palestre, orari e loghi ufficiali).
                         </p>
                       </div>
                       <button
@@ -1373,7 +1383,7 @@ export default function TabGareFipav({
                 </span>
                 <h3 className="text-base font-bold text-white flex items-center gap-2 mt-0.5">
                   <Code className="w-5 h-5 text-brand-yellow" />
-                  Sincronizzazione da Sorgente FIPAV / CRER
+                  Sincronizzazione da Sorgente FIPAV o CSI
                 </h3>
               </div>
               <button
@@ -1392,7 +1402,7 @@ export default function TabGareFipav({
                 </p>
                 <ol className="list-decimal list-inside space-y-1 text-zinc-300">
                   <li>
-                    Apri la pagina del campionato su FIPAV o CRER{' '}
+                    Apri la pagina del campionato su FIPAV o CSI{' '}
                     {fipavUrl && (
                       <a
                         href={fipavUrl}
