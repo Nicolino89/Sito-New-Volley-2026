@@ -4917,6 +4917,27 @@ export async function eliminaRichiestaSponsor(id: string): Promise<void> {
 // 17. DIRETTA STREAMING YOUTUBE & MATCH DAY LIVE
 // ============================================================================
 
+export interface CanaleDiretta {
+  id: 'maschile' | 'femminile' | string;
+  titolo_canale: string; // es. "Serie D Maschile" o "Serie D Femminile"
+  attiva: boolean;
+  stato: 'live' | 'in_programma' | 'terminata';
+  url_youtube: string;
+  url_video_presentazione?: string;
+  titolo: string;
+  sottotitolo?: string;
+  data_ora?: string;
+  luogo?: string;
+  squadra_casa?: string;
+  squadra_ospite?: string;
+  logo_casa?: string;
+  logo_ospite?: string;
+  categoria?: string;
+  mostra_chat?: boolean;
+  descrizione?: string;
+  locandina_url?: string;
+}
+
 export interface DirettaStreaming {
   attiva: boolean;
   stato: 'live' | 'in_programma' | 'terminata';
@@ -4934,6 +4955,12 @@ export interface DirettaStreaming {
   mostra_chat?: boolean;
   descrizione?: string;
   aggiornato_il?: string;
+  locandina_url?: string;
+
+  // SUPPORTO DOPPIA DIRETTA SIMULTANEA (CANALI INDIPENDENTI)
+  doppia_diretta?: boolean;
+  canale_1?: CanaleDiretta;
+  canale_2?: CanaleDiretta;
 }
 
 export const OFFICIAL_NVA_LOGO = 'https://firebasestorage.googleapis.com/v0/b/new-volley-academy.firebasestorage.app/o/settings%2Flogo_1783320543830.webp?alt=media&token=1311d811-745b-44ae-af58-326e4add2e02';
@@ -5046,6 +5073,11 @@ export function getKnownTeamLogo(teamName?: string | null): string {
     return '/images/teams/rubicone.png';
   }
 
+  // 17. Consar Teodora Ravenna
+  if (clean.includes('TEODORA') || (clean.includes('CONSAR') && !clean.includes('PORTO'))) {
+    return '/images/teams/teodora-ravenna.png';
+  }
+
   return '';
 }
 
@@ -5054,18 +5086,61 @@ export const DEFAULT_DIRETTA_STREAMING: DirettaStreaming = {
   stato: 'in_programma',
   url_youtube: '',
   url_video_presentazione: '',
-  titolo: 'Serie D Maschile: New Volley Academy vs FENIX FAENZA RA',
-  sottotitolo: '3ª Giornata di Campionato Regionale FIPAV',
-  squadra_casa: 'New Volley Academy',
-  squadra_ospite: 'FENIX FAENZA RA',
-  logo_casa: OFFICIAL_NVA_LOGO,
-  logo_ospite: 'https://www.pallavolofaenza.com/site_img/logo.png',
+  titolo: 'Serie D Maschile: CPMI SAVENA VOLLEY vs New Volley Academy',
+  sottotitolo: '4ª Giornata di Campionato Regionale FIPAV - Girone B',
+  squadra_casa: 'CPMI SAVENA VOLLEY',
+  squadra_ospite: 'New Volley Academy',
+  logo_casa: '/images/teams/savena-volley.png',
+  logo_ospite: OFFICIAL_NVA_LOGO,
   categoria: 'Serie D Maschile',
-  luogo: 'Pal. COMUNALE FABIO LOMBINI, CASTROCARO TERME E TERRA SOLE FC',
-  data_ora: '29/10/26 21:15',
+  luogo: 'Pal. Villaggio del Fanciullo — Via B. Cavalieri 3, Bologna (BO)',
+  data_ora: '06/11/26 21:30',
   mostra_chat: false,
   descrizione: 'Guarda la partita ufficiale della New Volley Academy in diretta streaming. Tifa per le nostre pantere!',
-  aggiornato_il: new Date().toISOString()
+  aggiornato_il: new Date().toISOString(),
+  locandina_url: '/images/locandina_serie_d_maschile.jpg',
+
+  doppia_diretta: false,
+  canale_1: {
+    id: 'maschile',
+    titolo_canale: 'Serie D Maschile',
+    attiva: false,
+    stato: 'in_programma',
+    url_youtube: '',
+    url_video_presentazione: '',
+    titolo: 'Serie D Maschile: CPMI SAVENA VOLLEY vs New Volley Academy',
+    sottotitolo: '4ª Giornata di Campionato Regionale FIPAV - Girone B',
+    squadra_casa: 'CPMI SAVENA VOLLEY',
+    squadra_ospite: 'New Volley Academy',
+    logo_casa: '/images/teams/savena-volley.png',
+    logo_ospite: OFFICIAL_NVA_LOGO,
+    categoria: 'Serie D Maschile',
+    luogo: 'Pal. Villaggio del Fanciullo — Via B. Cavalieri 3, Bologna (BO)',
+    data_ora: '06/11/26 21:30',
+    mostra_chat: false,
+    descrizione: 'Guarda la partita di Serie D Maschile in diretta streaming!',
+    locandina_url: '/images/locandina_serie_d_maschile.jpg'
+  },
+  canale_2: {
+    id: 'femminile',
+    titolo_canale: 'Serie D Femminile',
+    attiva: false,
+    stato: 'in_programma',
+    url_youtube: '',
+    url_video_presentazione: '',
+    titolo: 'Serie D Femminile: New Volley Academy vs CONSAR TEODORA',
+    sottotitolo: '4ª Giornata di Campionato Regionale FIPAV - Girone C',
+    squadra_casa: 'New Volley Academy',
+    squadra_ospite: 'CONSAR TEODORA',
+    logo_casa: OFFICIAL_NVA_LOGO,
+    logo_ospite: '/images/teams/teodora-ravenna.png',
+    categoria: 'Serie D Femminile',
+    luogo: 'Centro Polisportivo Giulianini — Via XIII Novembre 129, Villafranca di Forlì',
+    data_ora: '06/11/26 21:15',
+    mostra_chat: false,
+    descrizione: 'Guarda la partita di Serie D Femminile in diretta streaming!',
+    locandina_url: '/images/locandina_serie_d_femminile.jpg'
+  }
 };
 
 export function extractYouTubeVideoId(url?: string | null): string | null {

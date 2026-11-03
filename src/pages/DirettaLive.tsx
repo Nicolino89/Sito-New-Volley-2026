@@ -11,9 +11,10 @@ import {
   Shield,
   MessageCircle,
   Sparkles,
-  CalendarPlus
+  CalendarPlus,
+  Download
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { updatePageMeta } from '../utils/seoHelper';
 import { 
   DirettaStreaming, 
@@ -66,6 +67,64 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
   const [nvaLogoError, setNvaLogoError] = useState(false);
   const [oppLogoError, setOppLogoError] = useState(false);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlCanale = searchParams.get('canale')?.toLowerCase();
+
+  const isDoppia = Boolean(diretta.doppia_diretta);
+  const c1 = diretta.canale_1;
+  const c2 = diretta.canale_2;
+
+  const activeChannelId: 'maschile' | 'femminile' = useMemo(() => {
+    if (urlCanale === 'femminile') return 'femminile';
+    if (urlCanale === 'maschile') return 'maschile';
+    if (c2?.stato === 'live' && c1?.stato !== 'live') return 'femminile';
+    if (c2?.attiva && !c1?.attiva) return 'femminile';
+    return 'maschile';
+  }, [urlCanale, c1, c2]);
+
+  const effectiveCanale = useMemo(() => {
+    if (!isDoppia) {
+      return {
+        titolo: diretta.titolo,
+        sottotitolo: diretta.sottotitolo,
+        attiva: diretta.attiva,
+        stato: diretta.stato,
+        url_youtube: diretta.url_youtube,
+        url_video_presentazione: diretta.url_video_presentazione,
+        data_ora: diretta.data_ora,
+        luogo: diretta.luogo,
+        squadra_casa: diretta.squadra_casa,
+        squadra_ospite: diretta.squadra_ospite,
+        logo_casa: diretta.logo_casa,
+        logo_ospite: diretta.logo_ospite,
+        categoria: diretta.categoria,
+        mostra_chat: diretta.mostra_chat,
+        descrizione: diretta.descrizione,
+        locandina_url: diretta.locandina_url
+      };
+    }
+    const chosen = activeChannelId === 'femminile' ? c2 : c1;
+    return chosen || {
+      titolo: diretta.titolo,
+      sottotitolo: diretta.sottotitolo,
+      attiva: diretta.attiva,
+      stato: diretta.stato,
+      url_youtube: diretta.url_youtube,
+      url_video_presentazione: diretta.url_video_presentazione,
+      data_ora: diretta.data_ora,
+      luogo: diretta.luogo,
+      squadra_casa: diretta.squadra_casa,
+      squadra_ospite: diretta.squadra_ospite,
+      logo_casa: diretta.logo_casa,
+      logo_ospite: diretta.logo_ospite,
+      categoria: diretta.categoria,
+      mostra_chat: diretta.mostra_chat,
+      descrizione: diretta.descrizione,
+      locandina_url: diretta.locandina_url
+    };
+  }, [isDoppia, activeChannelId, c1, c2, diretta]);
+
+
   // Caricamento configurazione diretta streaming
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -110,27 +169,29 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
   }, []);
 
   const targetMatchDate = useMemo(() => {
-    return parseMatchDateTime(diretta.data_ora);
-  }, [diretta.data_ora]);
+    return parseMatchDateTime(effectiveCanale.data_ora);
+  }, [effectiveCanale.data_ora]);
 
   const timeLeft = useMemo(() => {
     return calculateTimeRemaining(targetMatchDate);
   }, [targetMatchDate, nowTick]);
 
-  const liveVideoId = extractYouTubeVideoId(diretta.url_youtube);
+  const liveVideoId = extractYouTubeVideoId(effectiveCanale.url_youtube);
 
   // Consideriamo attiva la live se impostata su 'live' dall'admin E attiva è true
-  const isLiveNow = Boolean(diretta.attiva) && diretta.stato === 'live';
+  const isLiveNow = Boolean(effectiveCanale.attiva) && effectiveCanale.stato === 'live';
 
   // Orario di inizio estratto (es. "21:15")
   const orarioInizio = useMemo(() => {
-    if (!diretta.data_ora) return '21:15';
-    const match = diretta.data_ora.match(/(\d{1,2}:\d{2})/);
-    return match ? match[1] : diretta.data_ora;
-  }, [diretta.data_ora]);
+    if (!effectiveCanale.data_ora) return '21:15';
+    const match = effectiveCanale.data_ora.match(/(\d{1,2}:\d{2})/);
+    return match ? match[1] : (effectiveCanale.data_ora || '21:15');
+  }, [effectiveCanale.data_ora]);
 
   const handleCopyLink = () => {
-    const url = window.location.origin + '/diretta';
+    const url = isDoppia 
+      ? `${window.location.origin}/diretta?canale=${activeChannelId}`
+      : `${window.location.origin}/diretta`;
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
@@ -138,8 +199,11 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
   };
 
   const handleShareWhatsapp = () => {
+    const url = isDoppia 
+      ? `${window.location.origin}/diretta?canale=${activeChannelId}`
+      : `${window.location.origin}/diretta`;
     const text = encodeURIComponent(
-      `🏐 Guarda la partita della New Volley Academy in diretta streaming!\n🔴 ${diretta.titolo}\n⏰ Inizio live: ore ${orarioInizio}\n📅 ${diretta.data_ora || 'Stasera'}\n📍 ${diretta.luogo || 'Palazzetto'}\nTorna a tifare con noi qui: ${window.location.origin}/diretta`
+      `🏐 Guarda la partita della New Volley Academy in diretta streaming!\n🔴 ${effectiveCanale.titolo}\n⏰ Inizio live: ore ${orarioInizio}\n📅 ${effectiveCanale.data_ora || 'Stasera'}\n📍 ${effectiveCanale.luogo || 'Palazzetto'}\nTorna a tifare con noi qui: ${url}`
     );
     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
   };
@@ -151,14 +215,14 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
     const endDate = new Date(targetMatchDate.getTime() + 2 * 60 * 60 * 1000);
     const endIso = endDate.toISOString().replace(/-|:|\.\d\d\d/g, "");
     
-    const title = encodeURIComponent(`🏐 Live Volley: ${diretta.titolo || 'New Volley Academy'}`);
+    const title = encodeURIComponent(`🏐 Live Volley: ${effectiveCanale.titolo || 'New Volley Academy'}`);
     const details = encodeURIComponent(
-      `Diretta streaming ufficiale su: ${window.location.origin}/diretta\nTorna qui a tifare le nostre pantere!\n${diretta.sottotitolo || ''}`
+      `Diretta streaming ufficiale su: ${window.location.origin}/diretta${isDoppia ? '?canale=' + activeChannelId : ''}\nTorna qui a tifare le nostre pantere!\n${effectiveCanale.sottotitolo || ''}`
     );
-    const location = encodeURIComponent(diretta.luogo || 'Palazzetto dello Sport');
+    const location = encodeURIComponent(effectiveCanale.luogo || 'Palazzetto dello Sport');
 
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startIso}/${endIso}&details=${details}&location=${location}`;
-  }, [targetMatchDate, diretta.titolo, diretta.sottotitolo, diretta.luogo]);
+  }, [targetMatchDate, effectiveCanale.titolo, effectiveCanale.sottotitolo, effectiveCanale.luogo]);
 
   // Suddivisione Sponsor
   const mainSponsors = sponsorsAll.filter(s => s.attivo !== false && (s.tipologia === 'Main Sponsor' || s.tipologia?.toLowerCase().includes('main')));
@@ -166,8 +230,8 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
   const otherSponsors = sponsorsAll.filter(s => s.attivo !== false && !mainSponsors.includes(s) && !goldSponsors.includes(s));
 
   // Squadre Casa vs Ospite
-  const nomeCasa = diretta.squadra_casa || 'New Volley Academy';
-  const nomeOspite = diretta.squadra_ospite || 'Squadra Avversaria';
+  const nomeCasa = effectiveCanale.squadra_casa || 'New Volley Academy';
+  const nomeOspite = effectiveCanale.squadra_ospite || 'Squadra Avversaria';
   const isNvaCasa = nomeCasa.toLowerCase().includes('new volley') || nomeCasa.toLowerCase().includes('nva');
   const isNvaOspite = nomeOspite.toLowerCase().includes('new volley') || nomeOspite.toLowerCase().includes('nva');
   const isFenixCasa = nomeCasa.toUpperCase().includes('FENIX');
@@ -176,22 +240,22 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
   // Risoluzione loghi ufficiali (priorità a Firebase CDN per NVA e dizionario federale per avversari)
   const getLogoCasa = () => {
     if (isNvaCasa) {
-      if (diretta.logo_casa && diretta.logo_casa !== '/logo.png') return diretta.logo_casa;
+      if (effectiveCanale.logo_casa && effectiveCanale.logo_casa !== '/logo.png') return effectiveCanale.logo_casa;
       return OFFICIAL_NVA_LOGO;
     }
     const known = getKnownTeamLogo(nomeCasa);
     if (known) return known;
-    return (diretta.logo_casa && diretta.logo_casa !== '/logo.png') ? diretta.logo_casa : '';
+    return (effectiveCanale.logo_casa && effectiveCanale.logo_casa !== '/logo.png') ? effectiveCanale.logo_casa : '';
   };
 
   const getLogoOspite = () => {
     if (isNvaOspite) {
-      if (diretta.logo_ospite && diretta.logo_ospite !== '/logo.png') return diretta.logo_ospite;
+      if (effectiveCanale.logo_ospite && effectiveCanale.logo_ospite !== '/logo.png') return effectiveCanale.logo_ospite;
       return OFFICIAL_NVA_LOGO;
     }
     const known = getKnownTeamLogo(nomeOspite);
     if (known) return known;
-    return (diretta.logo_ospite && diretta.logo_ospite !== '/logo.png') ? diretta.logo_ospite : '';
+    return (effectiveCanale.logo_ospite && effectiveCanale.logo_ospite !== '/logo.png') ? effectiveCanale.logo_ospite : '';
   };
 
   const logoCasaEffective = getLogoCasa();
@@ -199,11 +263,11 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
 
   // 1. Aggiornamento Dinamico Meta Tag SEO / OpenGraph
   useEffect(() => {
-    const metaTitle = diretta.attiva && diretta.titolo
-      ? (isLiveNow ? `🔴 ORA IN DIRETTA: ${diretta.titolo}` : `⏰ PROSSIMA DIRETTA: ${diretta.titolo}`)
+    const metaTitle = effectiveCanale.attiva && effectiveCanale.titolo
+      ? (isLiveNow ? `🔴 ORA IN DIRETTA: ${effectiveCanale.titolo}` : `⏰ PROSSIMA DIRETTA: ${effectiveCanale.titolo}`)
       : "Diretta Streaming Match | New Volley Academy";
 
-    const metaDescription = diretta.descrizione || 
+    const metaDescription = effectiveCanale.descrizione || 
       `Segui la diretta streaming ufficiale della New Volley Academy Forlì. Tifa per le nostre pantere punto su punto dal palazzetto!`;
 
     updatePageMeta({
@@ -212,7 +276,7 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
       url: "https://newvolleyacademy.it/diretta",
       image: isNvaCasa ? OFFICIAL_NVA_LOGO : (logoCasaEffective || OFFICIAL_NVA_LOGO)
     });
-  }, [diretta.titolo, diretta.descrizione, diretta.attiva, isLiveNow, isNvaCasa, logoCasaEffective]);
+  }, [effectiveCanale.titolo, effectiveCanale.descrizione, effectiveCanale.attiva, isLiveNow, isNvaCasa, logoCasaEffective]);
 
   // 2. Schema.org JSON-LD (SportsEvent & BroadcastEvent) per indicizzazione ricca su Google
   useEffect(() => {
@@ -228,15 +292,15 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
     const jsonLd = {
       "@context": "https://schema.org",
       "@type": "SportsEvent",
-      "name": diretta.titolo || "Partita New Volley Academy Forlì",
-      "description": diretta.descrizione || "Diretta streaming della partita ufficiale New Volley Academy Forlì",
+      "name": effectiveCanale.titolo || "Partita New Volley Academy Forlì",
+      "description": effectiveCanale.descrizione || "Diretta streaming della partita ufficiale New Volley Academy Forlì",
       "startDate": targetMatchDate ? targetMatchDate.toISOString() : undefined,
       "eventStatus": isLiveNow 
         ? "https://schema.org/EventLive" 
-        : (diretta.stato === 'terminata' ? "https://schema.org/EventCompleted" : "https://schema.org/EventScheduled"),
+        : (effectiveCanale.stato === 'terminata' ? "https://schema.org/EventCompleted" : "https://schema.org/EventScheduled"),
       "location": {
         "@type": "Place",
-        "name": diretta.luogo || "Palazzetto dello Sport",
+        "name": effectiveCanale.luogo || "Palazzetto dello Sport",
         "address": {
           "@type": "PostalAddress",
           "addressLocality": "Forlì",
@@ -265,8 +329,8 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
       ...(liveVideoId ? {
         "video": {
           "@type": "VideoObject",
-          "name": diretta.titolo,
-          "description": diretta.descrizione,
+          "name": effectiveCanale.titolo,
+          "description": effectiveCanale.descrizione,
           "embedUrl": `https://www.youtube-nocookie.com/embed/${liveVideoId}`,
           "thumbnailUrl": `https://img.youtube.com/vi/${liveVideoId}/hqdefault.jpg`,
           "uploadDate": new Date().toISOString()
@@ -297,7 +361,7 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
           </Link>
 
           <div className="flex items-center gap-2.5">
-            {diretta.attiva ? (
+            {effectiveCanale.attiva ? (
               isLiveNow ? (
                 <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600 text-white text-xs font-black uppercase font-sport tracking-wider animate-pulse shadow-lg shadow-red-600/30">
                   <span className="w-2 h-2 rounded-full bg-white animate-ping" />
@@ -323,10 +387,59 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
         </div>
       </div>
 
+      {/* 1.5 DOPPIA DIRETTA SWITCHER BAR (SE ATTIVA LA MODALITÀ MULTI-MATCH) */}
+      {isDoppia && (
+        <div className="bg-slate-900 border-b border-slate-800 py-3 px-4 sm:px-6 relative z-10 shadow-lg">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+              <span className="font-sport font-black uppercase tracking-wider text-xs text-slate-200">
+                ⚡ Doppia Diretta NVA Simultanea:
+              </span>
+              <span className="text-[11px] text-slate-400 font-inter hidden sm:inline">
+                Scegli quale partita seguire
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => setSearchParams({ canale: 'maschile' })}
+                className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl font-sport uppercase tracking-wider text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  activeChannelId === 'maschile'
+                    ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-400/50'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <span>🏐 Serie D Maschile</span>
+                {c1?.stato === 'live' && (
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSearchParams({ canale: 'femminile' })}
+                className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl font-sport uppercase tracking-wider text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  activeChannelId === 'femminile'
+                    ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-400/50'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <span>🏐 Serie D Femminile</span>
+                {c2?.stato === 'live' && (
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ========================================================================= */}
       {/* SCENARIO 0: DIRETTA DISATTIVATA DALL'ADMIN                                */}
       {/* ========================================================================= */}
-      {!diretta.attiva ? (
+      {!effectiveCanale.attiva ? (
         <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-20 text-center space-y-6">
           <div className="w-20 h-20 mx-auto rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 shadow-xl">
             <Radio className="w-10 h-10 opacity-40 text-slate-400" />
@@ -406,12 +519,12 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                   </span>
                 </div>
                 <h1 className="text-sm sm:text-xl font-black font-sport uppercase tracking-wide text-white truncate">
-                  {diretta.titolo || `${nomeCasa} vs ${nomeOspite}`}
+                  {effectiveCanale.titolo || `${nomeCasa} vs ${nomeOspite}`}
                 </h1>
-                {diretta.luogo && (
+                {effectiveCanale.luogo && (
                   <p className="text-[10px] sm:text-[11px] text-slate-400 truncate flex items-center gap-1 font-mono">
                     <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
-                    <span>{diretta.luogo}</span>
+                    <span>{effectiveCanale.luogo}</span>
                   </p>
                 )}
               </div>
@@ -441,7 +554,7 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
             {liveVideoId ? (
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${liveVideoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`}
-                title={diretta.titolo}
+                title={effectiveCanale.titolo}
                 className="w-full h-full border-0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
@@ -466,11 +579,11 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-red-500 animate-ping shrink-0" />
                 <span className="font-sport font-black uppercase text-amber-400 tracking-wider">
-                  {diretta.categoria || 'Campionato FIPAV'} {diretta.sottotitolo ? `• ${diretta.sottotitolo}` : ''}
+                  {effectiveCanale.categoria || 'Campionato FIPAV'} {effectiveCanale.sottotitolo ? `• ${effectiveCanale.sottotitolo}` : ''}
                 </span>
               </div>
               <p className="text-slate-300 font-inter text-xs sm:text-sm">
-                {diretta.descrizione || 'Tifa le nostre pantere in campo! Condividi il link con amici e compagni di squadra.'}
+                {effectiveCanale.descrizione || 'Tifa le nostre pantere in campo! Condividi il link con amici e compagni di squadra.'}
               </p>
             </div>
 
@@ -487,15 +600,15 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                   <span>Apri su YouTube</span>
                 </a>
               )}
-              {diretta.luogo && (
+              {effectiveCanale.luogo && (
                 <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(diretta.luogo)}`}
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(effectiveCanale.luogo)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center gap-1.5 border border-slate-700 transition-colors"
                 >
                   <MapPin className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="hidden sm:inline truncate max-w-[180px]">{diretta.luogo}</span>
+                  <span className="hidden sm:inline truncate max-w-[180px]">{effectiveCanale.luogo}</span>
                   <span className="sm:hidden">Mappa</span>
                 </a>
               )}
@@ -562,6 +675,20 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                     {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-slate-400" />}
                     <span>{copied ? 'Copiato!' : 'Copia Link'}</span>
                   </button>
+
+                  {effectiveCanale.locandina_url && (
+                    <a
+                      href={effectiveCanale.locandina_url}
+                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer min-h-[42px]"
+                      title="Scarica locandina ufficiale del match (16:9 HD)"
+                    >
+                      <Download className="w-4 h-4 text-amber-400" />
+                      <span>Locandina Match HD</span>
+                    </a>
+                  )}
                 </div>
 
               </div>
@@ -573,11 +700,11 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
               <div className="flex items-center justify-center gap-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-400 text-xs font-sport uppercase tracking-wider font-bold">
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>{diretta.categoria || 'Match Ufficiale FIPAV'}</span>
+                  <span>{effectiveCanale.categoria || 'Match Ufficiale FIPAV'}</span>
                 </span>
-                {diretta.sottotitolo && (
+                {effectiveCanale.sottotitolo && (
                   <span className="text-xs text-slate-400 font-mono hidden sm:inline">
-                    • {diretta.sottotitolo}
+                    • {effectiveCanale.sottotitolo}
                   </span>
                 )}
               </div>
@@ -679,23 +806,23 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
               </div>
 
               {/* DETTAGLI CAMPO & ORARIO */}
-              {(diretta.luogo || diretta.data_ora) && (
+              {(effectiveCanale.luogo || effectiveCanale.data_ora) && (
                 <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-mono text-slate-300 pt-3 border-t border-slate-800/60">
-                  {diretta.data_ora && (
+                  {effectiveCanale.data_ora && (
                     <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 px-3.5 py-1.5 rounded-xl">
                       <Calendar className="w-4 h-4 text-amber-400" />
-                      <span className="font-bold text-white">{diretta.data_ora}</span>
+                      <span className="font-bold text-white">{effectiveCanale.data_ora}</span>
                     </div>
                   )}
-                  {diretta.luogo && (
+                  {effectiveCanale.luogo && (
                     <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(diretta.luogo)}`}
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(effectiveCanale.luogo)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1.5 bg-slate-950/80 hover:bg-slate-800 border border-slate-800 px-3.5 py-1.5 rounded-xl text-slate-300 hover:text-amber-400 transition-colors"
                     >
                       <MapPin className="w-4 h-4 text-amber-400" />
-                      <span className="truncate max-w-[280px]">{diretta.luogo}</span>
+                      <span className="truncate max-w-[280px]">{effectiveCanale.luogo}</span>
                       <ExternalLink className="w-3 h-3 opacity-60" />
                     </a>
                   )}
