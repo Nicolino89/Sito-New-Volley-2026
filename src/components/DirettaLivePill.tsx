@@ -57,7 +57,7 @@ export const DirettaLivePill: React.FC = () => {
         <span 
           className="text-[10px] sm:text-[12px] font-black uppercase text-white tracking-wide font-sport"
         >
-          GUARDA LA PARTITA
+          {diretta?.doppia_diretta ? '2 PARTITE IN DIRETTA' : 'GUARDA LA PARTITA'}
         </span>
       </div>
     </Link>

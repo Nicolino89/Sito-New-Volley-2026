@@ -933,13 +933,100 @@ export default function Home({
                 
                 {/* 🔴 LIVE / MATCH DAY BROADCAST HERO ALERT (Rigido rispetto di diretta.attiva) */}
                 {(() => {
-                  // Se la diretta non è esplicitamente attiva dall'admin, non mostrare alcun banner
                   if (!direttaStreaming || !direttaStreaming.attiva) return null;
+
+                  const isDoppia = Boolean(direttaStreaming.doppia_diretta);
+                  const c1 = direttaStreaming.canale_1;
+                  const c2 = direttaStreaming.canale_2;
+
+                  if (isDoppia && (c1 || c2)) {
+                    const c1Active = c1 && (c1.attiva !== false) && (c1.stato === 'live' || c1.stato === 'in_programma');
+                    const c2Active = c2 && (c2.attiva !== false) && (c2.stato === 'live' || c2.stato === 'in_programma');
+
+                    if (!c1Active && !c2Active) return null;
+
+                    return (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="w-full mb-2 p-3.5 sm:p-4 rounded-3xl bg-slate-900/90 border border-amber-400/40 shadow-2xl backdrop-blur-md space-y-2.5 max-w-2xl"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+                            <span className="text-[11px] font-mono font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                              ⚡ DOPPIA DIRETTA STREAMING • 2 PARTITE SIMULTANEE
+                            </span>
+                          </div>
+                          <Link 
+                            to="/diretta" 
+                            className="text-[10px] text-amber-400 hover:text-white font-mono font-bold uppercase underline"
+                          >
+                            Vedi Entrambe →
+                          </Link>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {c1 && (
+                            <Link
+                              to="/diretta?canale=maschile"
+                              className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-2 group cursor-pointer ${
+                                c1.stato === 'live'
+                                  ? 'bg-red-950/40 border-red-500/50 hover:bg-red-900/50 ring-1 ring-red-500/30'
+                                  : 'bg-slate-950/60 border-slate-700/60 hover:border-amber-400/50 hover:bg-slate-800/60'
+                              }`}
+                            >
+                              <div className="overflow-hidden">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                  <span className={`w-1.5 h-1.5 rounded-full ${c1.stato === 'live' ? 'bg-red-400 animate-ping' : 'bg-emerald-400'}`} />
+                                  <span className="text-[10px] font-mono font-bold uppercase text-amber-200">
+                                    {c1.stato === 'live' ? '🔴 ORA LIVE' : '⏰ ORE 21:30'}
+                                  </span>
+                                </div>
+                                <div className="text-xs font-bold font-sport uppercase tracking-wider text-white truncate group-hover:text-amber-400 transition-colors">
+                                  🏐 Serie D Maschile
+                                </div>
+                                <div className="text-[10px] text-slate-400 truncate">
+                                  vs {c1.squadra_casa?.includes('New Volley') ? c1.squadra_ospite : c1.squadra_casa}
+                                </div>
+                              </div>
+                              <ArrowRight className="w-4 h-4 text-amber-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                            </Link>
+                          )}
+
+                          {c2 && (
+                            <Link
+                              to="/diretta?canale=femminile"
+                              className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-2 group cursor-pointer ${
+                                c2.stato === 'live'
+                                  ? 'bg-red-950/40 border-red-500/50 hover:bg-red-900/50 ring-1 ring-red-500/30'
+                                  : 'bg-slate-950/60 border-slate-700/60 hover:border-amber-400/50 hover:bg-slate-800/60'
+                              }`}
+                            >
+                              <div className="overflow-hidden">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                  <span className={`w-1.5 h-1.5 rounded-full ${c2.stato === 'live' ? 'bg-red-400 animate-ping' : 'bg-emerald-400'}`} />
+                                  <span className="text-[10px] font-mono font-bold uppercase text-amber-200">
+                                    {c2.stato === 'live' ? '🔴 ORA LIVE' : '⏰ ORE 21:15'}
+                                  </span>
+                                </div>
+                                <div className="text-xs font-bold font-sport uppercase tracking-wider text-white truncate group-hover:text-amber-400 transition-colors">
+                                  🏐 Serie D Femminile
+                                </div>
+                                <div className="text-[10px] text-slate-400 truncate">
+                                  vs {c2.squadra_casa?.includes('New Volley') ? c2.squadra_ospite : c2.squadra_casa}
+                                </div>
+                              </div>
+                              <ArrowRight className="w-4 h-4 text-amber-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                            </Link>
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  }
 
                   const isLive = direttaStreaming.stato === 'live';
                   const isInProg = direttaStreaming.stato === 'in_programma';
-
-                  // Mostra solo se lo stato è live o in_programma
                   if (!isLive && !isInProg) return null;
 
                   return (
@@ -1214,29 +1301,52 @@ export default function Home({
                     </button>
                   </div>
 
-                  {/* Tasto Diretto alla Diretta Streaming (Solo se attiva E in stato live o in_programma) */}
-                  {direttaStreaming && direttaStreaming.attiva && (direttaStreaming.stato === 'live' || direttaStreaming.stato === 'in_programma') && (
-                    <div className="pt-3 mt-3 border-t border-zinc-800">
-                      <Link
-                        to="/diretta"
-                        className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white shadow-lg shadow-red-600/25 text-xs font-black font-sport italic uppercase tracking-wider flex items-center justify-between transition-all duration-200 group cursor-pointer border border-red-500/30"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
-                          <Radio className="w-4 h-4 text-white animate-pulse" />
-                          <span>
-                            {direttaStreaming.stato === 'live' 
-                              ? '🔴 Guarda la Partita in Diretta Streaming!' 
-                              : '⏰ Diretta Streaming in Programma'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 text-[11px] font-sans font-bold text-white group-hover:translate-x-0.5 transition-transform">
-                          <span>Vai al Live</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </div>
-                      </Link>
-                    </div>
-                  )}
+                  {/* Tasto Diretto alla Diretta Streaming (Calibrato sulla categoria selezionata) */}
+                  {(() => {
+                    if (!direttaStreaming || !direttaStreaming.attiva) return null;
+                    const isDoppia = Boolean(direttaStreaming.doppia_diretta);
+                    const isMaschile = selectedMatchCategory === 'D Maschile';
+                    const targetCanale = isDoppia 
+                      ? (isMaschile ? direttaStreaming.canale_1 : direttaStreaming.canale_2) 
+                      : null;
+
+                    const activeDirectChannel = targetCanale || direttaStreaming;
+                    const isLive = activeDirectChannel.stato === 'live';
+                    const isInProg = activeDirectChannel.stato === 'in_programma';
+
+                    if (!isLive && !isInProg) return null;
+
+                    const destinationUrl = isDoppia 
+                      ? `/diretta?canale=${isMaschile ? 'maschile' : 'femminile'}` 
+                      : '/diretta';
+
+                    const channelLabel = isDoppia 
+                      ? (isMaschile ? 'Serie D Maschile' : 'Serie D Femminile') 
+                      : 'la Partita';
+
+                    return (
+                      <div className="pt-3 mt-3 border-t border-zinc-800">
+                        <Link
+                          to={destinationUrl}
+                          className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white shadow-lg shadow-red-600/25 text-xs font-black font-sport italic uppercase tracking-wider flex items-center justify-between transition-all duration-200 group cursor-pointer border border-red-500/30"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
+                            <Radio className="w-4 h-4 text-white animate-pulse" />
+                            <span>
+                              {isLive 
+                                ? `🔴 Guarda ${channelLabel} in Diretta!` 
+                                : `⏰ Diretta ${channelLabel} in Programma`}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-[11px] font-sans font-bold text-white group-hover:translate-x-0.5 transition-transform">
+                            <span>Vai al Live</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </div>
+                        </Link>
+                      </div>
+                    );
+                  })()}
 
                 </div>
               </div>
