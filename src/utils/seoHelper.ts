@@ -44,7 +44,10 @@ export function updatePageMeta({
 
   // 3. Canonical Link Tag & Normalized Public URL
   const rawUrl = url || window.location.href;
-  const canonicalUrl = rawUrl.replace(/https:\/\/[^/]*\.web\.app/gi, 'https://newvolleyacademy.it').split('?')[0].split('#')[0];
+  const cleanDomainUrl = rawUrl.replace(/https:\/\/[^/]*\.web\.app/gi, 'https://newvolleyacademy.it').split('#')[0];
+  const canonicalUrl = cleanDomainUrl.includes('canale=')
+    ? cleanDomainUrl
+    : cleanDomainUrl.split('?')[0];
   let canonicalEl = document.querySelector('link[rel="canonical"]');
   if (!canonicalEl) {
     canonicalEl = document.createElement('link');
@@ -57,13 +60,20 @@ export function updatePageMeta({
   setMeta('property', 'og:title', formattedTitle);
   setMeta('property', 'og:type', type);
   if (description) setMeta('property', 'og:description', description);
-  if (image) setMeta('property', 'og:image', image);
+  const absoluteImage = image
+    ? (image.startsWith('http') ? image : `https://newvolleyacademy.it${image.startsWith('/') ? '' : '/'}${image}`)
+    : 'https://newvolleyacademy.it/og-image.jpg';
+  setMeta('property', 'og:image', absoluteImage);
+  setMeta('property', 'og:image:width', '1920');
+  setMeta('property', 'og:image:height', '1080');
+  setMeta('property', 'og:image:alt', formattedTitle);
   setMeta('property', 'og:url', canonicalUrl);
 
   // 4. Twitter Card Tags
   setMeta('name', 'twitter:title', formattedTitle);
   if (description) setMeta('name', 'twitter:description', description);
-  if (image) setMeta('name', 'twitter:image', image);
+  setMeta('name', 'twitter:card', 'summary_large_image');
+  setMeta('name', 'twitter:image', absoluteImage);
 
   // 5. Firebase / Google Analytics 4 Event Tracking
   if (analytics) {

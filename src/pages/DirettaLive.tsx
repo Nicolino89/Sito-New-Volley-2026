@@ -261,22 +261,36 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
   const logoCasaEffective = getLogoCasa();
   const logoOspiteEffective = getLogoOspite();
 
-  // 1. Aggiornamento Dinamico Meta Tag SEO / OpenGraph
+  // 1. Aggiornamento Dinamico Meta Tag SEO / OpenGraph per Social & Motori di Ricerca
+  const locandinaShareImage = useMemo(() => {
+    if (effectiveCanale.locandina_url) return effectiveCanale.locandina_url;
+    return activeChannelId === 'femminile' 
+      ? '/images/locandina_serie_d_femminile.jpg' 
+      : '/images/locandina_serie_d_maschile.jpg';
+  }, [effectiveCanale.locandina_url, activeChannelId]);
+
+  const canonicalShareUrl = useMemo(() => {
+    return isDoppia 
+      ? `https://newvolleyacademy.it/diretta?canale=${activeChannelId}`
+      : 'https://newvolleyacademy.it/diretta';
+  }, [isDoppia, activeChannelId]);
+
   useEffect(() => {
     const metaTitle = effectiveCanale.attiva && effectiveCanale.titolo
-      ? (isLiveNow ? `🔴 ORA IN DIRETTA: ${effectiveCanale.titolo}` : `⏰ PROSSIMA DIRETTA: ${effectiveCanale.titolo}`)
-      : "Diretta Streaming Match | New Volley Academy";
+      ? (isLiveNow ? `🔴 LIVE ORA: ${effectiveCanale.titolo}` : `⏰ MATCH DAY: ${effectiveCanale.titolo}`)
+      : "Diretta Streaming Match | New Volley Academy Forlì";
 
-    const metaDescription = effectiveCanale.descrizione || 
-      `Segui la diretta streaming ufficiale della New Volley Academy Forlì. Tifa per le nostre pantere punto su punto dal palazzetto!`;
+    const metaDescription = effectiveCanale.sottotitolo 
+      ? `${effectiveCanale.titolo} — ${effectiveCanale.sottotitolo}. Guarda la diretta streaming ufficiale con formazioni, punteggio e commento live.`
+      : (effectiveCanale.descrizione || `Segui la diretta streaming ufficiale della New Volley Academy Forlì. Tifa per le nostre pantere punto su punto dal palazzetto!`);
 
     updatePageMeta({
       title: metaTitle,
       description: metaDescription,
-      url: "https://newvolleyacademy.it/diretta",
-      image: isNvaCasa ? OFFICIAL_NVA_LOGO : (logoCasaEffective || OFFICIAL_NVA_LOGO)
+      url: canonicalShareUrl,
+      image: locandinaShareImage
     });
-  }, [effectiveCanale.titolo, effectiveCanale.descrizione, effectiveCanale.attiva, isLiveNow, isNvaCasa, logoCasaEffective]);
+  }, [effectiveCanale.titolo, effectiveCanale.sottotitolo, effectiveCanale.descrizione, effectiveCanale.attiva, isLiveNow, canonicalShareUrl, locandinaShareImage]);
 
   // 2. Schema.org JSON-LD (SportsEvent & BroadcastEvent) per indicizzazione ricca su Google
   useEffect(() => {
@@ -294,6 +308,9 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
       "@type": "SportsEvent",
       "name": effectiveCanale.titolo || "Partita New Volley Academy Forlì",
       "description": effectiveCanale.descrizione || "Diretta streaming della partita ufficiale New Volley Academy Forlì",
+      "sport": "Volleyball",
+      "url": canonicalShareUrl,
+      "image": locandinaShareImage.startsWith('http') ? locandinaShareImage : `https://newvolleyacademy.it${locandinaShareImage}`,
       "startDate": targetMatchDate ? targetMatchDate.toISOString() : undefined,
       "eventStatus": isLiveNow 
         ? "https://schema.org/EventLive" 
@@ -303,8 +320,8 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
         "name": effectiveCanale.luogo || "Palazzetto dello Sport",
         "address": {
           "@type": "PostalAddress",
-          "addressLocality": "Forlì",
-          "addressRegion": "FC",
+          "addressLocality": effectiveCanale.luogo?.toLowerCase().includes('bologna') ? "Bologna" : "Villafranca di Forlì",
+          "addressRegion": effectiveCanale.luogo?.toLowerCase().includes('bologna') ? "BO" : "FC",
           "addressCountry": "IT"
         }
       },
@@ -325,6 +342,14 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
         "name": "New Volley Academy Forlì",
         "url": "https://newvolleyacademy.it",
         "logo": OFFICIAL_NVA_LOGO
+      },
+      "publication": {
+        "@type": "BroadcastEvent",
+        "name": `Diretta Streaming: ${effectiveCanale.titolo}`,
+        "isLiveBroadcast": isLiveNow,
+        "startDate": targetMatchDate ? targetMatchDate.toISOString() : undefined,
+        "videoFormat": "HD",
+        "url": canonicalShareUrl
       },
       ...(liveVideoId ? {
         "video": {

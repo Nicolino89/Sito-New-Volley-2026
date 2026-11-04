@@ -20,7 +20,9 @@ export const slugify = (text) =>
 // Static Core Pages
 const staticPages = [
   { url: '/', changefreq: 'daily', priority: '1.0' },
-  { url: '/diretta', changefreq: 'hourly', priority: '0.9' },
+  { url: '/diretta', changefreq: 'hourly', priority: '1.0' },
+  { url: '/diretta?canale=maschile', changefreq: 'hourly', priority: '0.9' },
+  { url: '/diretta?canale=femminile', changefreq: 'hourly', priority: '0.9' },
   { url: '/squadre', changefreq: 'daily', priority: '0.9' },
   { url: '/squadre/archivio', changefreq: 'weekly', priority: '0.7' },
   { url: '/albo-d-oro', changefreq: 'weekly', priority: '0.8' },
