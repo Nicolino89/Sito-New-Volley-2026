@@ -5125,7 +5125,7 @@ export const DEFAULT_DIRETTA_STREAMING: DirettaStreaming = {
     id: 'femminile',
     titolo_canale: 'Serie D Femminile',
     attiva: false,
-    stato: 'in_programma',
+    stato: 'terminata',
     url_youtube: '',
     url_video_presentazione: '',
     titolo: 'Serie D Femminile: New Volley Academy vs CONSAR TEODORA',
@@ -5287,10 +5287,250 @@ export function sortGiocatoriSquadra(giocatori?: Giocatore[]): Giocatore[] {
 
     // 3. Quelli senza numero o con 0: ordina per cognome e poi per nome
     const cmpCognome = (a.cognome || '').localeCompare(b.cognome || '', 'it', { sensitivity: 'base' });
-    if (cmpCognome !== 0) return cmpCognome;
     return (a.nome || '').localeCompare(b.nome || '', 'it', { sensitivity: 'base' });
   });
 }
+
+// ==========================================
+// VETRINA MATERIALE & MERCHANDISING SHOWCASE
+// ==========================================
+
+export type CategoriaVetrina = 
+  | 'Tutti'
+  | 'Abbigliamento' 
+  | 'Accessori' 
+  | 'Gara & Divise' 
+  | 'Tempo Libero' 
+  | 'Merchandising & Gadget';
+
+export interface ArticoloVetrina {
+  id: string;
+  nome: string;
+  descrizione: string;
+  categoria: 'Abbigliamento' | 'Accessori' | 'Gara & Divise' | 'Tempo Libero' | 'Merchandising & Gadget';
+  prezzo_pieno: number;
+  prezzo_tesserato?: number; // Prezzo riservato a tesserati, atleti e staff NVA
+  in_promozione?: boolean;
+  promo_label?: string; // es. "PROMO INIZIO STAGIONE", "-20%", "OFFERTA LANCIO"
+  novita?: boolean;
+  disponibile: boolean; // true = Disponibile / Ordinabile; false = Esaurito
+  stato_disponibilita?: 'immediata' | 'su_ordinazione' | 'esaurito';
+  foto_url: string;
+  foto_gallery?: string[];
+  taglie_disponibili?: string[]; // es. ["XS", "S", "M", "L", "XL", "XXL"]
+  colori_disponibili?: string[]; // es. ["Giallo/Nero", "Full Black"]
+  materiale?: string; // es. "100% Poliestere Tecnico Traspirante"
+  mostra_nel_ticker?: boolean; // Opzione per inclusione nel ticker/banner scorrevole futuro
+  ordine: number;
+  creato_il?: string;
+  aggiornato_il?: string;
+}
+
+export const DEFAULT_ARTICOLI_VETRINA: ArticoloVetrina[] = [
+  {
+    id: 'felpa-pantere-hoodie',
+    nome: 'Felpa Ufficiale Pantere NVA con Cappuccio',
+    descrizione: 'Felpa tecnica con zip intera e cappuccio foderato, inserti giallo oro e artigli Pantera su maniche e retro. Morbida, termica e resistente per pre-gara e tempo libero.',
+    categoria: 'Abbigliamento',
+    prezzo_pieno: 45.0,
+    prezzo_tesserato: 38.0,
+    in_promozione: true,
+    promo_label: 'SCONTO TESSERATI',
+    novita: true,
+    disponibile: true,
+    stato_disponibilita: 'immediata',
+    foto_url: '/images/merch/felpa-hoodie-nva.jpg',
+    taglie_disponibili: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+    colori_disponibili: ['Nero / Giallo Academy'],
+    materiale: '80% Cotone Pettinato, 20% Poliestere Tecnico (300 g/m²)',
+    mostra_nel_ticker: true,
+    ordine: 1
+  },
+  {
+    id: 'tshirt-training-dryfit',
+    nome: 'T-Shirt Riscaldamento Dry-Fit NVA 2026/27',
+    descrizione: 'Maglia ufficiale di allenamento e riscaldamento pre-partita. Tessuto traspirante a rapida asciugatura con logo New Volley Academy serigrafato ad alta tenacità.',
+    categoria: 'Abbigliamento',
+    prezzo_pieno: 22.0,
+    prezzo_tesserato: 18.0,
+    in_promozione: false,
+    novita: true,
+    disponibile: true,
+    stato_disponibilita: 'immediata',
+    foto_url: '/images/merch/tshirt-dryfit-nva.jpg',
+    taglie_disponibili: ['8-10 anni', '12-14 anni', 'XS', 'S', 'M', 'L', 'XL'],
+    colori_disponibili: ['Giallo Fluoro', 'Nero Pantera'],
+    materiale: '100% Poliestere Interlock Dry-Fit antibatterico',
+    mostra_nel_ticker: true,
+    ordine: 2
+  },
+  {
+    id: 'zaino-volley-pro',
+    nome: 'Zaino Tecnico Volley Academy con Tasca Scarpe',
+    descrizione: 'Zaino capiente a più scomparti con fondo rigido isolato portascarpe/ginocchiere, spallacci imbottiti ergonomici e scomparto porta-borraccia laterale.',
+    categoria: 'Accessori',
+    prezzo_pieno: 38.0,
+    prezzo_tesserato: 32.0,
+    in_promozione: true,
+    promo_label: 'BEST SELLER',
+    novita: false,
+    disponibile: true,
+    stato_disponibilita: 'immediata',
+    foto_url: '/images/merch/zaino-nva-pro.jpg',
+    taglie_disponibili: ['Taglia Unica (35L)'],
+    colori_disponibili: ['Nero / Dettagli Giallo'],
+    materiale: 'Poliestere 600D Ripstop idrorepellente',
+    mostra_nel_ticker: true,
+    ordine: 3
+  },
+  {
+    id: 'kit-gara-replica',
+    nome: 'Kit Maglia Gara Ufficiale Pantere NVA (Personalizzabile)',
+    descrizione: 'Replica ufficiale della maglia da gara di Serie D Maschile e Femminile. Possibilità di personalizzazione con nome atleta e numero preferito.',
+    categoria: 'Gara & Divise',
+    prezzo_pieno: 35.0,
+    prezzo_tesserato: 29.0,
+    in_promozione: false,
+    novita: true,
+    disponibile: true,
+    stato_disponibilita: 'su_ordinazione',
+    foto_url: '/images/merch/maglia-gara-nva.jpg',
+    taglie_disponibili: ['12 anni', 'XS', 'S', 'M', 'L', 'XL', 'XXL'],
+    colori_disponibili: ['1ª Maglia Giallo/Nero', '2ª Maglia Nero/Giallo', 'Maglia Libero Rosso Fluo'],
+    materiale: 'Poliestere Tecnico Micro-forato elasticizzato',
+    mostra_nel_ticker: false,
+    ordine: 4
+  },
+  {
+    id: 'borraccia-termica-pantere',
+    nome: 'Borraccia Termica Acciaio Inox NVA (500ml)',
+    descrizione: 'Borraccia termica a doppia parete sottovuoto. Mantiene le bevande fredde per 24h e calde per 12h. Finitura soft-touch nero opaco con logo dorato inciso a laser.',
+    categoria: 'Merchandising & Gadget',
+    prezzo_pieno: 16.0,
+    prezzo_tesserato: 12.0,
+    in_promozione: true,
+    promo_label: 'GADGET DEL MESE',
+    novita: false,
+    disponibile: true,
+    stato_disponibilita: 'immediata',
+    foto_url: '/images/merch/borraccia-nva.jpg',
+    taglie_disponibili: ['500 ml'],
+    colori_disponibili: ['Nero Opaco / Oro', 'Giallo Lucido / Nero'],
+    materiale: 'Acciaio Inossidabile 304 alimentare BPA-free',
+    mostra_nel_ticker: true,
+    ordine: 5
+  },
+  {
+    id: 'pantaloncino-volley-pro',
+    nome: 'Pantaloncino Volley Tecnico NVA',
+    descrizione: 'Shorts da pallavolo elasticizzati a taglio anatomico con cuciture piatte anti-sfregamento ed elastico rinforzato in vita con coulisse interna.',
+    categoria: 'Gara & Divise',
+    prezzo_pieno: 20.0,
+    prezzo_tesserato: 16.0,
+    in_promozione: false,
+    novita: false,
+    disponibile: true,
+    stato_disponibilita: 'immediata',
+    foto_url: '/images/merch/pantaloncino-nva.jpg',
+    taglie_disponibili: ['XS', 'S', 'M', 'L', 'XL'],
+    colori_disponibili: ['Nero Pantera', 'Blu Navy'],
+    materiale: '92% Poliestere, 8% Elastan traspirante',
+    mostra_nel_ticker: false,
+    ordine: 6
+  },
+  {
+    id: 'ginocchiere-volley-nva',
+    nome: 'Ginocchiere Tecniche Volley ad Alta Densità',
+    descrizione: 'Ginocchiere protettive con imbottitura in schiuma EVA termoformata a celle chiuse per massima ammortizzazione nei tuffi e comfort articolare prolungato.',
+    categoria: 'Accessori',
+    prezzo_pieno: 24.0,
+    prezzo_tesserato: 20.0,
+    in_promozione: false,
+    novita: false,
+    disponibile: true,
+    stato_disponibilita: 'immediata',
+    foto_url: '/images/merch/ginocchiere-nva.jpg',
+    taglie_disponibili: ['S (Junior)', 'M (Standard)', 'L (Senior)'],
+    colori_disponibili: ['Nero', 'Bianco'],
+    materiale: 'Tessuto tubolare elasticizzato con protezione EVA ergonomica',
+    mostra_nel_ticker: false,
+    ordine: 7
+  }
+];
+
+export async function getArticoliVetrina(): Promise<ArticoloVetrina[]> {
+  const CACHE_KEY = 'nva_vetrina_articoli_cache';
+  if (isDemoMode || !db) {
+    const local = localStorage.getItem(CACHE_KEY);
+    return local ? JSON.parse(local) : DEFAULT_ARTICOLI_VETRINA;
+  }
+  try {
+    const snap = await getDocs(query(collection(db, 'vetrina_materiale'), orderBy('ordine')));
+    if (!snap.empty) {
+      const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as ArticoloVetrina));
+      localStorage.setItem(CACHE_KEY, JSON.stringify(items));
+      return items;
+    }
+  } catch (err) {
+    console.warn("Errore getArticoliVetrina Firestore:", err);
+  }
+  const local = localStorage.getItem(CACHE_KEY);
+  if (local) {
+    try {
+      return JSON.parse(local);
+    } catch {}
+  }
+  return DEFAULT_ARTICOLI_VETRINA;
+}
+
+export async function salvaArticoloVetrina(articolo: ArticoloVetrina): Promise<void> {
+  const CACHE_KEY = 'nva_vetrina_articoli_cache';
+  const current = await getArticoliVetrina();
+  const existingIdx = current.findIndex(a => a.id === articolo.id);
+  const now = new Date().toISOString();
+  const payload: ArticoloVetrina = {
+    ...articolo,
+    aggiornato_il: now,
+    creato_il: articolo.creato_il || now
+  };
+
+  let updatedList: ArticoloVetrina[];
+  if (existingIdx >= 0) {
+    updatedList = [...current];
+    updatedList[existingIdx] = payload;
+  } else {
+    updatedList = [...current, payload];
+  }
+  updatedList.sort((a, b) => (a.ordine ?? 99) - (b.ordine ?? 99));
+  localStorage.setItem(CACHE_KEY, JSON.stringify(updatedList));
+
+  if (!isDemoMode && db) {
+    const docRef = doc(db, 'vetrina_materiale', payload.id);
+    await setDoc(docRef, payload, { merge: true });
+  }
+}
+
+export async function eliminaArticoloVetrina(id: string): Promise<void> {
+  const CACHE_KEY = 'nva_vetrina_articoli_cache';
+  const current = await getArticoliVetrina();
+  const updatedList = current.filter(a => a.id !== id);
+  localStorage.setItem(CACHE_KEY, JSON.stringify(updatedList));
+
+  if (!isDemoMode && db) {
+    await deleteDoc(doc(db, 'vetrina_materiale', id));
+  }
+}
+
+export async function salvaTuttiArticoliVetrina(articoli: ArticoloVetrina[]): Promise<void> {
+  const CACHE_KEY = 'nva_vetrina_articoli_cache';
+  localStorage.setItem(CACHE_KEY, JSON.stringify(articoli));
+  if (!isDemoMode && db) {
+    for (const art of articoli) {
+      await setDoc(doc(db, 'vetrina_materiale', art.id), art, { merge: true });
+    }
+  }
+}
+
 
 /**
  * Ordina il roster storico (archivio squadre) con la medesima logica:

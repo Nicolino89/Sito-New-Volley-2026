@@ -34,6 +34,7 @@ import News from './pages/News';
 import Societa from './pages/Societa';
 import SponsorPage from './pages/Sponsor';
 import DirettaLive from './pages/DirettaLive';
+import ShopVetrina from './pages/ShopVetrina';
 import NotFound from './pages/NotFound';
 import Maintenance from './pages/Maintenance';
 import SitoInAggiornamento from './components/SitoInAggiornamento';
@@ -342,6 +343,14 @@ export const getPageMeta = (pathname: string): PageMeta => {
       title: 'SPONSOR',
       sezione: 'I Nostri Sponsor',
       descrizione: 'Stiamo allestendo la vetrina ufficiale con tutti i partner e sostenitori delle Pantere.'
+    };
+  }
+  if (pathname.startsWith('/vetrina') || pathname.startsWith('/shop')) {
+    return {
+      key: 'vetrina',
+      title: 'VETRINA MATERIALE',
+      sezione: 'Vetrina Materiale & Merchandising',
+      descrizione: 'La vetrina ufficiale con il merchandising e il materiale societario New Volley Academy.'
     };
   }
   if (pathname.startsWith('/voltex')) {
@@ -877,7 +886,7 @@ export default function App() {
           </div>
 
           {/* DYNAMIC CONTENT STAGE */}
-          <main className={`w-full min-h-screen ${(location.pathname === '/' || location.pathname === '/squadre' || location.pathname.startsWith('/camp-tornei') || location.pathname.startsWith('/voltex') || location.pathname.startsWith('/societa') || location.pathname.startsWith('/news') || location.pathname.startsWith('/galleria') || location.pathname.startsWith('/albo-d-oro') || location.pathname.startsWith('/hall-of-fame') || location.pathname.startsWith('/diretta') || location.pathname.startsWith('/live')) ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`} id="content-stage">
+          <main className={`w-full min-h-screen ${(location.pathname === '/' || location.pathname === '/squadre' || location.pathname.startsWith('/camp-tornei') || location.pathname.startsWith('/voltex') || location.pathname.startsWith('/societa') || location.pathname.startsWith('/news') || location.pathname.startsWith('/galleria') || location.pathname.startsWith('/albo-d-oro') || location.pathname.startsWith('/hall-of-fame') || location.pathname.startsWith('/diretta') || location.pathname.startsWith('/live') || location.pathname.startsWith('/vetrina') || location.pathname.startsWith('/shop')) ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`} id="content-stage">
             {location.pathname === '/login' ? (
               <ChunkErrorBoundary key={location.pathname}>
                 <Suspense fallback={<LoadingFallback />}>
@@ -905,6 +914,7 @@ export default function App() {
                       if (path === '/privacy') return <Privacy />;
                       if (path === '/sponsor') return <SponsorPage />;
                       if (path === '/diretta' || path === '/live') return <DirettaLive sponsorsAll={sponsorsAll} societaInfo={societaInfo} />;
+                      if (path === '/vetrina' || path.startsWith('/vetrina') || path === '/shop' || path.startsWith('/shop')) return <ShopVetrina societaInfo={societaInfo} />;
                       if (path === '/voltex' || path.startsWith('/voltex')) return <VoltexCampPage societaInfo={societaInfo} />;
                       if (path === '/' || path === '/home' || path === '/index.html') return (
                         <Home 

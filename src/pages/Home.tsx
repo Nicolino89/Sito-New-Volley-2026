@@ -940,8 +940,8 @@ export default function Home({
                   const c2 = direttaStreaming.canale_2;
 
                   if (isDoppia && (c1 || c2)) {
-                    const c1Active = c1 && (c1.attiva !== false) && (c1.stato === 'live' || c1.stato === 'in_programma');
-                    const c2Active = c2 && (c2.attiva !== false) && (c2.stato === 'live' || c2.stato === 'in_programma');
+                    const c1Active = Boolean(c1 && c1.attiva && (c1.stato === 'live' || c1.stato === 'in_programma'));
+                    const c2Active = Boolean(c2 && c2.attiva && (c2.stato === 'live' || c2.stato === 'in_programma'));
 
                     if (!c1Active && !c2Active) return null;
 
@@ -955,19 +955,21 @@ export default function Home({
                           <div className="flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
                             <span className="text-[11px] font-mono font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
-                              ⚡ DOPPIA DIRETTA STREAMING • 2 PARTITE SIMULTANEE
+                              {c1Active && c2Active 
+                                ? '⚡ DOPPIA DIRETTA STREAMING • 2 PARTITE SIMULTANEE' 
+                                : `⚡ DIRETTA STREAMING IN ONDA • ${c1Active ? 'SERIE D MASCHILE' : 'SERIE D FEMMINILE'}`}
                             </span>
                           </div>
                           <Link 
                             to="/diretta" 
                             className="text-[10px] text-amber-400 hover:text-white font-mono font-bold uppercase underline"
                           >
-                            Vedi Entrambe →
+                            Vedi Partita →
                           </Link>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {c1 && (
+                        <div className={`grid gap-2 ${c1Active && c2Active ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+                          {c1Active && c1 && (
                             <Link
                               to="/diretta?canale=maschile"
                               className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-2 group cursor-pointer ${
@@ -980,7 +982,7 @@ export default function Home({
                                 <div className="flex items-center gap-1.5 mb-0.5">
                                   <span className={`w-1.5 h-1.5 rounded-full ${c1.stato === 'live' ? 'bg-red-400 animate-ping' : 'bg-emerald-400'}`} />
                                   <span className="text-[10px] font-mono font-bold uppercase text-amber-200">
-                                    {c1.stato === 'live' ? '🔴 ORA LIVE' : '⏰ ORE 21:30'}
+                                    {c1.stato === 'live' ? '🔴 ORA LIVE' : (c1.data_ora ? `⏰ ${c1.data_ora}` : '⏰ IN PROGRAMMA')}
                                   </span>
                                 </div>
                                 <div className="text-xs font-bold font-sport uppercase tracking-wider text-white truncate group-hover:text-amber-400 transition-colors">
@@ -994,7 +996,7 @@ export default function Home({
                             </Link>
                           )}
 
-                          {c2 && (
+                          {c2Active && c2 && (
                             <Link
                               to="/diretta?canale=femminile"
                               className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-2 group cursor-pointer ${
@@ -1007,7 +1009,7 @@ export default function Home({
                                 <div className="flex items-center gap-1.5 mb-0.5">
                                   <span className={`w-1.5 h-1.5 rounded-full ${c2.stato === 'live' ? 'bg-red-400 animate-ping' : 'bg-emerald-400'}`} />
                                   <span className="text-[10px] font-mono font-bold uppercase text-amber-200">
-                                    {c2.stato === 'live' ? '🔴 ORA LIVE' : '⏰ ORE 21:15'}
+                                    {c2.stato === 'live' ? '🔴 ORA LIVE' : (c2.data_ora ? `⏰ ${c2.data_ora}` : '⏰ IN PROGRAMMA')}
                                   </span>
                                 </div>
                                 <div className="text-xs font-bold font-sport uppercase tracking-wider text-white truncate group-hover:text-amber-400 transition-colors">
@@ -1303,12 +1305,27 @@ export default function Home({
 
                   {/* Tasto Diretto alla Diretta Streaming (Calibrato sulla categoria selezionata) */}
                   {(() => {
-                    if (!direttaStreaming || !direttaStreaming.attiva) return null;
+                    if (!direttaStreaming) return null;
                     const isDoppia = Boolean(direttaStreaming.doppia_diretta);
                     const isMaschile = selectedMatchCategory === 'D Maschile';
                     const targetCanale = isDoppia 
                       ? (isMaschile ? direttaStreaming.canale_1 : direttaStreaming.canale_2) 
                       : null;
+
+                    // In modalità doppia diretta, controlla scrupolosamente se il canale target specifico è attivo e non terminato
+                    if (isDoppia) {
+                      if (!targetCanale || !targetCanale.attiva || targetCanale.stato === 'terminata') {
+                        return null;
+                      }
+                    } else {
+                      if (!direttaStreaming.attiva || direttaStreaming.stato === 'terminata') {
+                        return null;
+                      }
+                      // Se la singola diretta ha una categoria specifica, mostrala solo nella scheda corrispondente
+                      const catClean = (direttaStreaming.categoria || '').toLowerCase();
+                      if (isMaschile && catClean.includes('femm')) return null;
+                      if (!isMaschile && catClean.includes('masch')) return null;
+                    }
 
                     const activeDirectChannel = targetCanale || direttaStreaming;
                     const isLive = activeDirectChannel.stato === 'live';

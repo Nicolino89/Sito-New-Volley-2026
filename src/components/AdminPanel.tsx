@@ -15,7 +15,8 @@ import {
   Flame,
   Radio,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  ShoppingBag
 } from 'lucide-react';
 
 import { 
@@ -35,6 +36,7 @@ import TabNews from './admin/tabs/TabNews';
 import TabSquadre from './admin/tabs/TabSquadre';
 import TabGareFipav from './admin/tabs/TabGareFipav';
 import TabDirettaStreaming from './admin/tabs/TabDirettaStreaming';
+import TabShopVetrina from './admin/tabs/TabShopVetrina';
 import TabPagine from './admin/tabs/TabPagine';
 import TabGalleria from './admin/tabs/TabGalleria';
 import TabCampTornei from './admin/tabs/TabCampTornei';
@@ -51,6 +53,7 @@ export type AdminTabType =
   | 'squadre' 
   | 'gare_fipav' 
   | 'diretta_streaming' 
+  | 'vetrina'
   | 'pagine' 
   | 'galleria' 
   | 'camp_tornei' 
@@ -215,9 +218,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [adminTab, setAdminTabState] = useState<AdminTabType>(() => {
     try {
       const saved = localStorage.getItem('nva_admin_active_tab') as AdminTabType;
-      const valid: AdminTabType[] = ['news', 'squadre', 'gare_fipav', 'diretta_streaming', 'pagine', 'galleria', 'camp_tornei', 'voltex', 'hall_of_fame', 'collaboratori', 'staff', 'sponsor', 'statistiche', 'backup'];
+      const valid: AdminTabType[] = ['news', 'squadre', 'gare_fipav', 'diretta_streaming', 'vetrina', 'pagine', 'galleria', 'camp_tornei', 'voltex', 'hall_of_fame', 'collaboratori', 'staff', 'sponsor', 'statistiche', 'backup'];
       if (saved && valid.includes(saved)) {
-        if (currentUser?.ruolo !== 'Super Admin' && ['news', 'pagine', 'galleria', 'camp_tornei', 'voltex', 'hall_of_fame', 'collaboratori', 'staff', 'sponsor', 'statistiche', 'backup'].includes(saved)) {
+        if (currentUser?.ruolo !== 'Super Admin' && ['news', 'vetrina', 'pagine', 'galleria', 'camp_tornei', 'voltex', 'hall_of_fame', 'collaboratori', 'staff', 'sponsor', 'statistiche', 'backup'].includes(saved)) {
           return 'squadre';
         }
         return saved;
@@ -315,6 +318,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           {currentUser?.ruolo === 'Super Admin' && (
             <>
+              <button
+                onClick={() => setAdminTab('vetrina')}
+                className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold uppercase transition-all font-sport italic skew-x-[-6deg] flex items-center justify-between cursor-pointer ${
+                  adminTab === 'vetrina'
+                    ? 'bg-amber-400 text-slate-950 shadow font-black'
+                    : 'bg-slate-50 text-slate-700 hover:text-slate-950 hover:bg-slate-100 border border-slate-200'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <ShoppingBag className="w-4 h-4 shrink-0" />
+                  <span className="not-italic text-sm">VETRINA & MATERIALE</span>
+                </div>
+                <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full ${
+                  adminTab === 'vetrina' ? 'bg-black/20 text-slate-950' : 'bg-amber-100 text-amber-900'
+                }`}>
+                  CATALOGO
+                </span>
+              </button>
+
               <button
                 onClick={() => setAdminTab('pagine')}
                 className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold uppercase transition-all font-sport italic skew-x-[-6deg] flex items-center gap-3 cursor-pointer ${
@@ -505,6 +527,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <AdminTabErrorBoundary tabName="Diretta Streaming" onResetTab={() => setAdminTab('squadre')}>
             <TabDirettaStreaming
               squadreAll={sortedSquadreAll}
+              showToast={showToast}
+            />
+          </AdminTabErrorBoundary>
+        )}
+
+        {adminTab === 'vetrina' && (
+          <AdminTabErrorBoundary tabName="Vetrina Materiale" onResetTab={() => setAdminTab('squadre')}>
+            <TabShopVetrina
               showToast={showToast}
             />
           </AdminTabErrorBoundary>
