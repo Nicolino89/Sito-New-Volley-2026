@@ -1026,7 +1026,7 @@ const DEFAULT_SQUADRE: RosaSquadra[] = [
     ],
     partite: [
       { id: "p-f-1", giornata: "1ª Giornata", data: "18/10/2025", ora: "20:30", avversario: "Volley Cesena", casa: true, luogo: "PalaMaroncelli, Forlì", risultato: "3 - 2", setNva: 3, setAvversario: 2, parzialiSet: "25-22, 23-25, 25-19, 21-25, 15-11", terminata: true },
-      { id: "p-f-2", giornata: "2ª Giornata", data: "25/10/2025", ora: "21:00", avversario: "Ravenna Volley Club", casa: false, luogo: "PalaCosta, Ravenna", risultato: "3 - 0", setNva: 3, setAvversario: 0, parzialiSet: "25-18, 25-17, 25-20", terminata: true },
+      { id: "p-f-2", giornata: "2ª Giornata", data: "25/10/2025", ora: "21:00", avversario: "Ravenna Volley Club", casa: false, luogo: "PalaCosta, Ravenna", risultato: "0 - 3", setNva: 3, setAvversario: 0, parzialiSet: "25-18, 25-17, 25-20", terminata: true },
       { id: "p-f-3", giornata: "3ª Giornata", data: "01/11/2025", ora: "20:30", avversario: "Rubicone In Volley", casa: true, luogo: "PalaMaroncelli, Forlì", risultato: "1 - 3", setNva: 1, setAvversario: 3, parzialiSet: "20-25, 25-22, 19-25, 22-25", terminata: true },
       { id: "p-f-4", giornata: "4ª Giornata", data: "08/11/2025", ora: "18:00", avversario: "Cattolica Volley", casa: false, luogo: "Palasport Comunale, Cattolica", risultato: "", setNva: null, setAvversario: null, terminata: false },
       { id: "p-f-5", giornata: "5ª Giornata", data: "15/11/2025", ora: "20:30", avversario: "Volley Team Bologna", casa: true, luogo: "PalaMaroncelli, Forlì", risultato: "", setNva: null, setAvversario: null, terminata: false }

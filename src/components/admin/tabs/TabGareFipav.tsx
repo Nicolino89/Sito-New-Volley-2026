@@ -460,7 +460,9 @@ export default function TabGareFipav({
           ...p,
           setNva,
           setAvversario,
-          risultato: terminata ? `${setNva ?? 3} - ${setAvversario ?? 0}` : '',
+          risultato: terminata 
+            ? (p.casa ? `${setNva ?? 3} - ${setAvversario ?? 0}` : `${setAvversario ?? 0} - ${setNva ?? 3}`) 
+            : '',
           terminata
         };
       }
@@ -744,7 +746,9 @@ export default function TabGareFipav({
                             
                             {/* Score Display */}
                             <div className="bg-zinc-900 text-brand-yellow px-3.5 py-1.5 rounded-xl font-bold text-sm min-w-[65px] text-center">
-                              {match.terminata ? (match.risultato || `${match.setNva ?? 0} - ${match.setAvversario ?? 0}`) : 'VS'}
+                              {match.terminata 
+                                ? (match.casa ? `${match.setNva ?? 0} - ${match.setAvversario ?? 0}` : `${match.setAvversario ?? 0} - ${match.setNva ?? 0}`) 
+                                : 'VS'}
                             </div>
 
                             {/* Status Toggle Button */}
@@ -1306,10 +1310,11 @@ export default function TabGareFipav({
                           value={editingMatch.setNva ?? 3}
                           onChange={(e) => {
                             const v = parseInt(e.target.value, 10);
+                            const opp = editingMatch.setAvversario ?? 0;
                             setEditingMatch({
                               ...editingMatch,
                               setNva: v,
-                              risultato: `${v} - ${editingMatch.setAvversario ?? 0}`
+                              risultato: editingMatch.casa ? `${v} - ${opp}` : `${opp} - ${v}`
                             });
                           }}
                           className="w-full bg-white border border-zinc-300 rounded-xl p-2 text-xs font-bold text-center"
@@ -1325,10 +1330,11 @@ export default function TabGareFipav({
                           value={editingMatch.setAvversario ?? 0}
                           onChange={(e) => {
                             const v = parseInt(e.target.value, 10);
+                            const nva = editingMatch.setNva ?? 3;
                             setEditingMatch({
                               ...editingMatch,
                               setAvversario: v,
-                              risultato: `${editingMatch.setNva ?? 3} - ${v}`
+                              risultato: editingMatch.casa ? `${nva} - ${v}` : `${v} - ${nva}`
                             });
                           }}
                           className="w-full bg-white border border-zinc-300 rounded-xl p-2 text-xs font-bold text-center"

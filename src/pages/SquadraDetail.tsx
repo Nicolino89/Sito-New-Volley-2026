@@ -745,7 +745,7 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                   avversario: cg.avversario,
                   casa: cg.casa,
                   luogo: cg.luogo || 'PalaMaroncelli, Forlì',
-                  risultato: cg.terminata ? `${cg.set_vinti} - ${cg.set_persi}` : '',
+                  risultato: cg.terminata ? (cg.casa ? `${cg.set_vinti} - ${cg.set_persi}` : `${cg.set_persi} - ${cg.set_vinti}`) : '',
                   setNva: cg.set_vinti,
                   setAvversario: cg.set_persi,
                   parzialiSet: cg.parzialiSet || '',
@@ -754,6 +754,9 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                   const setNva = match.setNva ?? 0;
                   const setOpp = match.setAvversario ?? 0;
                   const hasWon = match.terminata && setNva > setOpp;
+                  // In pallavolo il punteggio deve seguire rigorosamente l'ordine visivo: [Squadra Sinistra (Casa)] - [Squadra Destra (Ospite)]
+                  // Quando siamo in trasferta (casa === false), NVA è a destra quindi il punteggio visualizzato è [Set Avversario] - [Set NVA]
+                  const displayScore = match.casa ? `${setNva} - ${setOpp}` : `${setOpp} - ${setNva}`;
                   return (
                     <div 
                       key={match.id || idx}
@@ -847,7 +850,7 @@ export default function SquadraDetail({ squadre, giocatori }: SquadraDetailProps
                                   </span>
                                 )}
                                 <span className="text-3xl font-sport font-black tabular-nums text-zinc-950 tracking-tight leading-none">
-                                  {setNva} - {setOpp}
+                                  {displayScore}
                                 </span>
                               </div>
                             </div>
