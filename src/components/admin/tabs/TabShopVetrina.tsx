@@ -1,27 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ShoppingBag, 
+  Shirt, 
   Plus, 
   Edit3, 
   Trash2, 
   ExternalLink, 
-  Tag, 
   Sparkles, 
-  Percent, 
   Search, 
   Check, 
   X, 
   AlertCircle, 
   Layers, 
-  DollarSign, 
-  Shirt, 
   Package, 
   RefreshCw,
   Eye,
   CheckCircle2,
-  SlidersHorizontal,
-  Flame,
-  ArrowUpDown
+  MapPin,
+  ShieldCheck
 } from 'lucide-react';
 import { 
   ArticoloVetrina, 
@@ -53,8 +48,8 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoria, setSelectedCategoria] = useState<CategoriaVetrina>('Tutti');
-  const [filtroSoloPromo, setFiltroSoloPromo] = useState(false);
-  const [filtroSoloSconto, setFiltroSoloSconto] = useState(false);
+  const [filtroSoloNovita, setFiltroSoloNovita] = useState(false);
+  const [filtroSoloDisponibili, setFiltroSoloDisponibili] = useState(false);
 
   // Modal stato
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -70,7 +65,7 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
       setArticoli(data);
     } catch (err: any) {
       console.error(err);
-      showToast("Errore durante il caricamento del catalogo vetrina", "error");
+      showToast("Errore durante il caricamento del catalogo materiale", "error");
     } finally {
       setIsLoading(false);
     }
@@ -82,19 +77,19 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
 
   // Ripristino dati di default
   const handleResetDefaults = async () => {
-    if (!window.confirm("Vuoi ripristinare il catalogo con gli articoli ufficiali New Volley Academy di default?")) {
+    if (!window.confirm("Vuoi ripristinare il catalogo con i capi e la dotazione tecnica ufficiale NVA di default?")) {
       return;
     }
     try {
       await salvaTuttiArticoliVetrina(DEFAULT_ARTICOLI_VETRINA);
       setArticoli(DEFAULT_ARTICOLI_VETRINA);
-      showToast("Catalogo ripristinato con gli articoli ufficiali NVA!", "success");
+      showToast("Catalogo ripristinato con i capi ufficiali NVA!", "success");
     } catch (err: any) {
       showToast("Errore durante il ripristino: " + err.message, "error");
     }
   };
 
-  // Apertura modale nuovo articolo
+  // Apertura modale nuovo capo
   const handleOpenNew = () => {
     const nextOrder = articoli.length > 0 ? Math.max(...articoli.map(a => a.ordine || 0)) + 1 : 1;
     setEditingArticolo({
@@ -102,17 +97,14 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
       nome: '',
       descrizione: '',
       categoria: 'Abbigliamento',
-      prezzo_pieno: 25.0,
-      prezzo_tesserato: 20.0,
-      in_promozione: false,
-      promo_label: 'SCONTO TESSERATI',
+      promo_label: 'KIT UFFICIALE',
       novita: true,
       disponibile: true,
       stato_disponibilita: 'immediata',
       foto_url: '',
       taglie_disponibili: ['S', 'M', 'L', 'XL'],
       colori_disponibili: ['Nero / Giallo Academy'],
-      materiale: 'Tessuto Tecnico Ufficiale NVA',
+      materiale: 'Tessuto Tecnico Traspirante',
       mostra_nel_ticker: false,
       ordine: nextOrder
     });
@@ -130,15 +122,15 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
     const updated: ArticoloVetrina = {
       ...articolo,
       disponibile: !articolo.disponibile,
-      stato_disponibilita: !articolo.disponibile ? 'immediata' : 'esaurito'
+      stato_disponibilita: !articolo.disponibile ? 'immediata' : 'su_ordinazione'
     };
     try {
       await salvaArticoloVetrina(updated);
       setArticoli(prev => prev.map(a => a.id === articolo.id ? updated : a));
       showToast(
         updated.disponibile 
-          ? `Articolo "${articolo.nome}" contrassegnato come DISPONIBILE` 
-          : `Articolo "${articolo.nome}" contrassegnato come ESAURITO`,
+          ? `Capo "${articolo.nome}" contrassegnato come DISPONIBILE IN SEDE` 
+          : `Capo "${articolo.nome}" contrassegnato come SU RICHIESTA`,
         "info"
       );
     } catch (err: any) {
@@ -146,35 +138,35 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
     }
   };
 
-  // Toggle rapido promo
-  const handleTogglePromo = async (articolo: ArticoloVetrina) => {
+  // Toggle rapido novità
+  const handleToggleNovita = async (articolo: ArticoloVetrina) => {
     const updated: ArticoloVetrina = {
       ...articolo,
-      in_promozione: !articolo.in_promozione
+      novita: !articolo.novita
     };
     try {
       await salvaArticoloVetrina(updated);
       setArticoli(prev => prev.map(a => a.id === articolo.id ? updated : a));
       showToast(
-        updated.in_promozione 
-          ? `Promo ATTIVATA su "${articolo.nome}"` 
-          : `Promo disattivata su "${articolo.nome}"`,
+        updated.novita 
+          ? `Badge Novità ATTIVATO su "${articolo.nome}"` 
+          : `Badge Novità rimosso da "${articolo.nome}"`,
         "info"
       );
     } catch (err: any) {
-      showToast("Errore aggiornamento promo", "error");
+      showToast("Errore aggiornamento novità", "error");
     }
   };
 
   // Eliminazione
   const handleDelete = async (articolo: ArticoloVetrina) => {
-    if (!window.confirm(`Sei sicuro di voler eliminare l'articolo "${articolo.nome}" dal catalogo?`)) {
+    if (!window.confirm(`Sei sicuro di voler eliminare "${articolo.nome}" dalla dotazione tecnica?`)) {
       return;
     }
     try {
       await eliminaArticoloVetrina(articolo.id);
       setArticoli(prev => prev.filter(a => a.id !== articolo.id));
-      showToast(`Articolo "${articolo.nome}" eliminato con successo`, "success");
+      showToast(`Capo "${articolo.nome}" eliminato con successo`, "success");
     } catch (err: any) {
       showToast("Errore eliminazione articolo", "error");
     }
@@ -184,7 +176,7 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
   const handleSaveModal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingArticolo || !editingArticolo.nome?.trim()) {
-      showToast("Inserisci il nome dell'articolo", "error");
+      showToast("Inserisci il nome del capo", "error");
       return;
     }
 
@@ -193,11 +185,6 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
       nome: editingArticolo.nome.trim(),
       descrizione: editingArticolo.descrizione || '',
       categoria: (editingArticolo.categoria as any) || 'Abbigliamento',
-      prezzo_pieno: Number(editingArticolo.prezzo_pieno) || 0,
-      prezzo_tesserato: editingArticolo.prezzo_tesserato !== undefined && editingArticolo.prezzo_tesserato !== null && editingArticolo.prezzo_tesserato !== ('' as any) 
-        ? Number(editingArticolo.prezzo_tesserato) 
-        : undefined,
-      in_promozione: Boolean(editingArticolo.in_promozione),
       promo_label: editingArticolo.promo_label || '',
       novita: Boolean(editingArticolo.novita),
       disponibile: Boolean(editingArticolo.disponibile),
@@ -216,7 +203,7 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
       await caricaArticoli();
       setIsModalOpen(false);
       setEditingArticolo(null);
-      showToast(`Articolo "${payload.nome}" salvato nel catalogo vetrina!`, "success");
+      showToast(`Capo "${payload.nome}" salvato nella dotazione tecnica!`, "success");
     } catch (err: any) {
       console.error(err);
       showToast("Errore durante il salvataggio: " + (err.message || ''), "error");
@@ -242,27 +229,9 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
     setCustomTaglia('');
   };
 
-  // Gestione colori
-  const addCustomColore = () => {
-    if (!customColore.trim() || !editingArticolo) return;
-    const current = editingArticolo.colori_disponibili || [];
-    if (!current.includes(customColore.trim())) {
-      setEditingArticolo({ ...editingArticolo, colori_disponibili: [...current, customColore.trim()] });
-    }
-    setCustomColore('');
-  };
-
-  const removeColore = (colore: string) => {
-    if (!editingArticolo) return;
-    const current = editingArticolo.colori_disponibili || [];
-    setEditingArticolo({ ...editingArticolo, colori_disponibili: current.filter(c => c !== colore) });
-  };
-
   // Calcolo statistiche
   const stats = {
     totali: articoli.length,
-    promo: articoli.filter(a => a.in_promozione).length,
-    scontoTesserati: articoli.filter(a => a.prezzo_tesserato && a.prezzo_tesserato < a.prezzo_pieno).length,
     novita: articoli.filter(a => a.novita).length,
     disponibili: articoli.filter(a => a.disponibile).length
   };
@@ -270,8 +239,8 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
   // Filtro articoli per visualizzazione
   const articoliFiltrati = articoli.filter(art => {
     if (selectedCategoria !== 'Tutti' && art.categoria !== selectedCategoria) return false;
-    if (filtroSoloPromo && !art.in_promozione) return false;
-    if (filtroSoloSconto && (!art.prezzo_tesserato || art.prezzo_tesserato >= art.prezzo_pieno)) return false;
+    if (filtroSoloNovita && !art.novita) return false;
+    if (filtroSoloDisponibili && !art.disponibile) return false;
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       const matchNome = art.nome.toLowerCase().includes(q);
@@ -290,19 +259,19 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-amber-400/20 border border-amber-400/40 text-amber-400 flex items-center justify-center shadow-lg">
-              <ShoppingBag className="w-6 h-6" />
+              <Shirt className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider font-sport italic">
-                  Vetrina Materiale & Merchandising
+                  Dotazione Tecnica & Materiale Societario
                 </h3>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 font-mono">
-                  {stats.totali} ARTICOLI
+                  {stats.totali} CAPI
                 </span>
               </div>
               <p className="font-inter text-xs text-slate-400 mt-0.5">
-                Gestisci il catalogo del materiale societario, abbigliamento, promozioni e prezzi riservati ai tesserati NVA.
+                Lookbook e catalogo istituzionale delle divise, tute e materiale sportivo New Volley Academy riservato agli atleti e soci.
               </p>
             </div>
           </div>
@@ -316,7 +285,7 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
               title="Apri l'anteprima della vetrina pubblica"
             >
               <Eye className="w-4 h-4 text-amber-400" />
-              <span>Anteprima Vetrina (`/vetrina`)</span>
+              <span>Anteprima Lookbook (`/vetrina`)</span>
               <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
             </a>
 
@@ -326,52 +295,44 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
               className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-sport italic skew-x-[-6deg] uppercase tracking-wider px-4 py-2.5 rounded-xl text-xs font-black transition-all shadow-md cursor-pointer flex items-center gap-1.5 shrink-0"
             >
               <Plus className="w-4 h-4" />
-              <span>Nuovo Articolo</span>
+              <span>Aggiungi Capo</span>
             </button>
           </div>
         </div>
 
         {/* STATS CHIPS */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-slate-800">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-800">
           <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800/80">
-            <div className="text-[10px] font-mono text-slate-400 uppercase">In Promozione</div>
+            <div className="text-[10px] font-mono text-slate-400 uppercase">Totale Capi e Dotazioni</div>
+            <div className="text-lg font-black font-sport text-white flex items-center gap-1">
+              <Shirt className="w-4 h-4 text-amber-400" />
+              <span>{stats.totali}</span>
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800/80">
+            <div className="text-[10px] font-mono text-slate-400 uppercase">Novità Stagione 2026/27</div>
             <div className="text-lg font-black font-sport text-amber-400 flex items-center gap-1">
-              <Flame className="w-4 h-4 text-red-400" />
-              <span>{stats.promo}</span>
-            </div>
-          </div>
-
-          <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800/80">
-            <div className="text-[10px] font-mono text-slate-400 uppercase">Sconto Tesserati NVA</div>
-            <div className="text-lg font-black font-sport text-emerald-400 flex items-center gap-1">
-              <Percent className="w-4 h-4 text-emerald-400" />
-              <span>{stats.scontoTesserati}</span>
-            </div>
-          </div>
-
-          <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800/80">
-            <div className="text-[10px] font-mono text-slate-400 uppercase">Novità Stagione</div>
-            <div className="text-lg font-black font-sport text-cyan-400 flex items-center gap-1">
-              <Sparkles className="w-4 h-4 text-cyan-400" />
+              <Sparkles className="w-4 h-4 text-amber-400" />
               <span>{stats.novita}</span>
             </div>
           </div>
 
           <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800/80">
-            <div className="text-[10px] font-mono text-slate-400 uppercase">Disponibili Subito</div>
-            <div className="text-lg font-black font-sport text-white flex items-center gap-1">
-              <CheckCircle2 className="w-4 h-4 text-amber-400" />
+            <div className="text-[10px] font-mono text-slate-400 uppercase">Campionario in Palazzetto</div>
+            <div className="text-lg font-black font-sport text-emerald-400 flex items-center gap-1">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               <span>{stats.disponibili} / {stats.totali}</span>
             </div>
           </div>
         </div>
 
-        {/* INFO BOX POLICY VETRINA */}
+        {/* INFO BOX POLICY ASD (STRADA 3 - LOOKBOOK PURO) */}
         <div className="p-3.5 bg-amber-500/10 border border-amber-400/30 rounded-2xl text-[11px] text-amber-200/90 flex items-start gap-2.5">
-          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
           <div>
-            <b>Modalità Vetrina Attiva (No E-Commerce):</b> La vendita non avviene direttamente online con pagamento elettronico.
-            I tesserati e i tifosi visionano gli articoli e possono provarli e acquistarli direttamente in segreteria al palazzetto o via WhatsApp.
+            <b>Conformità Fiscale ASD (Lookbook Istituzionale):</b> Questa pagina è configurata in modalità Lookbook puro.
+            Non mostra prezzi, sconti o transazioni commerciali, ma presenta in modo professionale e trasparente la dotazione tecnica societaria e i contatti della segreteria per gli atleti e le famiglie.
           </div>
         </div>
       </div>
@@ -387,7 +348,7 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              placeholder="Cerca per nome articolo, descrizione o categoria..."
+              placeholder="Cerca capo, descrizione o categoria..."
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none text-xs bg-slate-50"
             />
             {searchTerm && (
@@ -404,35 +365,35 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setFiltroSoloPromo(!filtroSoloPromo)}
+              onClick={() => setFiltroSoloNovita(!filtroSoloNovita)}
               className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
-                filtroSoloPromo
-                  ? 'bg-red-500 text-white border-red-600 shadow-sm'
+                filtroSoloNovita
+                  ? 'bg-amber-400 text-slate-950 border-amber-500 shadow-sm'
                   : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
               }`}
             >
-              <Flame className="w-3.5 h-3.5" />
-              <span>Solo Promo</span>
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Solo Novità</span>
             </button>
 
             <button
               type="button"
-              onClick={() => setFiltroSoloSconto(!filtroSoloSconto)}
+              onClick={() => setFiltroSoloDisponibili(!filtroSoloDisponibili)}
               className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
-                filtroSoloSconto
+                filtroSoloDisponibili
                   ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
                   : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
               }`}
             >
-              <Percent className="w-3.5 h-3.5" />
-              <span>Sconto Tesserati</span>
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>In Palazzetto</span>
             </button>
 
             <button
               type="button"
               onClick={handleResetDefaults}
               className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 transition-all cursor-pointer"
-              title="Ripristina articoli di default NVA"
+              title="Ripristina capi di default NVA"
             >
               <RefreshCw className="w-4 h-4" />
             </button>
@@ -459,18 +420,18 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
         </div>
       </div>
 
-      {/* 3. GRIGLIA ARTICOLI */}
+      {/* 3. GRIGLIA CAPI */}
       {isLoading ? (
         <div className="p-12 text-center text-slate-400 space-y-2">
           <RefreshCw className="w-8 h-8 animate-spin mx-auto text-amber-500" />
-          <p className="font-mono text-xs">Caricamento articoli vetrina...</p>
+          <p className="font-mono text-xs">Caricamento dotazione tecnica...</p>
         </div>
       ) : articoliFiltrati.length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center space-y-3">
-          <ShoppingBag className="w-12 h-12 text-slate-300 mx-auto" />
-          <h4 className="text-base font-bold text-slate-800">Nessun articolo trovato</h4>
+          <Shirt className="w-12 h-12 text-slate-300 mx-auto stroke-1" />
+          <h4 className="text-base font-bold text-slate-800">Nessun capo trovato</h4>
           <p className="text-slate-500 max-w-md mx-auto text-xs">
-            Nessun articolo corrisponde ai filtri selezionati. Prova a modificare la ricerca o aggiungi un nuovo articolo al catalogo.
+            Nessun capo corrisponde ai filtri selezionati. Prova a modificare la ricerca o aggiungi un nuovo capo alla dotazione.
           </p>
           <button
             type="button"
@@ -478,191 +439,159 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
             className="px-4 py-2 rounded-xl bg-amber-400 text-slate-950 font-bold hover:bg-amber-500 transition-all inline-flex items-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Aggiungi Articolo</span>
+            <span>Aggiungi Capo</span>
           </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {articoliFiltrati.map(articolo => {
-            const hasSconto = articolo.prezzo_tesserato && articolo.prezzo_tesserato < articolo.prezzo_pieno;
-            const scontoPerc = hasSconto 
-              ? Math.round(((articolo.prezzo_pieno - (articolo.prezzo_tesserato || 0)) / articolo.prezzo_pieno) * 100) 
-              : 0;
+          {articoliFiltrati.map(articolo => (
+            <div 
+              key={articolo.id}
+              className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
+            >
+              <div>
+                {/* FOTO E BADGES */}
+                <div className="relative aspect-[4/3] bg-slate-950 flex items-center justify-center overflow-hidden">
+                  {articolo.foto_url ? (
+                    <img 
+                      src={articolo.foto_url} 
+                      alt={articolo.nome}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="text-center p-4 space-y-1.5 text-slate-500">
+                      <Shirt className="w-10 h-10 mx-auto text-slate-600 stroke-1" />
+                      <span className="text-[10px] font-mono block">Nessuna foto</span>
+                    </div>
+                  )}
 
-            return (
-              <div 
-                key={articolo.id}
-                className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
-              >
-                <div>
-                  {/* FOTO E BADGES */}
-                  <div className="relative aspect-[4/3] bg-slate-950 flex items-center justify-center overflow-hidden">
-                    {articolo.foto_url ? (
-                      <img 
-                        src={articolo.foto_url} 
-                        alt={articolo.nome}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          // Fallback se foto mancante
-                          (e.target as HTMLElement).style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <div className="text-center p-4 space-y-1.5 text-slate-500">
-                        <Shirt className="w-10 h-10 mx-auto text-slate-600" />
-                        <span className="text-[10px] font-mono block">Nessuna foto</span>
-                      </div>
+                  {/* OVERLAY BADGES */}
+                  <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start">
+                    {articolo.promo_label && (
+                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-mono font-black uppercase tracking-wider bg-amber-400 text-slate-950 shadow-md">
+                        {articolo.promo_label}
+                      </span>
                     )}
 
-                    {/* OVERLAY BADGES */}
-                    <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start">
-                      {articolo.in_promozione && (
-                        <span className="px-2.5 py-0.5 rounded-full text-[9px] font-mono font-black uppercase tracking-wider bg-red-600 text-white shadow-md flex items-center gap-1">
-                          <Flame className="w-3 h-3" />
-                          <span>{articolo.promo_label || 'PROMO'}</span>
-                        </span>
-                      )}
-
-                      {articolo.novita && (
-                        <span className="px-2.5 py-0.5 rounded-full text-[9px] font-mono font-black uppercase tracking-wider bg-amber-400 text-slate-950 shadow-md">
-                          NOVITÀ
-                        </span>
-                      )}
-
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider bg-black/75 text-white backdrop-blur-sm">
-                        {articolo.categoria}
+                    {articolo.novita && !articolo.promo_label && (
+                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-mono font-black uppercase tracking-wider bg-amber-400 text-slate-950 shadow-md">
+                        NOVITÀ
                       </span>
-                    </div>
-
-                    {/* DISPONIBILITÀ STATUS CHIP */}
-                    <div className="absolute top-3 right-3">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider backdrop-blur-sm ${
-                        articolo.disponibile 
-                          ? 'bg-emerald-500/90 text-white shadow' 
-                          : 'bg-slate-900/90 text-red-300 border border-red-500/40'
-                      }`}>
-                        {articolo.disponibile ? 'DISPONIBILE' : 'ESAURITO'}
-                      </span>
-                    </div>
-
-                    {/* PREZZO SCONTO OVERLAY IN BASSO */}
-                    {hasSconto && (
-                      <div className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-lg bg-emerald-600 text-white font-mono font-black text-[10px] shadow">
-                        -{scontoPerc}% Tesserati NVA
-                      </div>
                     )}
+
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider bg-black/75 text-white backdrop-blur-sm">
+                      {articolo.categoria}
+                    </span>
                   </div>
 
-                  {/* CONTENUTO ARTICOLO */}
-                  <div className="p-4 space-y-3">
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-sm leading-snug line-clamp-2">
-                        {articolo.nome}
-                      </h4>
-                      <p className="text-slate-500 text-[11px] line-clamp-2 mt-1">
-                        {articolo.descrizione || 'Nessuna descrizione specificata.'}
-                      </p>
-                    </div>
-
-                    {/* PREZZI COMPARATI */}
-                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
-                      <div>
-                        <div className="text-[10px] text-slate-400 uppercase font-mono">Prezzo Listino</div>
-                        <div className={`font-sport font-black text-sm ${hasSconto ? 'line-through text-slate-400' : 'text-slate-900'}`}>
-                          € {articolo.prezzo_pieno.toFixed(2)}
-                        </div>
-                      </div>
-
-                      {hasSconto && (
-                        <div className="text-right">
-                          <div className="text-[10px] text-emerald-600 font-bold uppercase font-mono flex items-center gap-1 justify-end">
-                            <Percent className="w-3 h-3" />
-                            <span>Tesserati NVA</span>
-                          </div>
-                          <div className="font-sport font-black text-base text-emerald-600">
-                            € {articolo.prezzo_tesserato?.toFixed(2)}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* TAGLIE DISPONIBILI */}
-                    {articolo.taglie_disponibili && articolo.taglie_disponibili.length > 0 && (
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-mono text-slate-400 uppercase block">Taglie disponibili:</span>
-                        <div className="flex flex-wrap gap-1">
-                          {articolo.taglie_disponibili.map(t => (
-                            <span key={t} className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-mono font-bold">
-                              {t}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                  {/* DISPONIBILITÀ STATUS CHIP */}
+                  <div className="absolute top-3 right-3">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider backdrop-blur-sm ${
+                      articolo.disponibile 
+                        ? 'bg-emerald-500/90 text-white shadow' 
+                        : 'bg-slate-900/90 text-amber-300 border border-amber-500/40'
+                    }`}>
+                      {articolo.disponibile ? 'IN PALAZZETTO' : 'SU RICHIESTA'}
+                    </span>
                   </div>
                 </div>
 
-                {/* BOTTONI AZIONE CARD */}
-                <div className="p-4 pt-0 border-t border-slate-100 mt-2 space-y-2">
-                  <div className="flex items-center justify-between gap-2 pt-2">
-                    
-                    {/* QUICK SWITCH DISPONIBILE */}
-                    <button
-                      type="button"
-                      onClick={() => handleToggleDisponibile(articolo)}
-                      className={`text-[10px] font-bold px-2.5 py-1.5 rounded-xl border transition-colors cursor-pointer ${
-                        articolo.disponibile 
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
-                          : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-                      }`}
-                    >
-                      {articolo.disponibile ? '✓ In Sede' : '✗ Esaurito'}
-                    </button>
+                {/* CONTENUTO ARTICOLO */}
+                <div className="p-4 space-y-3">
+                  <div>
+                    <h4 className="font-bold text-slate-900 text-sm leading-snug line-clamp-2">
+                      {articolo.nome}
+                    </h4>
+                    <p className="text-slate-500 text-[11px] line-clamp-2 mt-1">
+                      {articolo.descrizione || 'Nessuna descrizione specificata.'}
+                    </p>
+                  </div>
 
-                    {/* QUICK SWITCH PROMO */}
-                    <button
-                      type="button"
-                      onClick={() => handleTogglePromo(articolo)}
-                      className={`text-[10px] font-bold px-2.5 py-1.5 rounded-xl border transition-colors cursor-pointer flex items-center gap-1 ${
-                        articolo.in_promozione 
-                          ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' 
-                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      <Flame className="w-3 h-3" />
-                      <span>{articolo.in_promozione ? 'Promo Attiva' : 'No Promo'}</span>
-                    </button>
-
-                    <div className="flex items-center gap-1 ml-auto">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEdit(articolo)}
-                        className="p-1.5 rounded-xl bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-slate-950 transition-colors cursor-pointer"
-                        title="Modifica articolo"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(articolo)}
-                        className="p-1.5 rounded-xl bg-slate-100 hover:bg-red-100 text-slate-500 hover:text-red-600 transition-colors cursor-pointer"
-                        title="Elimina articolo"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                  {/* TAGLIE DISPONIBILI */}
+                  {articolo.taglie_disponibili && articolo.taglie_disponibili.length > 0 && (
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-mono text-slate-400 uppercase block">Taglie previste:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {articolo.taglie_disponibili.map(t => (
+                          <span key={t} className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-mono font-bold">
+                            {t}
+                          </span>
+                        ))}
+                      </div>
                     </div>
+                  )}
 
+                  {/* BOX INFO SEGRETERIA */}
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-2 text-[11px] text-slate-600">
+                    <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span>Ritiro e campionario presso Segreteria NVA</span>
                   </div>
                 </div>
-
               </div>
-            );
-          })}
+
+              {/* BOTTONI AZIONE CARD */}
+              <div className="p-4 pt-0 border-t border-slate-100 mt-2 space-y-2">
+                <div className="flex items-center justify-between gap-2 pt-2">
+                  
+                  {/* QUICK SWITCH DISPONIBILE */}
+                  <button
+                    type="button"
+                    onClick={() => handleToggleDisponibile(articolo)}
+                    className={`text-[10px] font-bold px-2.5 py-1.5 rounded-xl border transition-colors cursor-pointer ${
+                      articolo.disponibile 
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
+                        : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+                    }`}
+                  >
+                    {articolo.disponibile ? '✓ In Sede' : '⏳ Su Richiesta'}
+                  </button>
+
+                  {/* QUICK SWITCH NOVITÀ */}
+                  <button
+                    type="button"
+                    onClick={() => handleToggleNovita(articolo)}
+                    className={`text-[10px] font-bold px-2.5 py-1.5 rounded-xl border transition-colors cursor-pointer flex items-center gap-1 ${
+                      articolo.novita 
+                        ? 'bg-amber-50 text-amber-900 border-amber-300' 
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Sparkles className="w-3 h-3 text-amber-500" />
+                    <span>{articolo.novita ? 'Novità 26/27' : 'Standard'}</span>
+                  </button>
+
+                  <div className="flex items-center gap-1 ml-auto">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEdit(articolo)}
+                      className="p-1.5 rounded-xl bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-slate-950 transition-colors cursor-pointer"
+                      title="Modifica capo"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(articolo)}
+                      className="p-1.5 rounded-xl bg-slate-100 hover:bg-red-100 text-slate-500 hover:text-red-600 transition-colors cursor-pointer"
+                      title="Elimina capo"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+          ))}
         </div>
       )}
 
-      {/* 4. MODALE CREA / MODIFICA ARTICOLO */}
+      {/* 4. MODALE CREA / MODIFICA CAPO */}
       {isModalOpen && editingArticolo && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
           <div className="bg-white rounded-3xl max-w-2xl w-full p-6 space-y-5 shadow-2xl border border-slate-200 my-8 max-h-[90vh] overflow-y-auto">
@@ -670,12 +599,12 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-amber-400/20 text-amber-500 flex items-center justify-center">
-                  <ShoppingBag className="w-4 h-4" />
+                  <Shirt className="w-4 h-4 stroke-1" />
                 </div>
                 <h4 className="text-base font-black text-slate-900 uppercase font-sport tracking-wider">
                   {editingArticolo.id?.startsWith('articolo-') && !articoli.some(a => a.id === editingArticolo.id) 
-                    ? 'Nuovo Articolo Vetrina' 
-                    : 'Modifica Articolo Vetrina'}
+                    ? 'Nuovo Capo Dotazione Tecnica' 
+                    : 'Modifica Capo Dotazione Tecnica'}
                 </h4>
               </div>
               <button
@@ -693,7 +622,7 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2 space-y-1">
                   <label className="block text-[11px] font-mono font-bold uppercase text-slate-700">
-                    Nome Articolo *
+                    Nome Capo / Materiale *
                   </label>
                   <input
                     type="text"
@@ -724,73 +653,21 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
               {/* DESCRIZIONE */}
               <div className="space-y-1">
                 <label className="block text-[11px] font-mono font-bold uppercase text-slate-700">
-                  Descrizione Articolo
+                  Descrizione Capo & Destinazione d'Uso
                 </label>
                 <textarea
                   rows={2}
                   value={editingArticolo.descrizione || ''}
                   onChange={e => setEditingArticolo({ ...editingArticolo, descrizione: e.target.value })}
-                  placeholder="Descrivi i dettagli dell'articolo, vestibilità, loghi..."
+                  placeholder="Descrivi i dettagli del capo, vestibilità, loghi societari..."
                   className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none text-xs"
                 />
-              </div>
-
-              {/* PREZZI & SCONTO TESSERATI */}
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                <span className="font-bold text-slate-900 text-xs block font-sport uppercase tracking-wider flex items-center gap-1.5">
-                  <DollarSign className="w-4 h-4 text-emerald-600" />
-                  Prezzi e Sconto Tesserati NVA
-                </span>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-mono font-bold uppercase text-slate-600">
-                      Prezzo di Listino (€) *
-                    </label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      required
-                      value={editingArticolo.prezzo_pieno !== undefined ? editingArticolo.prezzo_pieno : ''}
-                      onChange={e => setEditingArticolo({ ...editingArticolo, prezzo_pieno: parseFloat(e.target.value) || 0 })}
-                      placeholder="es. 30.00"
-                      className="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:border-amber-400 outline-none text-xs bg-white font-mono"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-mono font-bold uppercase text-emerald-700 flex items-center gap-1">
-                      <Percent className="w-3 h-3" />
-                      Prezzo Riservato Tesserati (€) (Opzionale)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      value={editingArticolo.prezzo_tesserato !== undefined ? editingArticolo.prezzo_tesserato : ''}
-                      onChange={e => setEditingArticolo({ ...editingArticolo, prezzo_tesserato: e.target.value === '' ? undefined : parseFloat(e.target.value) })}
-                      placeholder="es. 25.00"
-                      className="w-full px-3.5 py-2 rounded-xl border border-emerald-300 focus:border-emerald-500 outline-none text-xs bg-white font-mono text-emerald-800"
-                    />
-                  </div>
-                </div>
-
-                {editingArticolo.prezzo_pieno && editingArticolo.prezzo_tesserato && editingArticolo.prezzo_tesserato < editingArticolo.prezzo_pieno ? (
-                  <div className="p-2 bg-emerald-100/70 border border-emerald-200 rounded-xl text-[11px] text-emerald-800 flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>
-                      Sconto Tesserati del <b>{Math.round(((editingArticolo.prezzo_pieno - editingArticolo.prezzo_tesserato) / editingArticolo.prezzo_pieno) * 100)}%</b> applicato!
-                      (Risparmio di € {(editingArticolo.prezzo_pieno - editingArticolo.prezzo_tesserato).toFixed(2)})
-                    </span>
-                  </div>
-                ) : null}
               </div>
 
               {/* URL FOTO ARTICOLO */}
               <div className="space-y-2">
                 <label className="block text-[11px] font-mono font-bold uppercase text-slate-700">
-                  URL Foto Articolo
+                  URL Foto Capo
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -811,7 +688,7 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
               {/* SELEZIONE TAGLIE */}
               <div className="space-y-2">
                 <label className="block text-[11px] font-mono font-bold uppercase text-slate-700">
-                  Taglie Disponibili
+                  Taglie Previste nel Kit
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {TAGLIE_PRESET.map(t => {
@@ -837,7 +714,7 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
                     type="text"
                     value={customTaglia}
                     onChange={e => setCustomTaglia(e.target.value)}
-                    placeholder="Aggiungi altra taglia (es. 42, 44...)"
+                    placeholder="Aggiungi altra taglia..."
                     className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 text-xs"
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomTaglia(); } }}
                   />
@@ -851,59 +728,59 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
                 </div>
               </div>
 
-              {/* PROMOZIONE, NOVITÀ & DISPONIBILITÀ TOGGLES */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
-                
-                {/* IN PROMOZIONE */}
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(editingArticolo.in_promozione)}
-                    onChange={e => setEditingArticolo({ ...editingArticolo, in_promozione: e.target.checked })}
-                    className="w-4 h-4 rounded text-red-600 focus:ring-red-500"
-                  />
-                  <span className="text-xs font-bold text-slate-800">In Promozione</span>
-                </label>
-
-                {/* NOVITÀ */}
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(editingArticolo.novita)}
-                    onChange={e => setEditingArticolo({ ...editingArticolo, novita: e.target.checked })}
-                    className="w-4 h-4 rounded text-amber-500 focus:ring-amber-400"
-                  />
-                  <span className="text-xs font-bold text-slate-800">Badge Novità</span>
-                </label>
-
-                {/* DISPONIBILE */}
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(editingArticolo.disponibile)}
-                    onChange={e => setEditingArticolo({ ...editingArticolo, disponibile: e.target.checked })}
-                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <span className="text-xs font-bold text-slate-800">Disponibile</span>
-                </label>
-
-              </div>
-
-              {/* TESTO ETICHETTA PROMO */}
-              {editingArticolo.in_promozione && (
+              {/* ETICHETTA & NOVITÀ */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
                 <div className="space-y-1">
-                  <label className="block text-[11px] font-mono font-bold uppercase text-red-700">
-                    Etichetta Promo (es. "OFFERTA LANCIO", "-20%", "PROMO PANTERE")
+                  <label className="block text-[10px] font-mono font-bold uppercase text-slate-700">
+                    Etichetta Linea (es. "KIT GARA", "LINEA TRAINING", "DOTAZIONE BASE")
                   </label>
                   <input
                     type="text"
                     value={editingArticolo.promo_label || ''}
                     onChange={e => setEditingArticolo({ ...editingArticolo, promo_label: e.target.value })}
-                    placeholder="es. PROMO INIZIO STAGIONE"
-                    className="w-full px-3.5 py-2 rounded-xl border border-red-200 focus:border-red-400 outline-none text-xs bg-red-50/40 text-red-900"
+                    placeholder="es. KIT UFFICIALE"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
                   />
                 </div>
-              )}
+
+                <div className="flex items-center gap-4 pt-4">
+                  {/* NOVITÀ */}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(editingArticolo.novita)}
+                      onChange={e => setEditingArticolo({ ...editingArticolo, novita: e.target.checked })}
+                      className="w-4 h-4 rounded text-amber-500 focus:ring-amber-400"
+                    />
+                    <span className="text-xs font-bold text-slate-800">Badge Novità 2026/27</span>
+                  </label>
+
+                  {/* DISPONIBILE */}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(editingArticolo.disponibile)}
+                      onChange={e => setEditingArticolo({ ...editingArticolo, disponibile: e.target.checked })}
+                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span className="text-xs font-bold text-slate-800">In Palazzetto</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* MATERIALI / NOTE TECNICHE */}
+              <div className="space-y-1">
+                <label className="block text-[11px] font-mono font-bold uppercase text-slate-700">
+                  Materiale / Composizione Tessile
+                </label>
+                <input
+                  type="text"
+                  value={editingArticolo.materiale || ''}
+                  onChange={e => setEditingArticolo({ ...editingArticolo, materiale: e.target.value })}
+                  placeholder="es. 100% Poliestere Interlock Dry-Fit traspirante"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                />
+              </div>
 
               {/* ORDINE VISUALIZZAZIONE */}
               <div className="grid grid-cols-2 gap-3">
@@ -922,16 +799,16 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
 
                 <div className="space-y-1">
                   <label className="block text-[10px] font-mono font-bold uppercase text-slate-600">
-                    Stato Magazzino
+                    Stato Ritiro
                   </label>
                   <select
                     value={editingArticolo.stato_disponibilita || 'immediata'}
                     onChange={e => setEditingArticolo({ ...editingArticolo, stato_disponibilita: e.target.value as any })}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white"
                   >
-                    <option value="immediata">Disponibilità Immediata</option>
-                    <option value="su_ordinazione">Su Ordinazione</option>
-                    <option value="esaurito">Esaurito</option>
+                    <option value="immediata">Disponibile per prova in sede</option>
+                    <option value="su_ordinazione">Su ordinazione per atleti</option>
+                    <option value="esaurito">In fase di riassortimento</option>
                   </select>
                 </div>
               </div>
@@ -951,7 +828,7 @@ export default function TabShopVetrina({ showToast }: TabShopVetrinaProps) {
                   className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-950 font-sport italic skew-x-[-6deg] uppercase tracking-wider font-black shadow-md transition-all cursor-pointer flex items-center gap-1.5"
                 >
                   <Check className="w-4 h-4" />
-                  <span>Salva Articolo</span>
+                  <span>Salva Capo</span>
                 </button>
               </div>
 

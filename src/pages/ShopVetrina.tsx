@@ -1,25 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  ShoppingBag, 
+  Shirt, 
   Search, 
   Sparkles, 
-  Percent, 
-  Flame, 
   X, 
   Check, 
-  AlertCircle, 
-  Shirt, 
+  Info, 
   Tag, 
   MessageCircle, 
   MapPin, 
   ChevronRight, 
   Layers, 
-  Info,
-  Clock,
-  ArrowRight,
-  ShieldCheck,
-  PackageCheck,
-  CheckCircle2
+  Clock, 
+  PackageCheck, 
+  ShieldCheck, 
+  CheckCircle2,
+  Calendar,
+  Compass
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -48,15 +45,14 @@ export default function ShopVetrina({ societaInfo }: ShopVetrinaProps) {
   const [loading, setLoading] = useState(true);
   const [selectedCategoria, setSelectedCategoria] = useState<CategoriaVetrina>('Tutti');
   const [searchTerm, setSearchTerm] = useState('');
-  const [onlyPromo, setOnlyPromo] = useState(false);
-  const [onlyScontoTesserati, setOnlyScontoTesserati] = useState(false);
   const [onlyNovita, setOnlyNovita] = useState(false);
+  const [onlyDisponibili, setOnlyDisponibili] = useState(false);
 
   // Modale dettaglio articolo
   const [selectedArticolo, setSelectedArticolo] = useState<ArticoloVetrina | null>(null);
   const [selectedTaglia, setSelectedTaglia] = useState<string>('');
 
-  // Numero WhatsApp per ordini / info
+  // Numero WhatsApp istituzionale segreteria
   const rawWaNumber = societaInfo?.contatti?.whatsapp || societaInfo?.contatti?.telefono || '393400000000';
   const cleanWaNumber = rawWaNumber.replace(/[^0-9]/g, '');
   const formattedWa = cleanWaNumber.startsWith('39') ? cleanWaNumber : `39${cleanWaNumber}`;
@@ -87,9 +83,8 @@ export default function ShopVetrina({ societaInfo }: ShopVetrinaProps) {
   const filteredArticoli = useMemo(() => {
     return articoli.filter(art => {
       if (selectedCategoria !== 'Tutti' && art.categoria !== selectedCategoria) return false;
-      if (onlyPromo && !art.in_promozione) return false;
-      if (onlyScontoTesserati && (!art.prezzo_tesserato || art.prezzo_tesserato >= art.prezzo_pieno)) return false;
       if (onlyNovita && !art.novita) return false;
+      if (onlyDisponibili && !art.disponibile) return false;
 
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase();
@@ -101,23 +96,19 @@ export default function ShopVetrina({ societaInfo }: ShopVetrinaProps) {
       }
       return true;
     });
-  }, [articoli, selectedCategoria, onlyPromo, onlyScontoTesserati, onlyNovita, searchTerm]);
+  }, [articoli, selectedCategoria, onlyNovita, onlyDisponibili, searchTerm]);
 
-  // Genera link WhatsApp con testo precompilato
+  // Genera link WhatsApp con testo istituzionale per la segreteria
   const getWhatsAppUrl = (art: ArticoloVetrina, taglia?: string) => {
-    const prezzoText = art.prezzo_tesserato && art.prezzo_tesserato < art.prezzo_pieno
-      ? `€${art.prezzo_tesserato.toFixed(2)} (Prezzo Tesserato) / €${art.prezzo_pieno.toFixed(2)} (Listino)`
-      : `€${art.prezzo_pieno.toFixed(2)}`;
-
-    const tagliaText = taglia ? ` - Taglia richiesta: ${taglia}` : '';
-    const text = `Ciao New Volley Academy! 👋 Vorrei informazioni e disponibilità per l'articolo della vetrina ufficiale:\n\n🏐 *${art.nome}*\nPrezzo: ${prezzoText}${tagliaText}\n\nPotete farmi sapere quando posso provarlo/ritirarlo in segreteria al palazzetto? Grazie!`;
+    const tagliaText = taglia ? ` (Taglia richiesta: ${taglia})` : '';
+    const text = `Ciao New Volley Academy! 👋 Vorrei informazioni e disponibilità sulla dotazione tecnica ufficiale:\n\n🏐 *${art.nome}*${tagliaText}\n\nPotete farmi sapere quando posso provarlo/ritirarlo in segreteria al palazzetto? Grazie!`;
     return `https://wa.me/${formattedWa}?text=${encodeURIComponent(text)}`;
   };
 
   return (
     <div className="w-full min-h-screen bg-slate-950 text-white font-sans selection:bg-[#FFE600] selection:text-slate-950 pb-20">
       
-      {/* 1. HERO HEADER BANNER */}
+      {/* 1. HERO HEADER BANNER (LOOKBOOK ISTITUZIONALE) */}
       <section className="relative overflow-hidden bg-gradient-to-b from-black via-zinc-950 to-slate-950 border-b border-zinc-800/80 pt-10 pb-12 sm:pb-16">
         
         {/* Glow sportivo di sfondo */}
@@ -125,47 +116,47 @@ export default function ShopVetrina({ societaInfo }: ShopVetrinaProps) {
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-6">
           
-          {/* Badge & Titolo */}
+          {/* Badge & Titolo Istituzionale */}
           <div className="space-y-3 max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#FFE600]/10 border border-[#FFE600]/30 text-[#FFE600] text-xs font-bold tracking-widest uppercase font-mono">
-              <ShoppingBag className="w-3.5 h-3.5" />
-              <span>COLLEZIONE UFFICIALE PANTERE 2026/2027</span>
+              <Shirt className="w-3.5 h-3.5" />
+              <span>DOTAZIONE TECNICA & LINEA UFFICIALE PANTERE 2026/2027</span>
             </div>
 
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-white font-sport italic leading-[0.95] drop-shadow-md">
-              Vetrina Materiale & Merchandising
+              Materiale & Kit Societario
             </h1>
 
             <p className="text-sm sm:text-base text-zinc-300 font-inter leading-relaxed">
-              Abbigliamento tecnico, divise da gara, accessori e gadget ufficiali New Volley Academy.
-              Prezzi speciali e scontistiche riservate a tutti gli atleti tesserati, famiglie e staff.
+              La linea ufficiale di abbigliamento, divise da gara, accessori e materiale societario New Volley Academy.
+              Ideata per atleti, squadre giovanili, staff tecnico e sostenitori delle Pantere.
             </p>
           </div>
 
-          {/* AVVISO POLICY VETRINA (SHOWCASE CONSULTATIVA - NO E-COMMERCE) */}
-          <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-zinc-900/90 border border-amber-400/30 backdrop-blur-md shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          {/* AVVISO DI TRASPARENZA ISTITUZIONALE ASD */}
+          <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-zinc-900/90 border border-[#FFE600]/30 backdrop-blur-md shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-start sm:items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-[#FFE600]/20 text-[#FFE600] flex items-center justify-center shrink-0 border border-[#FFE600]/30">
                 <Info className="w-5 h-5" />
               </div>
               <div className="space-y-0.5 text-xs">
                 <span className="font-bold text-white uppercase font-sport tracking-wider text-sm block">
-                  Come Funziona la Vetrina NVA
+                  Informazioni per Tesserati e Famiglie
                 </span>
                 <p className="text-zinc-300 font-inter">
-                  I prodotti possono essere provati e ordinati direttamente presso la <b>Segreteria del Palazzetto</b> o prenotati via <b>WhatsApp</b> con ritiro in sede. Non è attivo il pagamento online diretto sul sito.
+                  La presente pagina ha finalità puramente illustrativa della dotazione tecnica societaria. Capi, taglie e campionari prova sono visionabili e richiedibili direttamente presso la <b>Segreteria NVA al Palazzetto Giulianini</b> di Villafranca di Forlì.
                 </p>
               </div>
             </div>
 
             <a
-              href={`https://wa.me/${formattedWa}?text=${encodeURIComponent("Ciao New Volley Academy! Vorrei informazioni sul materiale societario e sul merchandising ufficiale.")}`}
+              href={`https://wa.me/${formattedWa}?text=${encodeURIComponent("Ciao New Volley Academy! Vorrei informazioni sulla dotazione tecnica e sulle taglie disponibili del materiale societario.")}`}
               target="_blank"
               rel="noopener noreferrer"
               className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg transition-all shrink-0 cursor-pointer"
             >
               <MessageCircle className="w-4 h-4 fill-white" />
-              <span>Scrivici su WhatsApp</span>
+              <span>Contatta la Segreteria</span>
             </a>
           </div>
 
@@ -185,7 +176,7 @@ export default function ShopVetrina({ societaInfo }: ShopVetrinaProps) {
                 type="text"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Cerca felpe, divise, zaini, taglie o accessori..."
+                placeholder="Cerca felpe, divise gara, taglie, zaini o accessori..."
                 className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700/80 text-white placeholder-zinc-400 text-xs focus:border-[#FFE600] focus:ring-1 focus:ring-[#FFE600] outline-none"
               />
               {searchTerm && (
@@ -198,45 +189,32 @@ export default function ShopVetrina({ societaInfo }: ShopVetrinaProps) {
               )}
             </div>
 
-            {/* TOGGLES CARATTERISTICHE */}
+            {/* TOGGLES */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
               <button
                 type="button"
-                onClick={() => setOnlyPromo(!onlyPromo)}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 border ${
-                  onlyPromo
-                    ? 'bg-red-600 text-white border-red-500 shadow-md ring-1 ring-red-400/40'
-                    : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:bg-zinc-800'
-                }`}
-              >
-                <Flame className="w-3.5 h-3.5 text-red-400" />
-                <span>Solo Promo</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setOnlyScontoTesserati(!onlyScontoTesserati)}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 border ${
-                  onlyScontoTesserati
-                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-md ring-1 ring-emerald-400/40'
-                    : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:bg-zinc-800'
-                }`}
-              >
-                <Percent className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Sconto Tesserati NVA</span>
-              </button>
-
-              <button
-                type="button"
                 onClick={() => setOnlyNovita(!onlyNovita)}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 border ${
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 border ${
                   onlyNovita
                     ? 'bg-[#FFE600] text-slate-950 border-[#FFE600] font-black shadow-md'
                     : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:bg-zinc-800'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5 text-[#FFE600]" />
-                <span>Novità</span>
+                <span>Novità Stagione</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setOnlyDisponibili(!onlyDisponibili)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 border ${
+                  onlyDisponibili
+                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-md ring-1 ring-emerald-400/40'
+                    : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:bg-zinc-800'
+                }`}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Disponibili in Sede</span>
               </button>
             </div>
 
@@ -263,18 +241,18 @@ export default function ShopVetrina({ societaInfo }: ShopVetrinaProps) {
         </div>
       </div>
 
-      {/* 3. GRIGLIA ARTICOLI */}
+      {/* 3. GRIGLIA LOOKBOOK MATERIALE */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         
         {loading ? (
           <div className="py-20 text-center space-y-3">
             <div className="w-10 h-10 border-2 border-[#FFE600] border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="font-mono text-xs text-zinc-400 uppercase tracking-widest">Caricamento vetrina materiale...</p>
+            <p className="font-mono text-xs text-zinc-400 uppercase tracking-widest">Caricamento dotazione tecnica...</p>
           </div>
         ) : filteredArticoli.length === 0 ? (
           <div className="p-12 text-center rounded-3xl bg-zinc-900/60 border border-zinc-800 space-y-4 max-w-lg mx-auto">
-            <ShoppingBag className="w-12 h-12 text-zinc-600 mx-auto" />
-            <h3 className="text-lg font-bold text-white font-sport uppercase">Nessun articolo trovato</h3>
+            <Shirt className="w-12 h-12 text-zinc-600 mx-auto stroke-1" />
+            <h3 className="text-lg font-bold text-white font-sport uppercase">Nessun capo trovato</h3>
             <p className="text-xs text-zinc-400">
               Nessun articolo corrisponde ai filtri selezionati. Prova ad azzerare la ricerca o a selezionare una categoria diversa.
             </p>
@@ -282,9 +260,8 @@ export default function ShopVetrina({ societaInfo }: ShopVetrinaProps) {
               onClick={() => {
                 setSelectedCategoria('Tutti');
                 setSearchTerm('');
-                setOnlyPromo(false);
-                setOnlyScontoTesserati(false);
                 setOnlyNovita(false);
+                setOnlyDisponibili(false);
               }}
               className="px-4 py-2 rounded-xl bg-[#FFE600] text-slate-950 font-bold text-xs uppercase cursor-pointer hover:bg-amber-400 transition-colors"
             >
@@ -293,175 +270,144 @@ export default function ShopVetrina({ societaInfo }: ShopVetrinaProps) {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredArticoli.map(articolo => {
-              const hasSconto = Boolean(articolo.prezzo_tesserato && articolo.prezzo_tesserato < articolo.prezzo_pieno);
-              const scontoPerc = hasSconto 
-                ? Math.round(((articolo.prezzo_pieno - (articolo.prezzo_tesserato || 0)) / articolo.prezzo_pieno) * 100) 
-                : 0;
+            {filteredArticoli.map(articolo => (
+              <motion.div
+                key={articolo.id}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className="group rounded-3xl bg-gradient-to-b from-zinc-900/90 to-zinc-950 border border-zinc-800/90 hover:border-[#FFE600]/60 hover:shadow-2xl hover:shadow-[#FFE600]/10 transition-all duration-300 flex flex-col justify-between overflow-hidden"
+              >
+                <div>
+                  {/* FOTO E BADGES */}
+                  <div 
+                    onClick={() => setSelectedArticolo(articolo)}
+                    className="relative aspect-square bg-zinc-950 flex items-center justify-center overflow-hidden cursor-pointer"
+                  >
+                    {articolo.foto_url ? (
+                      <img 
+                        src={articolo.foto_url} 
+                        alt={articolo.nome}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="text-center p-6 space-y-2 text-zinc-600">
+                        <Shirt className="w-16 h-16 mx-auto stroke-1" />
+                        <span className="text-[10px] font-mono tracking-wider uppercase block">Dotazione Ufficiale</span>
+                      </div>
+                    )}
 
-              return (
-                <motion.div
-                  key={articolo.id}
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="group rounded-3xl bg-gradient-to-b from-zinc-900/90 to-zinc-950 border border-zinc-800/90 hover:border-[#FFE600]/60 hover:shadow-2xl hover:shadow-[#FFE600]/10 transition-all duration-300 flex flex-col justify-between overflow-hidden"
-                >
-                  <div>
-                    {/* FOTO E BADGES */}
-                    <div 
-                      onClick={() => setSelectedArticolo(articolo)}
-                      className="relative aspect-square bg-zinc-950 flex items-center justify-center overflow-hidden cursor-pointer"
-                    >
-                      {articolo.foto_url ? (
-                        <img 
-                          src={articolo.foto_url} 
-                          alt={articolo.nome}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          onError={(e) => {
-                            (e.target as HTMLElement).style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <div className="text-center p-6 space-y-2 text-zinc-600">
-                          <Shirt className="w-16 h-16 mx-auto stroke-1" />
-                          <span className="text-[10px] font-mono tracking-wider uppercase block">Visualizza Dettagli</span>
-                        </div>
+                    {/* BADGES SOVRAPPOSTI */}
+                    <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start z-10">
+                      {articolo.promo_label && (
+                        <span className="px-2.5 py-0.5 rounded-full text-[9px] font-mono font-black uppercase tracking-wider bg-amber-400 text-slate-950 shadow-md">
+                          {articolo.promo_label}
+                        </span>
                       )}
 
-                      {/* BADGES SOVRAPPOSTI IN ALTO A SINISTRA */}
-                      <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start z-10">
-                        {articolo.in_promozione && (
-                          <span className="px-2.5 py-0.5 rounded-full text-[9px] font-mono font-black uppercase tracking-wider bg-red-600 text-white shadow-lg flex items-center gap-1">
-                            <Flame className="w-3 h-3" />
-                            <span>{articolo.promo_label || 'PROMO'}</span>
-                          </span>
-                        )}
-
-                        {articolo.novita && (
-                          <span className="px-2.5 py-0.5 rounded-full text-[9px] font-mono font-black uppercase tracking-wider bg-[#FFE600] text-slate-950 shadow-lg">
-                            NOVITÀ
-                          </span>
-                        )}
-
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider bg-black/80 text-zinc-300 backdrop-blur-md border border-white/10">
-                          {articolo.categoria}
+                      {articolo.novita && !articolo.promo_label && (
+                        <span className="px-2.5 py-0.5 rounded-full text-[9px] font-mono font-black uppercase tracking-wider bg-[#FFE600] text-slate-950 shadow-md">
+                          NUOVA STAGIONE
                         </span>
-                      </div>
-
-                      {/* DISPONIBILITÀ STATUS IN ALTO A DESTRA */}
-                      <div className="absolute top-3 right-3 z-10">
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider backdrop-blur-md shadow-md ${
-                          articolo.disponibile 
-                            ? 'bg-emerald-500/90 text-white border border-emerald-400/40' 
-                            : 'bg-zinc-900/90 text-red-400 border border-red-500/30'
-                        }`}>
-                          {articolo.disponibile ? 'DISPONIBILE' : 'ESAURITO'}
-                        </span>
-                      </div>
-
-                      {/* BADGE SCONTO TESSERATI IN BASSO A DESTRA */}
-                      {hasSconto && (
-                        <div className="absolute bottom-2.5 right-2.5 px-2.5 py-1 rounded-xl bg-emerald-600 text-white font-mono font-black text-[10px] shadow-lg flex items-center gap-1 border border-emerald-400/30">
-                          <Percent className="w-3 h-3" />
-                          <span>-{scontoPerc}% TESSERATI</span>
-                        </div>
                       )}
+
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider bg-black/80 text-zinc-300 backdrop-blur-md border border-white/10">
+                        {articolo.categoria}
+                      </span>
                     </div>
 
-                    {/* INFORMAZIONI ARTICOLO */}
-                    <div className="p-4 sm:p-5 space-y-3">
-                      <div>
-                        <h3 
-                          onClick={() => setSelectedArticolo(articolo)}
-                          className="font-bold text-white text-sm sm:text-base leading-snug line-clamp-2 hover:text-[#FFE600] transition-colors cursor-pointer"
-                        >
-                          {articolo.nome}
-                        </h3>
-                        <p className="text-zinc-400 text-xs line-clamp-2 mt-1 leading-relaxed">
-                          {articolo.descrizione}
-                        </p>
-                      </div>
+                    {/* DISPONIBILITÀ STATUS CHIP */}
+                    <div className="absolute top-3 right-3 z-10">
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider backdrop-blur-md shadow-md ${
+                        articolo.disponibile 
+                          ? 'bg-emerald-500/90 text-white border border-emerald-400/40' 
+                          : 'bg-zinc-900/90 text-amber-300 border border-amber-500/30'
+                      }`}>
+                        {articolo.disponibile ? 'IN PALAZZETTO' : 'SU RICHIESTA'}
+                      </span>
+                    </div>
 
-                      {/* TAGLIE DISPONIBILI PREVIEW */}
-                      {articolo.taglie_disponibili && articolo.taglie_disponibili.length > 0 && (
-                        <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                          <span className="text-[10px] font-mono text-zinc-500 uppercase">Taglie:</span>
-                          {articolo.taglie_disponibili.slice(0, 5).map(t => (
-                            <span key={t} className="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[10px] font-mono font-bold">
-                              {t}
-                            </span>
-                          ))}
-                          {articolo.taglie_disponibili.length > 5 && (
-                            <span className="text-[10px] text-zinc-500 font-mono">+{articolo.taglie_disponibili.length - 5}</span>
-                          )}
-                        </div>
-                      )}
-
-                      {/* PREZZI COMPARATI */}
-                      <div className="p-3 rounded-2xl bg-black/50 border border-zinc-800 flex items-center justify-between">
-                        <div>
-                          <div className="text-[9px] font-mono uppercase text-zinc-400">Prezzo Pieno</div>
-                          <div className={`font-sport font-black text-sm ${hasSconto ? 'line-through text-zinc-500' : 'text-white'}`}>
-                            € {articolo.prezzo_pieno.toFixed(2)}
-                          </div>
-                        </div>
-
-                        {hasSconto ? (
-                          <div className="text-right">
-                            <div className="text-[9px] font-mono uppercase font-bold text-emerald-400 flex items-center justify-end gap-1">
-                              <ShieldCheck className="w-3 h-3" />
-                              <span>Sconto Tesserati NVA</span>
-                            </div>
-                            <div className="font-sport font-black text-lg text-[#FFE600]">
-                              € {articolo.prezzo_tesserato?.toFixed(2)}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-right">
-                            <div className="text-[9px] font-mono uppercase text-zinc-400">Listino Ufficiale</div>
-                            <div className="font-sport font-black text-base text-white">
-                              € {articolo.prezzo_pieno.toFixed(2)}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
+                    {/* BADGE BOTTOM */}
+                    <div className="absolute bottom-2.5 left-2.5 right-2.5 px-2.5 py-1 rounded-xl bg-black/75 backdrop-blur-md border border-white/10 flex items-center justify-between text-[10px] font-mono text-zinc-300">
+                      <span className="flex items-center gap-1 text-[#FFE600]">
+                        <ShieldCheck className="w-3 h-3" />
+                        Kit Pantere
+                      </span>
+                      <span>Villafranca (FC)</span>
                     </div>
                   </div>
 
-                  {/* PULSANTI AZIONE */}
-                  <div className="p-4 sm:p-5 pt-0 space-y-2">
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
+                  {/* INFORMAZIONI ARTICOLO */}
+                  <div className="p-4 sm:p-5 space-y-3">
+                    <div>
+                      <h3 
                         onClick={() => setSelectedArticolo(articolo)}
-                        className="py-2.5 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-sport uppercase italic tracking-wider text-xs font-bold transition-all text-center cursor-pointer"
+                        className="font-bold text-white text-sm sm:text-base leading-snug line-clamp-2 hover:text-[#FFE600] transition-colors cursor-pointer"
                       >
-                        Dettagli
-                      </button>
-
-                      <a
-                        href={getWhatsAppUrl(articolo)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-sport uppercase italic tracking-wider text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
-                      >
-                        <MessageCircle className="w-3.5 h-3.5 fill-white shrink-0" />
-                        <span>Ordina</span>
-                      </a>
+                        {articolo.nome}
+                      </h3>
+                      <p className="text-zinc-400 text-xs line-clamp-2 mt-1 leading-relaxed">
+                        {articolo.descrizione}
+                      </p>
                     </div>
-                  </div>
 
-                </motion.div>
-              );
-            })}
+                    {/* TAGLIE DISPONIBILI PREVIEW */}
+                    {articolo.taglie_disponibili && articolo.taglie_disponibili.length > 0 && (
+                      <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                        <span className="text-[10px] font-mono text-zinc-500 uppercase">Taglie:</span>
+                        {articolo.taglie_disponibili.map(t => (
+                          <span key={t} className="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[10px] font-mono font-bold">
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* BOX INFO SEGRETERIA */}
+                    <div className="p-3 rounded-2xl bg-zinc-900/70 border border-zinc-800 flex items-center gap-2.5 text-xs text-zinc-300">
+                      <MapPin className="w-4 h-4 text-[#FFE600] shrink-0" />
+                      <span className="text-[11px] font-inter">
+                        Provabile e richiedibile in Segreteria NVA
+                      </span>
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* PULSANTI AZIONE */}
+                <div className="p-4 sm:p-5 pt-0 space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedArticolo(articolo)}
+                      className="py-2.5 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-sport uppercase italic tracking-wider text-xs font-bold transition-all text-center cursor-pointer"
+                    >
+                      Scheda & Dettagli
+                    </button>
+
+                    <a
+                      href={getWhatsAppUrl(articolo)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-sport uppercase italic tracking-wider text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 fill-white shrink-0" />
+                      <span>Info</span>
+                    </a>
+                  </div>
+                </div>
+
+              </motion.div>
+            ))}
           </div>
         )}
 
       </main>
 
-      {/* 4. MODALE DETTAGLIO ARTICOLO */}
+      {/* 4. MODALE SCHEDA DETTAGLIO MATERIALE */}
       <AnimatePresence>
         {selectedArticolo && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
@@ -496,69 +442,47 @@ export default function ShopVetrina({ societaInfo }: ShopVetrinaProps) {
                     ) : (
                       <div className="text-center p-6 space-y-2 text-zinc-600">
                         <Shirt className="w-20 h-20 mx-auto stroke-1" />
-                        <span className="text-xs font-mono">Foto Prodotto Ufficiale NVA</span>
+                        <span className="text-xs font-mono">Dotazione Istituzionale NVA</span>
                       </div>
                     )}
 
-                    {selectedArticolo.in_promozione && (
-                      <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-red-600 text-white font-mono font-black text-xs uppercase tracking-wider shadow-lg flex items-center gap-1">
-                        <Flame className="w-3.5 h-3.5" />
-                        <span>{selectedArticolo.promo_label || 'PROMO ATTIVA'}</span>
+                    {selectedArticolo.promo_label && (
+                      <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-amber-400 text-slate-950 font-mono font-black text-xs uppercase tracking-wider shadow-lg flex items-center gap-1">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>{selectedArticolo.promo_label}</span>
                       </div>
                     )}
                   </div>
 
-                  {/* INFORMAZIONI & PREZZI */}
+                  {/* INFORMAZIONI E SEGRETERIA */}
                   <div className="space-y-4">
                     <div>
                       <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#FFE600] block mb-1">
-                        {selectedArticolo.categoria} • COD: {selectedArticolo.id}
+                        {selectedArticolo.categoria} • DOTAZIONE UFFICIALE NVA
                       </span>
                       <h2 className="text-2xl font-black uppercase text-white font-sport tracking-tight leading-tight">
                         {selectedArticolo.nome}
                       </h2>
                     </div>
 
-                    {/* BOX PREZZO */}
+                    {/* BOX STATO SEGRETERIA */}
                     <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-2">
-                      <div className="flex items-baseline justify-between">
-                        <div>
-                          <span className="text-[10px] font-mono text-zinc-400 uppercase block">Prezzo Ufficiale</span>
-                          <span className={`text-xl font-sport font-black ${
-                            selectedArticolo.prezzo_tesserato ? 'line-through text-zinc-500' : 'text-white'
-                          }`}>
-                            € {selectedArticolo.prezzo_pieno.toFixed(2)}
-                          </span>
-                        </div>
-
-                        {selectedArticolo.prezzo_tesserato && selectedArticolo.prezzo_tesserato < selectedArticolo.prezzo_pieno && (
-                          <div className="text-right">
-                            <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase flex items-center gap-1 justify-end">
-                              <ShieldCheck className="w-3 h-3" />
-                              Riservato Tesserati NVA
-                            </span>
-                            <span className="text-3xl font-sport font-black text-[#FFE600]">
-                              € {selectedArticolo.prezzo_tesserato.toFixed(2)}
-                            </span>
-                          </div>
-                        )}
+                      <div className="flex items-center gap-2 text-[#FFE600] font-sport font-bold text-sm uppercase">
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Disponibilità e Ritiro</span>
                       </div>
-
-                      {selectedArticolo.prezzo_tesserato && selectedArticolo.prezzo_tesserato < selectedArticolo.prezzo_pieno && (
-                        <div className="pt-2 border-t border-zinc-800 text-[11px] text-zinc-300 font-inter flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                          <span>
-                            Risparmi <b>€ {(selectedArticolo.prezzo_pieno - selectedArticolo.prezzo_tesserato).toFixed(2)}</b> con il tesseramento atleta New Volley Academy!
-                          </span>
-                        </div>
-                      )}
+                      <p className="text-xs text-zinc-300 font-inter">
+                        {selectedArticolo.disponibile 
+                          ? 'Campionario taglie disponibile per prova in Segreteria presso il Palazzetto Giulianini.' 
+                          : 'Capo disponibile su ordinazione tramite la segreteria o il proprio dirigente.'}
+                      </p>
                     </div>
 
                     {/* SELEZIONE TAGLIA SE DISPONIBILI */}
                     {selectedArticolo.taglie_disponibili && selectedArticolo.taglie_disponibili.length > 0 && (
                       <div className="space-y-2">
                         <span className="text-xs font-mono font-bold uppercase text-zinc-300 block">
-                          Seleziona Taglia: {selectedTaglia && <span className="text-[#FFE600]">({selectedTaglia})</span>}
+                          Taglie Previste: {selectedTaglia && <span className="text-[#FFE600]">({selectedTaglia})</span>}
                         </span>
                         <div className="flex flex-wrap gap-2">
                           {selectedArticolo.taglie_disponibili.map(t => (
@@ -593,17 +517,6 @@ export default function ShopVetrina({ societaInfo }: ShopVetrinaProps) {
                       </div>
                     )}
 
-                    {/* STATO DISPONIBILITÀ */}
-                    <div className="flex items-center gap-2 text-xs font-mono">
-                      <span className="text-zinc-500 uppercase">Disponibilità:</span>
-                      <span className={`font-bold uppercase ${selectedArticolo.disponibile ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {selectedArticolo.stato_disponibilita === 'immediata' && '✓ Disponibile in sede'}
-                        {selectedArticolo.stato_disponibilita === 'su_ordinazione' && '⏳ Su ordinazione'}
-                        {selectedArticolo.stato_disponibilita === 'esaurito' && '✗ Momentaneamente esaurito'}
-                        {!selectedArticolo.stato_disponibilita && (selectedArticolo.disponibile ? 'Disponibile' : 'Esaurito')}
-                      </span>
-                    </div>
-
                   </div>
 
                 </div>
@@ -624,15 +537,15 @@ export default function ShopVetrina({ societaInfo }: ShopVetrinaProps) {
                   )}
                 </div>
 
-                {/* COME ORDINARE BOX & CTA WHATSAPP */}
-                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-zinc-900 to-zinc-900 border border-emerald-500/30 space-y-3">
-                  <div className="flex items-center gap-2 text-emerald-400 font-sport font-black uppercase text-sm">
+                {/* CONTATTO SEGRETERIA CTA */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-zinc-900 to-zinc-900 border border-[#FFE600]/30 space-y-3">
+                  <div className="flex items-center gap-2 text-[#FFE600] font-sport font-black uppercase text-sm">
                     <PackageCheck className="w-4 h-4" />
-                    <span>Come Ordinare Questo Articolo</span>
+                    <span>Richiesta Dotazione per Atleti e Tesserati</span>
                   </div>
 
                   <p className="text-xs text-zinc-300 font-inter">
-                    Puoi inviare un messaggio alla segreteria specificando l'articolo e la taglia desiderata. Ti confermeremo la disponibilità immediata per il ritiro al palazzetto o i tempi di consegna.
+                    Per provare la taglia o richiedere la dotazione per il campionato, puoi inviare una richiesta alla segreteria o recarti al palazzetto negli orari di allenamento.
                   </p>
 
                   <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -643,7 +556,7 @@ export default function ShopVetrina({ societaInfo }: ShopVetrinaProps) {
                       className="flex-1 py-3 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-sport uppercase italic tracking-wider font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-emerald-950/50 transition-all cursor-pointer"
                     >
                       <MessageCircle className="w-5 h-5 fill-white" />
-                      <span>Ordina o Richiedi su WhatsApp {selectedTaglia ? `(${selectedTaglia})` : ''}</span>
+                      <span>Richiedi Info in Segreteria {selectedTaglia ? `(${selectedTaglia})` : ''}</span>
                     </a>
 
                     <button

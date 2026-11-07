@@ -5308,12 +5308,12 @@ export interface ArticoloVetrina {
   nome: string;
   descrizione: string;
   categoria: 'Abbigliamento' | 'Accessori' | 'Gara & Divise' | 'Tempo Libero' | 'Merchandising & Gadget';
-  prezzo_pieno: number;
-  prezzo_tesserato?: number; // Prezzo riservato a tesserati, atleti e staff NVA
+  prezzo_pieno?: number; // Opzionale (non mostrato in modalità lookbook istituzionale ASD)
+  prezzo_tesserato?: number; // Opzionale
   in_promozione?: boolean;
-  promo_label?: string; // es. "PROMO INIZIO STAGIONE", "-20%", "OFFERTA LANCIO"
+  promo_label?: string; // es. "KIT UFFICIALE", "NUOVA STAGIONE"
   novita?: boolean;
-  disponibile: boolean; // true = Disponibile / Ordinabile; false = Esaurito
+  disponibile: boolean; // true = Disponibile per atleti / Ordinabile; false = Esaurito
   stato_disponibilita?: 'immediata' | 'su_ordinazione' | 'esaurito';
   foto_url: string;
   foto_gallery?: string[];
@@ -5330,13 +5330,10 @@ export const DEFAULT_ARTICOLI_VETRINA: ArticoloVetrina[] = [
   {
     id: 'felpa-pantere-hoodie',
     nome: 'Felpa Ufficiale Pantere NVA con Cappuccio',
-    descrizione: 'Felpa tecnica con zip intera e cappuccio foderato, inserti giallo oro e artigli Pantera su maniche e retro. Morbida, termica e resistente per pre-gara e tempo libero.',
+    descrizione: 'Felpa tecnica societaria con zip intera e cappuccio foderato, inserti giallo oro e artigli Pantera su maniche e retro. Morbida, termica e resistente per pre-gara, allenamenti e trasferte.',
     categoria: 'Abbigliamento',
-    prezzo_pieno: 45.0,
-    prezzo_tesserato: 38.0,
-    in_promozione: true,
-    promo_label: 'SCONTO TESSERATI',
     novita: true,
+    promo_label: 'KIT UFFICIALE',
     disponibile: true,
     stato_disponibilita: 'immediata',
     foto_url: '/images/merch/felpa-hoodie-nva.jpg',
@@ -5349,12 +5346,10 @@ export const DEFAULT_ARTICOLI_VETRINA: ArticoloVetrina[] = [
   {
     id: 'tshirt-training-dryfit',
     nome: 'T-Shirt Riscaldamento Dry-Fit NVA 2026/27',
-    descrizione: 'Maglia ufficiale di allenamento e riscaldamento pre-partita. Tessuto traspirante a rapida asciugatura con logo New Volley Academy serigrafato ad alta tenacità.',
+    descrizione: 'Maglia ufficiale di riscaldamento pre-partita e sedute atletiche. Tessuto traspirante a rapida asciugatura con logo New Volley Academy serigrafato ad alta tenacità.',
     categoria: 'Abbigliamento',
-    prezzo_pieno: 22.0,
-    prezzo_tesserato: 18.0,
-    in_promozione: false,
     novita: true,
+    promo_label: 'LINEA TRAINING',
     disponibile: true,
     stato_disponibilita: 'immediata',
     foto_url: '/images/merch/tshirt-dryfit-nva.jpg',
@@ -5367,13 +5362,10 @@ export const DEFAULT_ARTICOLI_VETRINA: ArticoloVetrina[] = [
   {
     id: 'zaino-volley-pro',
     nome: 'Zaino Tecnico Volley Academy con Tasca Scarpe',
-    descrizione: 'Zaino capiente a più scomparti con fondo rigido isolato portascarpe/ginocchiere, spallacci imbottiti ergonomici e scomparto porta-borraccia laterale.',
+    descrizione: 'Zaino societario ergonomico e capiente con fondo rigido isolato portascarpe/ginocchiere, spallacci imbottiti rinforzati e tasca termica porta-borraccia.',
     categoria: 'Accessori',
-    prezzo_pieno: 38.0,
-    prezzo_tesserato: 32.0,
-    in_promozione: true,
-    promo_label: 'BEST SELLER',
     novita: false,
+    promo_label: 'DOTAZIONE BASE',
     disponibile: true,
     stato_disponibilita: 'immediata',
     foto_url: '/images/merch/zaino-nva-pro.jpg',
@@ -5385,18 +5377,16 @@ export const DEFAULT_ARTICOLI_VETRINA: ArticoloVetrina[] = [
   },
   {
     id: 'kit-gara-replica',
-    nome: 'Kit Maglia Gara Ufficiale Pantere NVA (Personalizzabile)',
-    descrizione: 'Replica ufficiale della maglia da gara di Serie D Maschile e Femminile. Possibilità di personalizzazione con nome atleta e numero preferito.',
+    nome: 'Divisa da Gara Ufficiale Pantere NVA',
+    descrizione: 'Divisa ufficiale da gara FIPAV per Serie D Maschile e Femminile con grafiche societarie esclusive e numerazione personalizzata per atleti registrati.',
     categoria: 'Gara & Divise',
-    prezzo_pieno: 35.0,
-    prezzo_tesserato: 29.0,
-    in_promozione: false,
     novita: true,
+    promo_label: 'DIVISA UFFICIALE FIPAV',
     disponibile: true,
     stato_disponibilita: 'su_ordinazione',
     foto_url: '/images/merch/maglia-gara-nva.jpg',
     taglie_disponibili: ['12 anni', 'XS', 'S', 'M', 'L', 'XL', 'XXL'],
-    colori_disponibili: ['1ª Maglia Giallo/Nero', '2ª Maglia Nero/Giallo', 'Maglia Libero Rosso Fluo'],
+    colori_disponibili: ['1ª Divisa Giallo/Nero', '2ª Divisa Nero/Giallo', 'Maglia Libero Rosso Fluo'],
     materiale: 'Poliestere Tecnico Micro-forato elasticizzato',
     mostra_nel_ticker: false,
     ordine: 4
@@ -5404,13 +5394,10 @@ export const DEFAULT_ARTICOLI_VETRINA: ArticoloVetrina[] = [
   {
     id: 'borraccia-termica-pantere',
     nome: 'Borraccia Termica Acciaio Inox NVA (500ml)',
-    descrizione: 'Borraccia termica a doppia parete sottovuoto. Mantiene le bevande fredde per 24h e calde per 12h. Finitura soft-touch nero opaco con logo dorato inciso a laser.',
+    descrizione: 'Borraccia termica a doppia parete sottovuoto per allenamento e palestra. Mantiene le bevande fresche per 24h. Finitura soft-touch nero opaco con logo Pantera inciso a laser.',
     categoria: 'Merchandising & Gadget',
-    prezzo_pieno: 16.0,
-    prezzo_tesserato: 12.0,
-    in_promozione: true,
-    promo_label: 'GADGET DEL MESE',
     novita: false,
+    promo_label: 'GADGET ATLETA',
     disponibile: true,
     stato_disponibilita: 'immediata',
     foto_url: '/images/merch/borraccia-nva.jpg',
@@ -5423,12 +5410,10 @@ export const DEFAULT_ARTICOLI_VETRINA: ArticoloVetrina[] = [
   {
     id: 'pantaloncino-volley-pro',
     nome: 'Pantaloncino Volley Tecnico NVA',
-    descrizione: 'Shorts da pallavolo elasticizzati a taglio anatomico con cuciture piatte anti-sfregamento ed elastico rinforzato in vita con coulisse interna.',
+    descrizione: 'Shorts ufficiali da pallavolo a taglio anatomico con cuciture piatte ergonomiche ed elastico rinforzato in vita con coulisse interna.',
     categoria: 'Gara & Divise',
-    prezzo_pieno: 20.0,
-    prezzo_tesserato: 16.0,
-    in_promozione: false,
     novita: false,
+    promo_label: 'LINEA GARA',
     disponibile: true,
     stato_disponibilita: 'immediata',
     foto_url: '/images/merch/pantaloncino-nva.jpg',
@@ -5441,12 +5426,10 @@ export const DEFAULT_ARTICOLI_VETRINA: ArticoloVetrina[] = [
   {
     id: 'ginocchiere-volley-nva',
     nome: 'Ginocchiere Tecniche Volley ad Alta Densità',
-    descrizione: 'Ginocchiere protettive con imbottitura in schiuma EVA termoformata a celle chiuse per massima ammortizzazione nei tuffi e comfort articolare prolungato.',
+    descrizione: 'Ginocchiere protettive con imbottitura in schiuma EVA termoformata per massima ammortizzazione nei tuffi e comfort articolare prolungato.',
     categoria: 'Accessori',
-    prezzo_pieno: 24.0,
-    prezzo_tesserato: 20.0,
-    in_promozione: false,
     novita: false,
+    promo_label: 'PROTEZIONE ATLETA',
     disponibile: true,
     stato_disponibilita: 'immediata',
     foto_url: '/images/merch/ginocchiere-nva.jpg',
