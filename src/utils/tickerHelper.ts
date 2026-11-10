@@ -9,7 +9,7 @@
  * - Annunci manuali del CMS
  */
 
-import { RosaSquadra, Sponsor } from '../firebase-societa';
+import { RosaSquadra, Sponsor, cleanTeamDisplayName } from '../firebase-societa';
 
 export interface TickerBlock {
   id: string;
@@ -100,11 +100,19 @@ export function buildDynamicTickerBlocks(
   const matchBlocks: TickerBlock[] = [];
   const WINDOW_MS = 56 * 60 * 60 * 1000; // Finestra di 56 ore (~2.3 giorni) per coprire comodamente tutto il weekend
 
-  // 1. Scansione gare nelle squadre
+  // 1. Scansione gare ESCLUSIVAMENTE delle 2 Serie D (Maschile e Femminile)
   if (squadre && squadre.length > 0) {
-    squadre.forEach(squadra => {
+    const squadreSerieD = squadre.filter(s => {
+      const nome = (s.nome_squadra || '').toUpperCase();
+      const camp = (s.campionato || '').toUpperCase();
+      return s.category === 'SERIE_D' || nome.includes('SERIE D') || camp.includes('SERIE D');
+    });
+
+    squadreSerieD.forEach(squadra => {
       const partite = squadra.partite || [];
-      const nomeSquadra = (squadra.nome_squadra || 'Serie D').trim();
+      const nomeUpper = (squadra.nome_squadra || '').toUpperCase();
+      const isMaschile = nomeUpper.includes('MASCHILE') || squadra.genere === 'M' || squadra.gender === 'M';
+      const nomeSquadra = isMaschile ? 'SERIE D MASCHILE' : 'SERIE D FEMMINILE';
 
       partite.forEach(partita => {
         const fullDateStr = `${partita.data || ''} ${partita.ora || '20:30'}`.trim();
@@ -113,6 +121,8 @@ export function buildDynamicTickerBlocks(
 
         const time = date.getTime();
         const diffMs = time - now;
+
+        const cleanOpponent = cleanTeamDisplayName(partita.avversario) || 'AVVERSARIO';
 
         // A) GARA RECENTE APPENA CONCLUSA (entro le 56h successive alla partita)
         if (diffMs <= 0 && Math.abs(diffMs) <= WINDOW_MS) {
@@ -137,8 +147,8 @@ export function buildDynamicTickerBlocks(
             }
 
             const isWin = setNva > setAvv;
-            const homeName = partita.casa ? 'NEW VOLLEY ACADEMY' : (partita.avversario || 'AVVERSARIO');
-            const awayName = partita.casa ? (partita.avversario || 'AVVERSARIO') : 'NEW VOLLEY ACADEMY';
+            const homeName = partita.casa ? 'NEW VOLLEY ACADEMY' : cleanOpponent;
+            const awayName = partita.casa ? cleanOpponent : 'NEW VOLLEY ACADEMY';
             const scoreDisplay = partita.casa ? `${setNva} - ${setAvv}` : `${setAvv} - ${setNva}`;
             const giornataText = partita.giornata ? ` (${partita.giornata.toUpperCase()})` : '';
 
@@ -147,7 +157,7 @@ export function buildDynamicTickerBlocks(
               type: 'risultato',
               badge: isWin ? '🏆 VITTORIA' : '🏐 RISULTATO',
               badgeVariant: isWin ? 'vittoria' : 'risultato',
-              text: `${nomeSquadra.toUpperCase()}: ${homeName} ${scoreDisplay} ${awayName}${giornataText}`,
+              text: `${nomeSquadra}: ${homeName} ${scoreDisplay} ${awayName}${giornataText}`,
               link: `/squadre/${squadra.id}`
             });
           }
@@ -155,8 +165,8 @@ export function buildDynamicTickerBlocks(
 
         // B) GARA IMMINENTE IN ARRIVO (entro le 56h precedenti alla partita)
         else if (diffMs > 0 && diffMs <= WINDOW_MS && !partita.terminata) {
-          const homeName = partita.casa ? 'NEW VOLLEY ACADEMY' : (partita.avversario || 'AVVERSARIO');
-          const awayName = partita.casa ? (partita.avversario || 'AVVERSARIO') : 'NEW VOLLEY ACADEMY';
+          const homeName = partita.casa ? 'NEW VOLLEY ACADEMY' : cleanOpponent;
+          const awayName = partita.casa ? cleanOpponent : 'NEW VOLLEY ACADEMY';
           const locazione = partita.casa ? 'IN CASA' : 'IN TRASFERTA';
           const oraText = partita.ora ? `• ORE ${partita.ora}` : '';
           const giornataText = partita.giornata ? ` [${partita.giornata.toUpperCase()}]` : '';
@@ -166,7 +176,7 @@ export function buildDynamicTickerBlocks(
             type: 'prossima_gara',
             badge: '⚡ PROSSIMA GARA',
             badgeVariant: 'gara',
-            text: `${nomeSquadra.toUpperCase()}: ${homeName} VS ${awayName} • ${locazione} ${oraText}${giornataText}`,
+            text: `${nomeSquadra}: ${homeName} VS ${awayName} • ${locazione} ${oraText}${giornataText}`,
             link: `/squadre/${squadra.id}`
           });
         }

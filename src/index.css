@@ -56,7 +56,7 @@ html, body {
 .animate-ticker {
   display: inline-flex;
   white-space: nowrap;
-  animation: ticker-scroll 35s linear infinite;
+  animation: ticker-scroll 75s linear infinite;
 }
 
 .animate-ticker:hover,
