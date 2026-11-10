@@ -208,6 +208,12 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // 20. vetrina_materiale (Lookbook / Vetrina Materiale Promozionale ASD)
+    match /vetrina_materiale/{itemId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }
 
