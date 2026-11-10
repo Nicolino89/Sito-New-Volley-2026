@@ -59,6 +59,11 @@ html, body {
   animation: ticker-scroll 35s linear infinite;
 }
 
+.animate-ticker:hover,
+.ticker-strip:hover .animate-ticker {
+  animation-play-state: paused;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-ticker {
     animation: none;

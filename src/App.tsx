@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Settings, 
@@ -38,6 +38,7 @@ import ShopVetrina from './pages/ShopVetrina';
 import NotFound from './pages/NotFound';
 import Maintenance from './pages/Maintenance';
 import SitoInAggiornamento from './components/SitoInAggiornamento';
+import { buildDynamicTickerBlocks, TickerBlock } from './utils/tickerHelper';
 
 import {
   ascoltaStatoAutenticazione,
@@ -850,25 +851,74 @@ export default function App() {
             onSettingsTextChange={handleSettingsTextChange}
           />
 
-          {/* INTEGRATED DARK TICKER STRIP WITH YELLOW ACCENTS */}
+          {/* INTEGRATED DARK TICKER STRIP WITH DYNAMIC MATCHES, ROTATING SPONSORS & ANNOUNCEMENTS */}
           {(() => {
-            const defaultTicker = [
-              "ISCRIZIONI CAMP APERTE: PROVE GRATUITE IL SABATO",
-              "SERIE D MASCHILE: NVA PROMOSSA",
-              "NVA BEACH CUP A CESENATICO",
-              "CAMPIONATO FIPAV SERIE D 2026/2027"
-            ];
-            const activeTickerAnnouncements = societaSettings?.tickerAnnouncements ?? defaultTicker;
-            const tickerString = activeTickerAnnouncements.length > 0 
-              ? `★ ${activeTickerAnnouncements.join(' ★ ')} ★` 
-              : "★ NEW VOLLEY ACADEMY ★";
+            const blocks = buildDynamicTickerBlocks(
+              squadreAll, 
+              sponsorsAll, 
+              societaSettings?.tickerAnnouncements
+            );
+
+            const renderBlockItem = (item: TickerBlock, key: string | number) => {
+              let badgeClasses = 'bg-[#FFE600] text-black font-extrabold px-1.5 py-0.5 rounded text-[10px] tracking-wide';
+              if (item.badgeVariant === 'vittoria') {
+                badgeClasses = 'bg-emerald-400 text-black font-extrabold px-1.5 py-0.5 rounded text-[10px] tracking-wide shadow-sm';
+              } else if (item.badgeVariant === 'risultato') {
+                badgeClasses = 'bg-zinc-700 text-white font-extrabold px-1.5 py-0.5 rounded text-[10px] tracking-wide';
+              } else if (item.badgeVariant === 'gara') {
+                badgeClasses = 'bg-amber-400 text-black font-black px-1.5 py-0.5 rounded text-[10px] tracking-wide animate-pulse';
+              } else if (item.badgeVariant === 'sponsor') {
+                badgeClasses = 'bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.5 rounded text-[9px] tracking-widest font-mono font-bold';
+              } else if (item.badgeVariant === 'lookbook') {
+                badgeClasses = 'bg-yellow-400/20 text-yellow-300 border border-yellow-400/40 px-1.5 py-0.5 rounded text-[10px] tracking-wide font-bold';
+              }
+
+              const isSponsor = item.badgeVariant === 'sponsor';
+
+              const content = (
+                <div className="inline-flex items-center gap-2 mx-4 group cursor-pointer transition-transform hover:scale-[1.02]">
+                  <span className={badgeClasses}>{item.badge}</span>
+                  <span className={isSponsor ? 'text-zinc-300 font-sans font-semibold tracking-normal text-xs group-hover:text-amber-300 transition-colors' : 'text-[#FFE600] group-hover:text-yellow-200 transition-colors'}>
+                    {item.text}
+                  </span>
+                  <span className="text-zinc-700 font-bold ml-2 select-none">/</span>
+                </div>
+              );
+
+              if (item.link) {
+                if (item.link.startsWith('http')) {
+                  return (
+                    <a key={key} href={item.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center" title="Apri link">
+                      {content}
+                    </a>
+                  );
+                }
+                return (
+                  <Link key={key} to={item.link} className="inline-flex items-center" title="Vai alla pagina">
+                    {content}
+                  </Link>
+                );
+              }
+
+              return <span key={key} className="inline-flex items-center">{content}</span>;
+            };
+
             return (
-              <div className="bg-[#111216] text-[#FFE600] py-2 overflow-hidden border-b border-zinc-800/80 relative z-20 select-none">
+              <div 
+                className="ticker-strip bg-[#111216] text-[#FFE600] py-2 overflow-hidden border-b border-zinc-800/80 relative z-20 select-none cursor-pointer"
+                title="Passa il mouse o tocca per mettere in pausa"
+              >
                 <div className="whitespace-nowrap flex items-center">
-                  <div className="animate-ticker font-sport font-black text-xs md:text-sm uppercase tracking-wider flex gap-8">
-                    <span>{tickerString}</span>
-                    <span>{tickerString}</span>
-                    <span>{tickerString}</span>
+                  <div className="animate-ticker font-sport font-black text-xs md:text-sm uppercase tracking-wider flex items-center">
+                    <div className="inline-flex items-center">
+                      {blocks.map((b, i) => renderBlockItem(b, `copy1-${b.id}-${i}`))}
+                    </div>
+                    <div className="inline-flex items-center" aria-hidden="true">
+                      {blocks.map((b, i) => renderBlockItem(b, `copy2-${b.id}-${i}`))}
+                    </div>
+                    <div className="inline-flex items-center" aria-hidden="true">
+                      {blocks.map((b, i) => renderBlockItem(b, `copy3-${b.id}-${i}`))}
+                    </div>
                   </div>
                 </div>
               </div>
