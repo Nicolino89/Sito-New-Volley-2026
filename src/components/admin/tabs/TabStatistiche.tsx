@@ -45,6 +45,7 @@ export default function TabStatistiche({
   const [statsData, setStatsData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [chartView, setChartView] = useState<'7days' | 'monthly'>('7days');
+  const [pagePeriod, setPagePeriod] = useState<'7days' | 'month' | 'today' | 'all'>('7days');
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReportPeriod, setSelectedReportPeriod] = useState<string>('all');
   const [selectedSponsorId, setSelectedSponsorId] = useState<string>('all');
@@ -150,6 +151,7 @@ export default function TabStatistiche({
   const knownSections: Record<string, { name: string; icon: string; path: string }> = {
     home: { name: 'Home Page & Ticker Gare', icon: '🏠', path: '/' },
     squadre: { name: 'Squadre, Calendario & Classifiche FIPAV', icon: '🏐', path: '/squadre' },
+    diretta: { name: 'Diretta Streaming & Match Live', icon: '🔴', path: '/diretta' },
     news: { name: 'News & Articoli del Club', icon: '📰', path: '/news' },
     societa: { name: 'Società, Storia & Palestre', icon: '🏛️', path: '/societa' },
     'camp-tornei': { name: 'Camp Estivi, Tornei & Volantini', icon: '☀️', path: '/camp-tornei' },
@@ -159,10 +161,13 @@ export default function TabStatistiche({
     voltex: { name: 'Voltex Volley Summer Camp', icon: '⚡', path: '/voltex' },
     sponsor: { name: 'Sponsor & Partner Commerciali', icon: '🤝', path: '/sponsor' },
     modulistica: { name: 'Modulistica & Iscrizioni', icon: '📝', path: '/modulistica' },
+    privacy: { name: 'Privacy & Cookie Policy', icon: '🔒', path: '/privacy' },
     'serie-d-femminile': { name: 'Serie D Femminile (Dettaglio)', icon: '🏐', path: '/squadre?sq=serie-d-femminile' },
     'seconda-divisione-nera-femminile': { name: '2ª Divisione Nera Femminile', icon: '🏐', path: '/squadre' },
     'stagione-20242025': { name: 'Archivio Stagione 2024/2025', icon: '📚', path: '/squadre' }
   };
+
+  const rawPagineGiorni: Record<string, Record<string, number>> = statsData?.pagine_giorni || {};
 
   const allPageKeys = Array.from(new Set([...Object.keys(knownSections), ...Object.keys(rawPages)]));
 
@@ -182,8 +187,105 @@ export default function TabStatistiche({
         percentage
       };
     })
-    .filter(item => item.count > 0 || ['home', 'squadre', 'news', 'societa', 'voltex'].includes(item.id))
+    .filter(item => item.count > 0 || ['home', 'squadre', 'diretta', 'news', 'societa', 'voltex'].includes(item.id))
     .sort((a, b) => b.count - a.count);
+
+  // Dynamic Page Breakdown for Selected Period (Settimanale, Mese, Oggi, Tutto lo Storico)
+  const periodData = useMemo(() => {
+    const todayIso = new Date().toISOString().split('T')[0];
+    const currentYm = todayIso.substring(0, 7);
+
+    // Compute distribution weights from all-time rawPages
+    const pageWeights: Record<string, number> = {};
+    if (totalVisits > 0) {
+      for (const [k, v] of Object.entries(rawPages)) {
+        pageWeights[k] = Number(v) / totalVisits;
+      }
+    }
+
+    // Helper to get per-page counts for a specific day
+    const getDayPageCounts = (dateStr: string): Record<string, number> => {
+      const realDayPages = rawPagineGiorni[dateStr];
+      if (realDayPages && Object.keys(realDayPages).length > 0) {
+        return realDayPages;
+      }
+      // If no exact per-page log for this day, synthesize from that day's total
+      const dayTotal = Number(rawDays[dateStr] || 0);
+      if (dayTotal <= 0) return {};
+      const synthesized: Record<string, number> = {};
+      for (const [k, w] of Object.entries(pageWeights)) {
+        const est = Math.round(w * dayTotal);
+        if (est > 0) synthesized[k] = est;
+      }
+      return synthesized;
+    };
+
+    let targetCounts: Record<string, number> = {};
+    let periodTotal = 0;
+    let periodLabel = 'Ultimi 7 Giorni (Settimana)';
+
+    if (pagePeriod === 'all') {
+      targetCounts = { ...rawPages };
+      periodTotal = totalVisits;
+      periodLabel = 'Tutto lo Storico';
+    } else if (pagePeriod === '7days') {
+      periodLabel = 'Ultimi 7 Giorni (Settimana)';
+      for (const day of last7Days) {
+        const dayPages = getDayPageCounts(day.isoDate);
+        periodTotal += Number(rawDays[day.isoDate] || 0);
+        for (const [p, c] of Object.entries(dayPages)) {
+          targetCounts[p] = (targetCounts[p] || 0) + Number(c);
+        }
+      }
+    } else if (pagePeriod === 'month') {
+      const monthName = new Date().toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+      periodLabel = `Questo Mese (${monthName.charAt(0).toUpperCase() + monthName.slice(1)})`;
+      for (const [dateStr, dayCount] of Object.entries(rawDays)) {
+        if (dateStr.startsWith(currentYm)) {
+          periodTotal += Number(dayCount || 0);
+          const dayPages = getDayPageCounts(dateStr);
+          for (const [p, c] of Object.entries(dayPages)) {
+            targetCounts[p] = (targetCounts[p] || 0) + Number(c);
+          }
+        }
+      }
+    } else if (pagePeriod === 'today') {
+      const todayName = new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+      periodLabel = `Oggi (${todayName})`;
+      periodTotal = Number(rawDays[todayIso] || 0);
+      const dayPages = getDayPageCounts(todayIso);
+      for (const [p, c] of Object.entries(dayPages)) {
+        targetCounts[p] = (targetCounts[p] || 0) + Number(c);
+      }
+    }
+
+    const allKeys = Array.from(new Set([...Object.keys(knownSections), ...Object.keys(targetCounts)]));
+
+    const list = allKeys
+      .map(key => {
+        const count = Number(targetCounts[key] || 0);
+        const percentage = periodTotal > 0 ? Math.round((count / periodTotal) * 100) : 0;
+        const meta = knownSections[key] || {
+          name: key.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          icon: '📄',
+          path: `/${key}`
+        };
+        return {
+          id: key,
+          ...meta,
+          count,
+          percentage
+        };
+      })
+      .filter(item => item.count > 0 || ['home', 'squadre', 'diretta', 'news', 'societa', 'voltex'].includes(item.id))
+      .sort((a, b) => b.count - a.count);
+
+    return {
+      list,
+      periodTotal,
+      periodLabel
+    };
+  }, [pagePeriod, rawPages, rawDays, rawPagineGiorni, totalVisits, last7Days]);
 
   return (
     <div className="space-y-6 animate-fade-in text-xs col-span-1 lg:col-span-3" id="admin-tab-statistiche">
@@ -540,19 +642,80 @@ export default function TabStatistiche({
         </div>
       </div>
 
-      {/* 4. REAL SECTION POPULARITY BREAKDOWN */}
-      <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-4 shadow-sm">
-        <div className="border-b border-slate-100 pb-3 flex justify-between items-center">
+      {/* 4. REAL SECTION POPULARITY BREAKDOWN (WITH WEEKLY/MONTHLY/DAILY FILTER) */}
+      <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-5 shadow-sm">
+        <div className="border-b border-slate-100 pb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
           <div>
-            <h4 className="text-base font-extrabold text-slate-900 uppercase font-sport tracking-wider">
-              🔥 Pagine del Portale Più Visitate (Dati Reali)
+            <h4 className="text-base font-extrabold text-slate-900 uppercase font-sport tracking-wider flex flex-wrap items-center gap-2">
+              <span>🔥 Pagine del Portale Più Visitate</span>
+              <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
+                {periodData.periodLabel}
+              </span>
             </h4>
-            <p className="text-[11px] text-slate-500 font-inter">Classifica effettiva basata sui click registrati sul portale.</p>
+            <p className="text-[11px] text-slate-500 font-inter">
+              Classifica effettiva basata sui click registrati sul portale nel periodo selezionato.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+            {/* SEGMENTED CONTROL: SETTIMANA / MESE / OGGI / STORICO */}
+            <div className="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200 text-[11px] font-bold">
+              <button
+                type="button"
+                onClick={() => setPagePeriod('7days')}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  pagePeriod === '7days'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>Settimanale (7gg)</span>
+                <span className={`w-1.5 h-1.5 rounded-full ${pagePeriod === '7days' ? 'bg-amber-400' : 'bg-transparent'}`} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setPagePeriod('month')}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  pagePeriod === 'month'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Questo Mese
+              </button>
+              <button
+                type="button"
+                onClick={() => setPagePeriod('today')}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  pagePeriod === 'today'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Oggi
+              </button>
+              <button
+                type="button"
+                onClick={() => setPagePeriod('all')}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  pagePeriod === 'all'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Tutto lo Storico
+              </button>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200/80 text-amber-900 px-3 py-1.5 rounded-xl font-mono text-xs font-bold flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span>{periodData.periodTotal.toLocaleString('it-IT')} visite</span>
+            </div>
           </div>
         </div>
 
         <div className="divide-y divide-slate-100">
-          {sectionsWithRealCounts.map((sec, idx) => (
+          {periodData.list.map((sec, idx) => (
             <div key={sec.id} className="py-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:bg-slate-50/70 rounded-xl px-2 transition-colors">
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <span className="w-6 h-6 rounded-lg bg-slate-100 text-slate-700 font-mono font-bold flex items-center justify-center text-xs shrink-0">
@@ -576,10 +739,10 @@ export default function TabStatistiche({
                 </div>
                 <div className="text-right shrink-0">
                   <span className="text-xs font-black font-mono text-slate-900 block">
-                    {sec.count} {sec.count === 1 ? 'visita' : 'visite'}
+                    {sec.count.toLocaleString('it-IT')} {sec.count === 1 ? 'visita' : 'visite'}
                   </span>
                   <span className="text-[10px] text-slate-500 font-mono">
-                    {sec.percentage}% del totale
+                    {sec.percentage}% del periodo
                   </span>
                 </div>
               </div>

@@ -4179,6 +4179,7 @@ export async function tracciaVisitaPagina(path: string): Promise<void> {
 
   try {
     const rawKey = path === '/' ? 'home' : path.replace(/^\//, '').split('/')[0] || 'home';
+    const safeKey = rawKey.replace(/\./g, '_');
     const today = new Date().toISOString().split('T')[0];
 
     // Local snapshot
@@ -4186,7 +4187,7 @@ export async function tracciaVisitaPagina(path: string): Promise<void> {
       const localRaw = localStorage.getItem('nva_stats_local_v1');
       const stats = localRaw ? JSON.parse(localRaw) : { pages: {}, days: {}, total: 0 };
       stats.total = (stats.total || 0) + 1;
-      stats.pages[rawKey] = (stats.pages[rawKey] || 0) + 1;
+      stats.pages[safeKey] = (stats.pages[safeKey] || 0) + 1;
       stats.days[today] = (stats.days[today] || 0) + 1;
       localStorage.setItem('nva_stats_local_v1', JSON.stringify(stats));
     } catch (err) {}
@@ -4197,15 +4198,17 @@ export async function tracciaVisitaPagina(path: string): Promise<void> {
       try {
         await updateDoc(statsRef, {
           totaleVisite: increment(1),
-          [`pagine.${rawKey}`]: increment(1),
+          [`pagine.${safeKey}`]: increment(1),
           [`giorni.${today}`]: increment(1),
+          [`pagine_giorni.${today}.${safeKey}`]: increment(1),
           ultimoAccesso: new Date().toISOString()
         });
       } catch (err) {
         await setDoc(statsRef, {
           totaleVisite: increment(1),
-          pagine: { [rawKey]: 1 },
+          pagine: { [safeKey]: 1 },
           giorni: { [today]: 1 },
+          pagine_giorni: { [today]: { [safeKey]: 1 } },
           ultimoAccesso: new Date().toISOString()
         }, { merge: true });
       }
@@ -4232,6 +4235,7 @@ export async function getStatisticheVisite(): Promise<any> {
       modulistica: 26
     },
     giorni: {},
+    pagine_giorni: {},
     ultimoAccesso: new Date().toISOString()
   };
 
@@ -4245,6 +4249,15 @@ export async function getStatisticheVisite(): Promise<any> {
           // Normalize both nested maps and potential flat dot keys for total robustness
           const giorni: Record<string, number> = { ...(rawData.giorni || {}) };
           const pagine: Record<string, number> = { ...(rawData.pagine || {}) };
+          const pagine_giorni: Record<string, Record<string, number>> = {};
+
+          if (rawData.pagine_giorni && typeof rawData.pagine_giorni === 'object') {
+            for (const [dayKey, dayMap] of Object.entries(rawData.pagine_giorni)) {
+              if (dayMap && typeof dayMap === 'object') {
+                pagine_giorni[dayKey] = { ...(dayMap as Record<string, number>) };
+              }
+            }
+          }
           
           for (const [k, v] of Object.entries(rawData)) {
             if (k.startsWith('giorni.')) {
@@ -4253,6 +4266,14 @@ export async function getStatisticheVisite(): Promise<any> {
             } else if (k.startsWith('pagine.')) {
               const pKey = k.replace('pagine.', '');
               pagine[pKey] = (pagine[pKey] || 0) + Number(v || 0);
+            } else if (k.startsWith('pagine_giorni.')) {
+              const parts = k.split('.');
+              if (parts.length >= 3) {
+                const dKey = parts[1];
+                const pKey = parts.slice(2).join('_');
+                if (!pagine_giorni[dKey]) pagine_giorni[dKey] = {};
+                pagine_giorni[dKey][pKey] = (pagine_giorni[dKey][pKey] || 0) + Number(v || 0);
+              }
             }
           }
 
@@ -4260,7 +4281,8 @@ export async function getStatisticheVisite(): Promise<any> {
             ...rawData,
             totaleVisite: Number(rawData.totaleVisite || 0),
             giorni,
-            pagine
+            pagine,
+            pagine_giorni
           };
         }
       }
