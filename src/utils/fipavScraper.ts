@@ -352,21 +352,55 @@ export function parseCsiHtml(
         const luogo = extractCsiVenue(card);
         const note = extractCsiAlert(card);
 
-        // Scores
-        const scoreMatches = Array.from(card.matchAll(/<div class=["']d-flex flex-column\s*["']>\s*<span>([^<]+)<\/span>\s*<span>([^<]+)<\/span>/gi));
+        // 1. Partials from .d-none.d-sm-flex
+        let parzialiSet = '';
+        const partialsBlockMatch = card.match(/<div[^>]*class=["'][^"']*d-none[^"']*d-sm-flex[^"']*["'][^>]*>([\s\S]*?)<\/div>\s*<div[^>]*class=["'][^"']*vr/i);
+        if (partialsBlockMatch) {
+          const innerPartials = partialsBlockMatch[1];
+          const colMatches = Array.from(innerPartials.matchAll(/<div[^>]*class=["'][^"']*d-flex[^"']*flex-column[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi));
+          const parzialiList: string[] = [];
+          for (const col of colMatches) {
+            const nums = col[1].replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(s => /^\d+$/.test(s));
+            if (nums.length >= 2) {
+              parzialiList.push(`${nums[0]}-${nums[1]}`);
+            }
+          }
+          parzialiSet = parzialiList.join(' ');
+        }
+
+        // 2. Final Score: last column after the last vr divider
+        const vrBlocks = card.split(/<div\s+class=["'][^"']*\bvr\b[^"']*["'][^>]*>\s*<\/div>/i);
         let setNva: number | null = null;
         let setAvversario: number | null = null;
         let terminata = false;
 
-        if (scoreMatches.length > 0) {
-          const s1 = scoreMatches[0][1].trim();
-          const s2 = scoreMatches[0][2].trim();
-          if (s1 !== '-' && s2 !== '-' && !isNaN(parseInt(s1, 10)) && !isNaN(parseInt(s2, 10))) {
-            const h = parseInt(s1, 10);
-            const a = parseInt(s2, 10);
-            setNva = isHome ? h : a;
-            setAvversario = isHome ? a : h;
-            terminata = true;
+        if (vrBlocks.length >= 2) {
+          const lastBlock = vrBlocks[vrBlocks.length - 1];
+          const nums = lastBlock.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(s => /^\d+$/.test(s));
+          if (nums.length >= 2) {
+            const h = parseInt(nums[0], 10);
+            const a = parseInt(nums[1], 10);
+            if (!isNaN(h) && !isNaN(a)) {
+              setNva = isHome ? h : a;
+              setAvversario = isHome ? a : h;
+              terminata = true;
+            }
+          }
+        }
+
+        // Fallback for simple score layout if vr split didn't find sets
+        if (!terminata) {
+          const scoreMatches = Array.from(card.matchAll(/<div class=["']d-flex flex-column\s*["']>\s*<span>([^<]+)<\/span>\s*<span>([^<]+)<\/span>/gi));
+          if (scoreMatches.length > 0) {
+            const s1 = scoreMatches[0][1].trim();
+            const s2 = scoreMatches[0][2].trim();
+            if (s1 !== '-' && s2 !== '-' && !isNaN(parseInt(s1, 10)) && !isNaN(parseInt(s2, 10))) {
+              const h = parseInt(s1, 10);
+              const a = parseInt(s2, 10);
+              setNva = isHome ? h : a;
+              setAvversario = isHome ? a : h;
+              terminata = true;
+            }
           }
         }
 
@@ -382,7 +416,7 @@ export function parseCsiHtml(
           risultato: terminata ? (isHome ? `${setNva} - ${setAvversario}` : `${setAvversario} - ${setNva}`) : '',
           setNva,
           setAvversario,
-          parzialiSet: '',
+          parzialiSet,
           terminata,
           logo_casa: isHome ? OFFICIAL_NVA_LOGO : opponentLogo,
           logo_ospite: isHome ? opponentLogo : OFFICIAL_NVA_LOGO,
@@ -1069,6 +1103,7 @@ export function mergePartite(
       id: existing.id || incoming.id,
       link_mappa: existing.link_mappa || incoming.link_mappa,
       luogo: (incoming.luogo && incoming.luogo !== 'Palasport') ? incoming.luogo : (existing.luogo || incoming.luogo),
+      parzialiSet: incoming.parzialiSet || existing.parzialiSet || '',
       note: existing.note || incoming.note
     };
   });
