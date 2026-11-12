@@ -67,73 +67,26 @@ export async function renderLocandinaToCanvas(
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  // 1. SFONDO SCURO RADIALE
-  const bgGrad = ctx.createRadialGradient(960, 540, 100, 960, 540, 1200);
-  bgGrad.addColorStop(0, '#1c1b18');
-  bgGrad.addColorStop(0.5, '#0f0e0c');
-  bgGrad.addColorStop(1, '#050505');
-  ctx.fillStyle = bgGrad;
-  ctx.fillRect(0, 0, 1920, 1080);
-
-  // 2. SFONDO PALAZZETTO (SE DISPONIBILE)
-  const palazzettoImg = await loadImageSafe('/images/palazzetto-sfondo.jpg');
-  if (palazzettoImg) {
-    ctx.save();
-    ctx.globalAlpha = 0.18;
-    ctx.drawImage(palazzettoImg, 0, 0, 1920, 1080);
-    ctx.restore();
+  // 1. CARICAMENTO SFONDO STEALTH CON PANTERA INTEGRATA
+  const bgImg = await loadImageSafe('/images/locandina-bg-clean.jpg');
+  if (bgImg) {
+    ctx.drawImage(bgImg, 0, 0, 1920, 1080);
+  } else {
+    // Fallback sfumatura scura radiale
+    const bgGrad = ctx.createRadialGradient(960, 540, 100, 960, 540, 1200);
+    bgGrad.addColorStop(0, '#12141a');
+    bgGrad.addColorStop(0.5, '#0a0c10');
+    bgGrad.addColorStop(1, '#05070a');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, 1920, 1080);
   }
 
-  // 3. FASCIA DIAGONALE NVA GIALLO/NERA
+  // 2. HEADER SUPERIORE: PILL MATCH DAY (AMPIA E SPAZIOSA)
   ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(550, 0);
-  ctx.lineTo(350, 1080);
-  ctx.lineTo(0, 1080);
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(245, 216, 0, 0.05)';
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.moveTo(1370, 0);
-  ctx.lineTo(1920, 0);
-  ctx.lineTo(1920, 1080);
-  ctx.lineTo(1570, 1080);
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(245, 216, 0, 0.05)';
-  ctx.fill();
-  ctx.restore();
-
-  // 4. PANTERA CENTRALE HERO NVA
-  const panteraImg = await loadImageSafe('/images/pantera-hero.png');
-  if (panteraImg) {
-    ctx.save();
-    ctx.globalAlpha = 0.45;
-    // Disegna la pantera centrata nella parte alta/centrale
-    const pWidth = 800;
-    const pHeight = 800 * (panteraImg.height / panteraImg.width);
-    const pX = (1920 - pWidth) / 2;
-    const pY = 40;
-    ctx.drawImage(panteraImg, pX, pY, pWidth, pHeight);
-    ctx.restore();
-  }
-
-  // Vignetta scura sopra la pantera per massima leggibilità
-  const vignette = ctx.createLinearGradient(0, 0, 0, 1080);
-  vignette.addColorStop(0, 'rgba(5, 5, 5, 0.7)');
-  vignette.addColorStop(0.3, 'rgba(5, 5, 5, 0.2)');
-  vignette.addColorStop(0.7, 'rgba(5, 5, 5, 0.4)');
-  vignette.addColorStop(1, 'rgba(5, 5, 5, 0.95)');
-  ctx.fillStyle = vignette;
-  ctx.fillRect(0, 0, 1920, 1080);
-
-  // 5. HEADER SUPERIORE: PILL MATCH DAY
-  ctx.save();
-  const pillW = 680;
+  const pillW = 840;
   const pillH = 50;
   const pillX = (1920 - pillW) / 2;
-  const pillY = 55;
+  const pillY = 50;
   drawRoundedRect(ctx, pillX, pillY, pillW, pillH, 25);
   ctx.fillStyle = '#f5d800';
   ctx.fill();
@@ -142,11 +95,11 @@ export async function renderLocandinaToCanvas(
   ctx.stroke();
 
   ctx.fillStyle = '#0a0a0a';
-  ctx.font = '900 22px "Arial Black", Impact, sans-serif';
+  ctx.font = '900 19px "Arial Black", Impact, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.letterSpacing = '2px';
-  ctx.fillText('★ FIPAV CAMPIONATO REGIONALE • MATCH DAY ★', 960, pillY + pillH / 2);
+  ctx.letterSpacing = '1px';
+  ctx.fillText('★  FIPAV CAMPIONATO REGIONALE • MATCH DAY  ★', 960, pillY + pillH / 2);
   ctx.restore();
 
   // CATEGORIA & GIORNATA
@@ -255,17 +208,17 @@ export async function renderLocandinaToCanvas(
     ctx.restore();
   }
 
-  // 7. CENTRALE: BADGE OVALE DORATO "VS"
+  // 7. CENTRALE: BADGE OVALE DORATO "VS" (POSIZIONATO SOTTO IL MUSO DELLA PANTERA)
   ctx.save();
   const vsW = 150;
-  const vsH = 90;
+  const vsH = 86;
   const vsX = (1920 - vsW) / 2;
-  const vsY = boxY + (boxH - vsH) / 2;
+  const vsY = 480;
 
   // Glow oro
   ctx.shadowColor = '#f5d800';
   ctx.shadowBlur = 40;
-  drawRoundedRect(ctx, vsX, vsY, vsW, vsH, 45);
+  drawRoundedRect(ctx, vsX, vsY, vsW, vsH, 43);
   ctx.fillStyle = '#f5d800';
   ctx.fill();
 
