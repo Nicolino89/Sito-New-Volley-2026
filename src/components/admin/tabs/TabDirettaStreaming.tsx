@@ -35,6 +35,7 @@ import {
   OFFICIAL_NVA_LOGO,
   getKnownTeamLogo
 } from '../../../firebase-societa';
+import { downloadLocandinaMatch, LocandinaMatchData } from '../../../utils/locandinaGenerator';
 
 interface TabDirettaStreamingProps {
   squadreAll?: RosaSquadra[];
@@ -49,6 +50,9 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copiedCanale, setCopiedCanale] = useState<string | null>(null);
+  const [copiedTitle, setCopiedTitle] = useState(false);
+  const [copiedDescription, setCopiedDescription] = useState(false);
+  const [isGeneratingLocandina, setIsGeneratingLocandina] = useState(false);
 
   // Tab per canale selezionato in modalità doppia diretta ('canale_1' o 'canale_2')
   const [activeChannelKey, setActiveChannelKey] = useState<'canale_1' | 'canale_2'>('canale_1');
@@ -341,6 +345,64 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
     }).catch(() => {});
   };
 
+  const channelParam = isDoppia ? (activeChannelKey === 'canale_1' ? 'maschile' : 'femminile') : '';
+  const publicLiveUrl = channelParam 
+    ? `https://newvolleyacademy.it/diretta?canale=${channelParam}`
+    : `https://newvolleyacademy.it/diretta`;
+
+  const youtubeTitle = `🔴 LIVE | ${currentCanale.categoria || 'Match Day'}: ${currentCanale.squadra_casa || 'New Volley Academy'} vs ${currentCanale.squadra_ospite || 'Avversario'}${currentCanale.sottotitolo ? ` (${currentCanale.sottotitolo.split('•')[0].trim()})` : ''}`;
+
+  const youtubeDescription = `🏐 DIRETTA STREAMING UFFICIALE • NEW VOLLEY ACADEMY FORLÌ
+🏆 ${currentCanale.categoria || 'Campionato FIPAV'} ${currentCanale.sottotitolo ? `• ${currentCanale.sottotitolo}` : ''}
+⚔️ ${currentCanale.squadra_casa || 'New Volley Academy'} vs ${currentCanale.squadra_ospite || 'Avversario'}
+📅 Data e Ora: ${currentCanale.data_ora || 'Ore 21:15'}
+📍 Impianto: ${currentCanale.luogo || 'Palasport Comunale'}
+
+▶ Segui la diretta e il livescore anche sul nostro portale ufficiale:
+👉 ${publicLiveUrl}
+
+💛🖤 SOSTIENI LE PANTERE! Iscriviti al canale e attiva la campanella per non perdere nessun match!
+#NVA #NewVolleyAcademy #Pallavolo #VolleyForli #FIPAV #LiveMatch`;
+
+  const handleCopyTitle = () => {
+    navigator.clipboard.writeText(youtubeTitle).then(() => {
+      setCopiedTitle(true);
+      showToast("Titolo YouTube copiato negli appunti!", "success");
+      setTimeout(() => setCopiedTitle(false), 2000);
+    }).catch(() => {});
+  };
+
+  const handleCopyDescription = () => {
+    navigator.clipboard.writeText(youtubeDescription).then(() => {
+      setCopiedDescription(true);
+      showToast("Descrizione YouTube copiata negli appunti!", "success");
+      setTimeout(() => setCopiedDescription(false), 2000);
+    }).catch(() => {});
+  };
+
+  const handleDownloadLocandina = async () => {
+    setIsGeneratingLocandina(true);
+    try {
+      const matchData: LocandinaMatchData = {
+        categoria: currentCanale.categoria || 'Serie D Maschile',
+        giornata: currentCanale.sottotitolo ? currentCanale.sottotitolo.split('•')[0].trim() : '',
+        squadraCasa: currentCanale.squadra_casa || 'New Volley Academy',
+        squadraOspite: currentCanale.squadra_ospite || 'Avversario',
+        logoCasa: currentCanale.logo_casa || OFFICIAL_NVA_LOGO,
+        logoOspite: currentCanale.logo_ospite || '',
+        dataOra: currentCanale.data_ora || 'Ore 21:15',
+        luogo: currentCanale.luogo || 'Palasport Comunale'
+      };
+      await downloadLocandinaMatch(matchData);
+      showToast("Locandina Match (16:9 HD) scaricata con successo!", "success");
+    } catch (err: any) {
+      console.error("Errore generazione locandina:", err);
+      showToast("Errore durante la generazione della locandina: " + (err.message || ''), "error");
+    } finally {
+      setIsGeneratingLocandina(false);
+    }
+  };
+
   return (
     <div className="space-y-6 text-xs max-w-5xl mx-auto pb-12 animate-fade-in" id="admin-tab-diretta">
       
@@ -594,7 +656,7 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
             </button>
           </div>
 
-          {/* BANNER LINK DIRETTO E DOWNLOAD LOCANDINA DEL CANALE ATTIVO */}
+          {/* BANNER LINK DIRETTO DEL CANALE ATTIVO */}
           <div className="p-3.5 bg-slate-900 border border-slate-800 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-white">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-300">
@@ -613,20 +675,141 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
                 {copiedCanale === (activeChannelKey === 'canale_1' ? 'maschile' : 'femminile') ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
                 <span>Copia Link Canale</span>
               </button>
-              <a
-                href={activeChannelKey === 'canale_1' ? '/images/locandina_serie_d_maschile.jpg' : '/images/locandina_serie_d_femminile.jpg'}
-                download={activeChannelKey === 'canale_1' ? 'locandina_serie_d_maschile.jpg' : 'locandina_serie_d_femminile.jpg'}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Scarica Locandina YouTube (16:9 HD)</span>
-              </a>
             </div>
           </div>
         </div>
       )}
+
+      {/* 2. KIT RAPIDO YOUTUBE STUDIO (COPIA TITOLO, DESCRIZIONE & SCARICA LOCANDINA 16:9 HD) */}
+      <div className="bg-slate-900 border border-slate-800 p-6 md:p-7 rounded-3xl text-white shadow-xl space-y-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-500 shrink-0">
+              <Video className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-sport font-black uppercase text-base tracking-wider text-white flex flex-wrap items-center gap-2">
+                <span>🎬 Kit Rapido YouTube Studio</span>
+                <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950">
+                  {currentCanale.titolo_canale || currentCanale.categoria || 'Match Day'}
+                </span>
+              </h4>
+              <p className="text-[11px] text-slate-400 font-inter mt-0.5">
+                Tutto pronto da copiare e caricare su YouTube Studio in 1 secondo per la live di oggi.
+              </p>
+            </div>
+          </div>
+
+          <a
+            href="https://studio.youtube.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-red-600 hover:bg-red-500 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md hover:scale-105 active:scale-95 shrink-0 cursor-pointer"
+          >
+            <span>Apri YouTube Studio</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* TITOLO YOUTUBE */}
+          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3 flex flex-col justify-between">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold uppercase text-slate-400 tracking-wider">
+                  1. Titolo dello Stream
+                </span>
+                <span className="text-[10px] font-mono text-amber-400 font-bold">Obbligatorio YouTube</span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-slate-200 select-all line-clamp-3">
+                {youtubeTitle}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCopyTitle}
+              className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                copiedTitle
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700'
+              }`}
+            >
+              {copiedTitle ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
+              <span>{copiedTitle ? 'Titolo Copiato!' : 'Copia Titolo YouTube'}</span>
+            </button>
+          </div>
+
+          {/* DESCRIZIONE YOUTUBE */}
+          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3 flex flex-col justify-between">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold uppercase text-slate-400 tracking-wider">
+                  2. Descrizione dello Stream
+                </span>
+                <span className="text-[10px] font-mono text-slate-400">Con link live & hashtag</span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-300 h-24 overflow-y-auto whitespace-pre-line leading-relaxed">
+                {youtubeDescription}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCopyDescription}
+              className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                copiedDescription
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700'
+              }`}
+            >
+              {copiedDescription ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
+              <span>{copiedDescription ? 'Descrizione Copiata!' : 'Copia Descrizione YouTube'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* LOCANDINA / MINIATURA 16:9 HD */}
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-amber-400/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-12 h-12 rounded-xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-amber-400 shrink-0">
+              <Sparkles className="w-6 h-6" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-sport font-black uppercase text-sm tracking-wider text-white">
+                  3. Miniatura / Locandina Match (16:9 Full HD)
+                </span>
+                <span className="text-[10px] font-mono bg-amber-400/20 text-amber-400 px-2 py-0.5 rounded-full font-bold border border-amber-400/30">
+                  1920 × 1080
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 font-inter mt-0.5">
+                Generata all'istante con Pantera NVA, loghi ufficiali ({currentCanale.squadra_casa} vs {currentCanale.squadra_ospite}), data e palazzetto.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleDownloadLocandina}
+            disabled={isGeneratingLocandina}
+            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black font-sport italic uppercase tracking-wider text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0 disabled:opacity-50"
+          >
+            {isGeneratingLocandina ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
+                <span>Generazione in corso...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 text-slate-950" />
+                <span>Scarica Locandina Match HD (16:9)</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
 
       {/* 2. FORM CONFIGURAZIONE */}
       <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
