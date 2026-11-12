@@ -700,20 +700,6 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                     {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-slate-400" />}
                     <span>{copied ? 'Copiato!' : 'Copia Link'}</span>
                   </button>
-
-                  {effectiveCanale.locandina_url && (
-                    <a
-                      href={effectiveCanale.locandina_url}
-                      download
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer min-h-[42px]"
-                      title="Scarica locandina ufficiale del match (16:9 HD)"
-                    >
-                      <Download className="w-4 h-4 text-amber-400" />
-                      <span>Locandina Match HD</span>
-                    </a>
-                  )}
                 </div>
 
               </div>
