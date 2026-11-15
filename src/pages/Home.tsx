@@ -933,143 +933,183 @@ export default function Home({
                 
                 {/* 🔴 LIVE / MATCH DAY BROADCAST HERO ALERT (Rigido rispetto di diretta.attiva) */}
                 {(() => {
-                  if (!direttaStreaming || !direttaStreaming.attiva) return null;
+                  if (!direttaStreaming) return null;
 
                   const isDoppia = Boolean(direttaStreaming.doppia_diretta);
                   const c1 = direttaStreaming.canale_1;
                   const c2 = direttaStreaming.canale_2;
+                  const cExtra = direttaStreaming.canale_extra;
 
-                  if (isDoppia && (c1 || c2)) {
-                    const c1Active = Boolean(c1 && c1.attiva && (c1.stato === 'live' || c1.stato === 'in_programma'));
-                    const c2Active = Boolean(c2 && c2.attiva && (c2.stato === 'live' || c2.stato === 'in_programma'));
+                  const c1Active = isDoppia && Boolean(c1 && c1.attiva && (c1.stato === 'live' || c1.stato === 'in_programma'));
+                  const c2Active = isDoppia && Boolean(c2 && c2.attiva && (c2.stato === 'live' || c2.stato === 'in_programma'));
+                  const cExtraActive = Boolean(cExtra && cExtra.attiva && (cExtra.stato === 'live' || cExtra.stato === 'in_programma'));
+                  const cSingleActive = !isDoppia && Boolean(direttaStreaming.attiva && (direttaStreaming.stato === 'live' || direttaStreaming.stato === 'in_programma'));
 
-                    if (!c1Active && !c2Active) return null;
+                  interface ActiveStreamItem {
+                    id: string;
+                    url: string;
+                    categoria: string;
+                    titolo: string;
+                    dettaglioPartita: string;
+                    isLive: boolean;
+                    dataOra?: string;
+                  }
+                  const activeStreams: ActiveStreamItem[] = [];
 
+                  if (c1Active && c1) {
+                    activeStreams.push({
+                      id: 'c1',
+                      url: '/diretta?canale=maschile',
+                      categoria: 'Serie D Maschile',
+                      titolo: c1.titolo || 'Serie D Maschile',
+                      dettaglioPartita: `vs ${c1.squadra_casa?.includes('New Volley') ? c1.squadra_ospite : c1.squadra_casa}`,
+                      isLive: c1.stato === 'live',
+                      dataOra: c1.data_ora
+                    });
+                  }
+
+                  if (c2Active && c2) {
+                    activeStreams.push({
+                      id: 'c2',
+                      url: '/diretta?canale=femminile',
+                      categoria: 'Serie D Femminile',
+                      titolo: c2.titolo || 'Serie D Femminile',
+                      dettaglioPartita: `vs ${c2.squadra_casa?.includes('New Volley') ? c2.squadra_ospite : c2.squadra_casa}`,
+                      isLive: c2.stato === 'live',
+                      dataOra: c2.data_ora
+                    });
+                  }
+
+                  if (cSingleActive && (!isDoppia || (!c1Active && !c2Active))) {
+                    const isSameAsExtra = cExtraActive && (direttaStreaming.titolo === cExtra?.titolo || direttaStreaming.categoria === cExtra?.categoria);
+                    if (!isSameAsExtra) {
+                      activeStreams.push({
+                        id: 'single',
+                        url: '/diretta',
+                        categoria: direttaStreaming.categoria || 'Serie D',
+                        titolo: direttaStreaming.titolo || 'Guarda la Partita Live',
+                        dettaglioPartita: `${direttaStreaming.squadra_casa || 'New Volley'} vs ${direttaStreaming.squadra_ospite || 'Avversario'}`,
+                        isLive: direttaStreaming.stato === 'live',
+                        dataOra: direttaStreaming.data_ora
+                      });
+                    }
+                  }
+
+                  if (cExtraActive && cExtra) {
+                    const alreadyPresent = activeStreams.some(s => s.titolo === cExtra.titolo);
+                    if (!alreadyPresent) {
+                      activeStreams.push({
+                        id: 'extra',
+                        url: '/diretta?canale=extra',
+                        categoria: cExtra.categoria || 'Altre Squadre & Giovanili',
+                        titolo: cExtra.titolo || `${cExtra.categoria}: Match Day`,
+                        dettaglioPartita: `${cExtra.squadra_casa || 'NVA'} vs ${cExtra.squadra_ospite || 'Avversario'}`,
+                        isLive: cExtra.stato === 'live',
+                        dataOra: cExtra.data_ora
+                      });
+                    }
+                  }
+
+                  if (activeStreams.length === 0) return null;
+
+                  // Se c'è un solo match attivo/programmato, mostra il banner orizzontale in evidenza
+                  if (activeStreams.length === 1) {
+                    const item = activeStreams[0];
                     return (
                       <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="w-full mb-2 p-3.5 sm:p-4 rounded-3xl bg-slate-900/90 border border-amber-400/40 shadow-2xl backdrop-blur-md space-y-2.5 max-w-2xl"
+                        className="w-full mb-2"
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
-                            <span className="text-[11px] font-mono font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
-                              {c1Active && c2Active 
-                                ? '⚡ DOPPIA DIRETTA STREAMING • 2 PARTITE SIMULTANEE' 
-                                : `⚡ DIRETTA STREAMING IN ONDA • ${c1Active ? 'SERIE D MASCHILE' : 'SERIE D FEMMINILE'}`}
+                        <Link
+                          to={item.url}
+                          className="inline-flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white border border-red-400/40 shadow-xl shadow-red-950/60 backdrop-blur-md transition-all duration-200 hover:scale-[1.01] cursor-pointer group max-w-full"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                            <Radio className="w-4 h-4 text-white animate-pulse" />
+                          </div>
+                          <div className="flex flex-col text-left overflow-hidden">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] uppercase font-mono font-black tracking-widest text-amber-200 flex items-center gap-1.5">
+                                {item.isLive ? (
+                                  <>
+                                    <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                                    🔴 ORA IN DIRETTA STREAMING
+                                  </>
+                                ) : (
+                                  <>
+                                    <Clock className="w-3 h-3 text-amber-200" />
+                                    ⏰ DIRETTA STREAMING IN PROGRAMMA
+                                  </>
+                                )}
+                              </span>
+                              {item.categoria && (
+                                <span className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-black/40 text-[9px] font-bold text-white/90">
+                                  {item.categoria}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs sm:text-sm font-black font-sport uppercase tracking-wider text-white truncate group-hover:underline">
+                              {item.titolo} {item.dataOra ? `• ${item.dataOra}` : ''} →
                             </span>
                           </div>
-                          <Link 
-                            to="/diretta" 
-                            className="text-[10px] text-amber-400 hover:text-white font-mono font-bold uppercase underline"
-                          >
-                            Vedi Partita →
-                          </Link>
-                        </div>
-
-                        <div className={`grid gap-2 ${c1Active && c2Active ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
-                          {c1Active && c1 && (
-                            <Link
-                              to="/diretta?canale=maschile"
-                              className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-2 group cursor-pointer ${
-                                c1.stato === 'live'
-                                  ? 'bg-red-950/40 border-red-500/50 hover:bg-red-900/50 ring-1 ring-red-500/30'
-                                  : 'bg-slate-950/60 border-slate-700/60 hover:border-amber-400/50 hover:bg-slate-800/60'
-                              }`}
-                            >
-                              <div className="overflow-hidden">
-                                <div className="flex items-center gap-1.5 mb-0.5">
-                                  <span className={`w-1.5 h-1.5 rounded-full ${c1.stato === 'live' ? 'bg-red-400 animate-ping' : 'bg-emerald-400'}`} />
-                                  <span className="text-[10px] font-mono font-bold uppercase text-amber-200">
-                                    {c1.stato === 'live' ? '🔴 ORA LIVE' : (c1.data_ora ? `⏰ ${c1.data_ora}` : '⏰ IN PROGRAMMA')}
-                                  </span>
-                                </div>
-                                <div className="text-xs font-bold font-sport uppercase tracking-wider text-white truncate group-hover:text-amber-400 transition-colors">
-                                  🏐 Serie D Maschile
-                                </div>
-                                <div className="text-[10px] text-slate-400 truncate">
-                                  vs {c1.squadra_casa?.includes('New Volley') ? c1.squadra_ospite : c1.squadra_casa}
-                                </div>
-                              </div>
-                              <ArrowRight className="w-4 h-4 text-amber-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
-                            </Link>
-                          )}
-
-                          {c2Active && c2 && (
-                            <Link
-                              to="/diretta?canale=femminile"
-                              className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-2 group cursor-pointer ${
-                                c2.stato === 'live'
-                                  ? 'bg-red-950/40 border-red-500/50 hover:bg-red-900/50 ring-1 ring-red-500/30'
-                                  : 'bg-slate-950/60 border-slate-700/60 hover:border-amber-400/50 hover:bg-slate-800/60'
-                              }`}
-                            >
-                              <div className="overflow-hidden">
-                                <div className="flex items-center gap-1.5 mb-0.5">
-                                  <span className={`w-1.5 h-1.5 rounded-full ${c2.stato === 'live' ? 'bg-red-400 animate-ping' : 'bg-emerald-400'}`} />
-                                  <span className="text-[10px] font-mono font-bold uppercase text-amber-200">
-                                    {c2.stato === 'live' ? '🔴 ORA LIVE' : (c2.data_ora ? `⏰ ${c2.data_ora}` : '⏰ IN PROGRAMMA')}
-                                  </span>
-                                </div>
-                                <div className="text-xs font-bold font-sport uppercase tracking-wider text-white truncate group-hover:text-amber-400 transition-colors">
-                                  🏐 Serie D Femminile
-                                </div>
-                                <div className="text-[10px] text-slate-400 truncate">
-                                  vs {c2.squadra_casa?.includes('New Volley') ? c2.squadra_ospite : c2.squadra_casa}
-                                </div>
-                              </div>
-                              <ArrowRight className="w-4 h-4 text-amber-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
-                            </Link>
-                          )}
-                        </div>
+                        </Link>
                       </motion.div>
                     );
                   }
 
-                  const isLive = direttaStreaming.stato === 'live';
-                  const isInProg = direttaStreaming.stato === 'in_programma';
-                  if (!isLive && !isInProg) return null;
-
+                  // Più partite attive contemporaneamente (es. 2 o 3 match in parallelo)
+                  const anyLive = activeStreams.some(s => s.isLive);
                   return (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="w-full mb-1"
+                      className="w-full mb-2 p-3.5 sm:p-4 rounded-3xl bg-slate-900/90 border border-amber-400/40 shadow-2xl backdrop-blur-md space-y-2.5 max-w-2xl"
                     >
-                      <Link
-                        to="/diretta"
-                        className="inline-flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white border border-red-400/40 shadow-xl shadow-red-950/60 backdrop-blur-md transition-all duration-200 hover:scale-[1.01] cursor-pointer group max-w-full"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-                          <Radio className="w-4 h-4 text-white animate-pulse" />
-                        </div>
-                        <div className="flex flex-col text-left overflow-hidden">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] uppercase font-mono font-black tracking-widest text-amber-200 flex items-center gap-1.5">
-                              {isLive ? (
-                                <>
-                                  <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                                  🔴 ORA IN DIRETTA STREAMING
-                                </>
-                              ) : (
-                                <>
-                                  <Clock className="w-3 h-3 text-amber-200" />
-                                  ⏰ DIRETTA STREAMING IN PROGRAMMA
-                                </>
-                              )}
-                            </span>
-                            {direttaStreaming.categoria && (
-                              <span className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-black/40 text-[9px] font-bold text-white/90">
-                                {direttaStreaming.categoria}
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-xs sm:text-sm font-black font-sport uppercase tracking-wider text-white truncate group-hover:underline">
-                            {direttaStreaming.titolo || 'Guarda la Partita Live'} {direttaStreaming.data_ora ? `• ${direttaStreaming.data_ora}` : ''} →
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2.5 h-2.5 rounded-full ${anyLive ? 'bg-red-500 animate-ping' : 'bg-amber-400'}`} />
+                          <span className="text-[11px] font-mono font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                            {anyLive ? '🔴 DIRETTE STREAMING IN ONDA' : '⏰ MATCH DAY IN STREAMING PROGRAMMATO'}
                           </span>
                         </div>
-                      </Link>
+                        <Link 
+                          to="/diretta" 
+                          className="text-[10px] text-amber-400 hover:text-white font-mono font-bold uppercase underline"
+                        >
+                          Tutte le Dirette →
+                        </Link>
+                      </div>
+
+                      <div className={`grid gap-2 ${activeStreams.length >= 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+                        {activeStreams.map(stream => (
+                          <Link
+                            key={stream.id}
+                            to={stream.url}
+                            className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-2 group cursor-pointer ${
+                              stream.isLive
+                                ? 'bg-red-950/40 border-red-500/50 hover:bg-red-900/50 ring-1 ring-red-500/30'
+                                : 'bg-slate-950/60 border-slate-700/60 hover:border-amber-400/50 hover:bg-slate-800/60'
+                            }`}
+                          >
+                            <div className="overflow-hidden">
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className={`w-1.5 h-1.5 rounded-full ${stream.isLive ? 'bg-red-400 animate-ping' : 'bg-emerald-400'}`} />
+                                <span className="text-[10px] font-mono font-bold uppercase text-amber-200">
+                                  {stream.isLive ? '🔴 ORA LIVE' : (stream.dataOra ? `⏰ ${stream.dataOra}` : '⏰ IN PROGRAMMA')}
+                                </span>
+                              </div>
+                              <div className="text-xs font-bold font-sport uppercase tracking-wider text-white truncate group-hover:text-amber-400 transition-colors">
+                                🏐 {stream.categoria}
+                              </div>
+                              <div className="text-[10px] text-slate-400 truncate">
+                                {stream.dettaglioPartita}
+                              </div>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-amber-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                          </Link>
+                        ))}
+                      </div>
                     </motion.div>
                   );
                 })()}

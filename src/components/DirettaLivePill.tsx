@@ -14,18 +14,47 @@ export const DirettaLivePill: React.FC = () => {
       .catch(() => {});
   }, [location.pathname]);
 
-  const isLiveNow = diretta?.stato === 'live';
-  const isInProgramma = diretta?.stato === 'in_programma';
-  // Rigido master check: deve essere esplicitamente attiva E in stato live o in_programma
-  const isEffectivelyActive = Boolean(diretta?.attiva) && (isLiveNow || isInProgramma);
+  const isDoppia = Boolean(diretta?.doppia_diretta);
+  const isC1Active = isDoppia && Boolean(diretta?.canale_1?.attiva && (diretta?.canale_1?.stato === 'live' || diretta?.canale_1?.stato === 'in_programma'));
+  const isC2Active = isDoppia && Boolean(diretta?.canale_2?.attiva && (diretta?.canale_2?.stato === 'live' || diretta?.canale_2?.stato === 'in_programma'));
+  const isSingleActive = !isDoppia && Boolean(diretta?.attiva && (diretta?.stato === 'live' || diretta?.stato === 'in_programma'));
+  const isExtraActive = Boolean(diretta?.canale_extra?.attiva && (diretta?.canale_extra?.stato === 'live' || diretta?.canale_extra?.stato === 'in_programma'));
 
-  if (isDirettaPage || !isEffectivelyActive) {
+  const isEffectivelyActive = isC1Active || isC2Active || isSingleActive || isExtraActive;
+
+  if (isDirettaPage || !isEffectivelyActive || !diretta) {
     return null;
+  }
+
+  // Almeno un canale è LIVE adesso
+  const isLiveNow = (isDoppia && (diretta.canale_1?.stato === 'live' || diretta.canale_2?.stato === 'live')) ||
+    diretta.stato === 'live' ||
+    (isExtraActive && diretta.canale_extra?.stato === 'live');
+
+  // Destinazione URL diretta: se solo l'extra è attivo, porta a ?canale=extra
+  let targetUrl = '/diretta';
+  if (isExtraActive && !isC1Active && !isC2Active && !isSingleActive) {
+    targetUrl = '/diretta?canale=extra';
+  } else if (isC1Active && !isC2Active) {
+    targetUrl = '/diretta?canale=maschile';
+  } else if (isC2Active && !isC1Active) {
+    targetUrl = '/diretta?canale=femminile';
+  }
+
+  // Label descrittiva
+  let label = 'GUARDA LA PARTITA';
+  const activeCount = [isC1Active, isC2Active, isSingleActive, isExtraActive].filter(Boolean).length;
+  if (activeCount > 1) {
+    label = `${activeCount} PARTITE STREAMING`;
+  } else if (isExtraActive && !isC1Active && !isC2Active && !isSingleActive && diretta.canale_extra?.categoria) {
+    label = diretta.canale_extra.categoria.toUpperCase();
+  } else if (diretta.doppia_diretta) {
+    label = '2 PARTITE IN DIRETTA';
   }
 
   return (
     <Link
-      to="/diretta"
+      to={targetUrl}
       aria-label="Segui la diretta streaming della partita"
       id="diretta-live-pill"
       className="flex items-center gap-2 pl-3 sm:pl-4 pr-3 sm:pr-4 py-1.5 sm:py-2 select-none cursor-pointer transition-all duration-300 group max-w-full hover:brightness-115 sm:hover:translate-x-1 hover:shadow-[5px_8px_25px_rgba(220,38,38,0.5)]"
@@ -55,9 +84,9 @@ export const DirettaLivePill: React.FC = () => {
           )}
         </span>
         <span 
-          className="text-[10px] sm:text-[12px] font-black uppercase text-white tracking-wide font-sport"
+          className="text-[10px] sm:text-[12px] font-black uppercase text-white tracking-wide font-sport truncate max-w-[170px]"
         >
-          {diretta?.doppia_diretta ? '2 PARTITE IN DIRETTA' : 'GUARDA LA PARTITA'}
+          {label}
         </span>
       </div>
     </Link>

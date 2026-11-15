@@ -84,13 +84,26 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
     if (urlCanale === 'extra' || urlCanale === 'altre') return 'extra';
     if (urlCanale === 'femminile') return 'femminile';
     if (urlCanale === 'maschile') return 'maschile';
-    // Se c'è solo extra attivo e le serie D sono spente
-    if (cExtra?.attiva && !c1?.attiva && !c2?.attiva && !diretta.attiva) return 'extra';
-    if (cExtra?.stato === 'live' && c1?.stato !== 'live' && c2?.stato !== 'live') return 'extra';
-    if (c2?.stato === 'live' && c1?.stato !== 'live') return 'femminile';
+    
+    // 1. Se un canale è LIVE ORA, vince
+    if (cExtra?.attiva && cExtra?.stato === 'live' && c1?.stato !== 'live' && c2?.stato !== 'live') return 'extra';
+    if (c2?.attiva && c2?.stato === 'live' && c1?.stato !== 'live') return 'femminile';
+    if (c1?.attiva && c1?.stato === 'live') return 'maschile';
+
+    // 2. Se un canale è IN PROGRAMMA attivo:
+    const isC1Prog = Boolean(c1?.attiva && c1?.stato === 'in_programma');
+    const isC2Prog = Boolean(c2?.attiva && c2?.stato === 'in_programma');
+    const isExtraProg = Boolean(cExtra?.attiva && cExtra?.stato === 'in_programma');
+
+    if (isExtraProg && !isC1Prog && !isC2Prog) return 'extra';
+    if (isC2Prog && !isC1Prog) return 'femminile';
+    if (isC1Prog) return 'maschile';
+
+    // 3. Fallback per attivazione generica
+    if (cExtra?.attiva && !c1?.attiva && !c2?.attiva) return 'extra';
     if (c2?.attiva && !c1?.attiva) return 'femminile';
     return 'maschile';
-  }, [urlCanale, c1, c2, cExtra, diretta.attiva]);
+  }, [urlCanale, c1, c2, cExtra]);
 
   const effectiveCanale = useMemo(() => {
     if (activeChannelId === 'extra' && cExtra) {

@@ -466,31 +466,107 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
     }
   };
 
+  const buildPayloadFromState = (
+    baseDiretta: DirettaStreaming,
+    customExtra?: CanaleDiretta
+  ): DirettaStreaming => {
+    const extra = customExtra || cExtra;
+    const isC1Active = Boolean(c1?.attiva && (c1?.stato === 'live' || c1?.stato === 'in_programma'));
+    const isC2Active = Boolean(c2?.attiva && (c2?.stato === 'live' || c2?.stato === 'in_programma'));
+    const isSerieDAttiva = isDoppia ? (isC1Active || isC2Active) : Boolean(baseDiretta.attiva && (baseDiretta.stato === 'live' || baseDiretta.stato === 'in_programma'));
+    const isExtraAttiva = Boolean(extra?.attiva && (extra?.stato === 'live' || extra?.stato === 'in_programma'));
+    const isAnyAttiva = isSerieDAttiva || isExtraAttiva;
+
+    const isAnyLive = (isDoppia ? (c1?.stato === 'live' || c2?.stato === 'live') : baseDiretta.stato === 'live') || (isExtraAttiva && extra?.stato === 'live');
+    const isAnyInProg = (isDoppia ? (c1?.stato === 'in_programma' || c2?.stato === 'in_programma') : baseDiretta.stato === 'in_programma') || (isExtraAttiva && extra?.stato === 'in_programma');
+    const overallStato: 'live' | 'in_programma' | 'terminata' = isAnyLive ? 'live' : (isAnyInProg ? 'in_programma' : 'terminata');
+
+    const useExtraAsRoot = !isSerieDAttiva && isExtraAttiva;
+
+    return {
+      ...baseDiretta,
+      canale_1: c1,
+      canale_2: c2,
+      canale_extra: extra,
+      attiva: isAnyAttiva,
+      stato: overallStato,
+      url_youtube: useExtraAsRoot 
+        ? (extra.url_youtube || baseDiretta.url_youtube)
+        : (isDoppia ? (c1.url_youtube || c2.url_youtube || baseDiretta.url_youtube) : (baseDiretta.url_youtube || extra.url_youtube)),
+      titolo: useExtraAsRoot
+        ? (extra.titolo || baseDiretta.titolo)
+        : (isDoppia ? (c1.titolo || baseDiretta.titolo) : (baseDiretta.titolo || extra.titolo)),
+      categoria: useExtraAsRoot
+        ? (extra.categoria || baseDiretta.categoria)
+        : baseDiretta.categoria,
+      sottotitolo: useExtraAsRoot
+        ? (extra.sottotitolo || baseDiretta.sottotitolo)
+        : baseDiretta.sottotitolo,
+      squadra_casa: useExtraAsRoot
+        ? (extra.squadra_casa || baseDiretta.squadra_casa)
+        : baseDiretta.squadra_casa,
+      squadra_ospite: useExtraAsRoot
+        ? (extra.squadra_ospite || baseDiretta.squadra_ospite)
+        : baseDiretta.squadra_ospite,
+      logo_casa: useExtraAsRoot
+        ? (extra.logo_casa || baseDiretta.logo_casa)
+        : baseDiretta.logo_casa,
+      logo_ospite: useExtraAsRoot
+        ? (extra.logo_ospite || baseDiretta.logo_ospite)
+        : baseDiretta.logo_ospite,
+      data_ora: useExtraAsRoot
+        ? (extra.data_ora || baseDiretta.data_ora)
+        : baseDiretta.data_ora,
+      luogo: useExtraAsRoot
+        ? (extra.luogo || '')
+        : baseDiretta.luogo,
+      aggiornato_il: new Date().toISOString()
+    };
+  };
+
+  const handleToggleAttivaExtra = async (newAttiva: boolean) => {
+    const updatedExtra: CanaleDiretta = { ...cExtra, attiva: newAttiva };
+    const payload = buildPayloadFromState(diretta, updatedExtra);
+    setDiretta(payload);
+    try {
+      await salvaDirettaStreaming(payload);
+      showToast(
+        newAttiva 
+          ? "✅ Canale Altre Squadre ATTIVATO sul portale! Banner visibile sul sito." 
+          : "⏸️ Canale Altre Squadre DISATTIVATO.",
+        "success"
+      );
+    } catch (err: any) {
+      console.error(err);
+      showToast("Errore durante il salvataggio: " + (err.message || ''), "error");
+    }
+  };
+
+  const handleSetStatoExtra = async (newStato: 'in_programma' | 'live' | 'terminata') => {
+    const updatedExtra: CanaleDiretta = { ...cExtra, stato: newStato };
+    const payload = buildPayloadFromState(diretta, updatedExtra);
+    setDiretta(payload);
+    try {
+      await salvaDirettaStreaming(payload);
+      showToast(
+        newStato === 'live' 
+          ? "🔴 Canale Altre Squadre impostato su IN DIRETTA ORA!" 
+          : (newStato === 'in_programma' ? "⏳ Canale Altre Squadre impostato su IN PROGRAMMA!" : "🏁 Canale Altre Squadre impostato su TERMINATA."),
+        "success"
+      );
+    } catch (err: any) {
+      console.error(err);
+      showToast("Errore durante il salvataggio: " + (err.message || ''), "error");
+    }
+  };
+
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setIsSaving(true);
     try {
-      const isSerieDAttiva = isDoppia ? Boolean(c1.attiva || c2.attiva) : Boolean(diretta.attiva);
-      const isExtraAttiva = Boolean(cExtra.attiva);
-      const isAnyAttiva = isSerieDAttiva || isExtraAttiva;
-
-      const payload: DirettaStreaming = {
-        ...diretta,
-        canale_1: c1,
-        canale_2: c2,
-        canale_extra: cExtra,
-        attiva: isAnyAttiva,
-        stato: (c1.stato === 'live' || c2.stato === 'live' || cExtra.stato === 'live')
-          ? 'live' 
-          : ((c1.stato === 'in_programma' || c2.stato === 'in_programma' || cExtra.stato === 'in_programma') ? 'in_programma' : 'terminata'),
-        url_youtube: isDoppia 
-          ? (c1.url_youtube || c2.url_youtube || diretta.url_youtube) 
-          : (diretta.url_youtube || cExtra.url_youtube),
-        titolo: isDoppia 
-          ? (c1.titolo || diretta.titolo) 
-          : (diretta.titolo || cExtra.titolo)
-      };
+      const payload = buildPayloadFromState(diretta, cExtra);
       await salvaDirettaStreaming(payload);
+      setDiretta(payload);
       showToast(
         payload.attiva 
           ? "Configurazione salvata: la diretta è ATTIVA sul sito!" 
@@ -1512,7 +1588,7 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
             <input
               type="checkbox"
               checked={Boolean(cExtra.attiva)}
-              onChange={(e) => updateCanaleExtra({ attiva: e.target.checked })}
+              onChange={(e) => handleToggleAttivaExtra(e.target.checked)}
               className="sr-only peer"
             />
             <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500 relative shadow-inner"></div>
@@ -1521,7 +1597,7 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
                 {cExtra.attiva ? '⚡ Diretta Attiva sul Portale' : 'Diretta Spenta'}
               </span>
               <span className="text-[10px] text-slate-400 font-inter">
-                {cExtra.attiva ? 'Visibile sulla pagina /diretta' : 'Nessun flusso in onda per questo canale'}
+                {cExtra.attiva ? 'Visibile sulla Home e su /diretta' : 'Nessun flusso in onda per questo canale'}
               </span>
             </div>
           </label>
@@ -1530,7 +1606,7 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
           <div className="flex items-center gap-1.5 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
             <button
               type="button"
-              onClick={() => updateCanaleExtra({ stato: 'in_programma' })}
+              onClick={() => handleSetStatoExtra('in_programma')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold font-sport uppercase tracking-wider transition-all cursor-pointer ${
                 cExtra.stato === 'in_programma'
                   ? 'bg-amber-400 text-slate-950 shadow-sm'
@@ -1541,7 +1617,7 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
             </button>
             <button
               type="button"
-              onClick={() => updateCanaleExtra({ stato: 'live' })}
+              onClick={() => handleSetStatoExtra('live')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold font-sport uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
                 cExtra.stato === 'live'
                   ? 'bg-red-500 text-white shadow-sm animate-pulse'
@@ -1553,7 +1629,7 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
             </button>
             <button
               type="button"
-              onClick={() => updateCanaleExtra({ stato: 'terminata' })}
+              onClick={() => handleSetStatoExtra('terminata')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold font-sport uppercase tracking-wider transition-all cursor-pointer ${
                 cExtra.stato === 'terminata'
                   ? 'bg-slate-700 text-slate-200 shadow-sm'
@@ -1885,6 +1961,19 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
               <p className="text-[10px] text-slate-500 text-center mt-1.5 italic">
                 Genera la grafica 1920×1080 con pantera stealth, scudetti e categoria
               </p>
+            </div>
+
+            {/* PULSANTE SALVA MODIFICHE ALTRE SQUADRE */}
+            <div className="pt-2 border-t border-amber-300/60">
+              <button
+                type="button"
+                onClick={() => handleSave()}
+                disabled={isSaving}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-sport uppercase tracking-wider font-black py-3 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer hover:shadow-lg disabled:opacity-50"
+              >
+                {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <span>{isSaving ? 'Salvataggio in corso...' : 'Salva Modifiche Diretta'}</span>
+              </button>
             </div>
           </div>
 
