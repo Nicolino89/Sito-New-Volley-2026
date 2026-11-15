@@ -940,10 +940,12 @@ export default function Home({
                   const c2 = direttaStreaming.canale_2;
                   const cExtra = direttaStreaming.canale_extra;
 
-                  const c1Active = isDoppia && Boolean(c1 && c1.attiva && (c1.stato === 'live' || c1.stato === 'in_programma'));
+                  const c1Active = Boolean(c1 && c1.attiva && (c1.stato === 'live' || c1.stato === 'in_programma'));
                   const c2Active = isDoppia && Boolean(c2 && c2.attiva && (c2.stato === 'live' || c2.stato === 'in_programma'));
                   const cExtraActive = Boolean(cExtra && cExtra.attiva && (cExtra.stato === 'live' || cExtra.stato === 'in_programma'));
-                  const cSingleActive = !isDoppia && Boolean(direttaStreaming.attiva && (direttaStreaming.stato === 'live' || direttaStreaming.stato === 'in_programma'));
+                  const cSingleActive = !isDoppia && (
+                    c1 ? c1Active : Boolean(direttaStreaming.attiva && !cExtraActive && (direttaStreaming.stato === 'live' || direttaStreaming.stato === 'in_programma'))
+                  );
 
                   interface ActiveStreamItem {
                     id: string;
@@ -956,7 +958,7 @@ export default function Home({
                   }
                   const activeStreams: ActiveStreamItem[] = [];
 
-                  if (c1Active && c1) {
+                  if (c1Active && c1 && isDoppia) {
                     activeStreams.push({
                       id: 'c1',
                       url: '/diretta?canale=maschile',
@@ -980,17 +982,18 @@ export default function Home({
                     });
                   }
 
-                  if (cSingleActive && (!isDoppia || (!c1Active && !c2Active))) {
-                    const isSameAsExtra = cExtraActive && (direttaStreaming.titolo === cExtra?.titolo || direttaStreaming.categoria === cExtra?.categoria);
+                  if (cSingleActive) {
+                    const activeChan = c1 || direttaStreaming;
+                    const isSameAsExtra = cExtraActive && (activeChan.titolo === cExtra?.titolo || activeChan.categoria === cExtra?.categoria);
                     if (!isSameAsExtra) {
                       activeStreams.push({
                         id: 'single',
                         url: '/diretta',
-                        categoria: direttaStreaming.categoria || 'Serie D',
-                        titolo: direttaStreaming.titolo || 'Guarda la Partita Live',
-                        dettaglioPartita: `${direttaStreaming.squadra_casa || 'New Volley'} vs ${direttaStreaming.squadra_ospite || 'Avversario'}`,
-                        isLive: direttaStreaming.stato === 'live',
-                        dataOra: direttaStreaming.data_ora
+                        categoria: activeChan.categoria || 'Serie D',
+                        titolo: activeChan.titolo || 'Guarda la Partita Live',
+                        dettaglioPartita: `${activeChan.squadra_casa || 'New Volley'} vs ${activeChan.squadra_ospite || 'Avversario'}`,
+                        isLive: activeChan.stato === 'live',
+                        dataOra: activeChan.data_ora
                       });
                     }
                   }
@@ -1350,19 +1353,28 @@ export default function Home({
                     const isMaschile = selectedMatchCategory === 'D Maschile';
                     const targetCanale = isDoppia 
                       ? (isMaschile ? direttaStreaming.canale_1 : direttaStreaming.canale_2) 
-                      : null;
+                      : (direttaStreaming.canale_1 || null);
 
-                    // In modalità doppia diretta, controlla scrupolosamente se il canale target specifico è attivo e non terminato
                     if (isDoppia) {
                       if (!targetCanale || !targetCanale.attiva || targetCanale.stato === 'terminata') {
                         return null;
                       }
                     } else {
-                      if (!direttaStreaming.attiva || direttaStreaming.stato === 'terminata') {
+                      if (targetCanale) {
+                        if (!targetCanale.attiva || targetCanale.stato === 'terminata') {
+                          return null;
+                        }
+                      } else {
+                        if (!direttaStreaming.attiva || direttaStreaming.stato === 'terminata') {
+                          return null;
+                        }
+                      }
+                      // Se l'unica live attiva è un'altra squadra (canale_extra) e Serie D non è attiva, non mostrare tasto su Serie D
+                      if (direttaStreaming.canale_extra?.attiva && (!targetCanale || !targetCanale.attiva)) {
                         return null;
                       }
                       // Se la singola diretta ha una categoria specifica, mostrala solo nella scheda corrispondente
-                      const catClean = (direttaStreaming.categoria || '').toLowerCase();
+                      const catClean = (targetCanale?.categoria || direttaStreaming.categoria || '').toLowerCase();
                       if (isMaschile && catClean.includes('femm')) return null;
                       if (!isMaschile && catClean.includes('masch')) return null;
                     }

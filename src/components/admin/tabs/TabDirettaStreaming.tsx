@@ -147,25 +147,27 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
   const isDoppia = Boolean(diretta.doppia_diretta);
 
   // Canali correnti con fallback sicuri
-  const c1: CanaleDiretta = diretta.canale_1 ? { ...diretta.canale_1 } : {
-    id: 'maschile',
-    titolo_canale: 'Serie D Maschile',
-    attiva: Boolean(diretta.canale_1?.attiva),
-    stato: diretta.canale_1?.stato || 'in_programma',
-    url_youtube: diretta.url_youtube || '',
-    url_video_presentazione: diretta.url_video_presentazione || '',
-    titolo: diretta.titolo || 'Serie D Maschile: Partita Ufficiale',
-    sottotitolo: diretta.sottotitolo || '',
-    data_ora: diretta.data_ora || '',
-    luogo: diretta.luogo || '',
-    squadra_casa: diretta.squadra_casa || '',
-    squadra_ospite: diretta.squadra_ospite || '',
-    logo_casa: diretta.logo_casa || '',
-    logo_ospite: diretta.logo_ospite || '',
-    categoria: 'Serie D Maschile',
-    mostra_chat: diretta.mostra_chat || false,
-    descrizione: diretta.descrizione || '',
-    locandina_url: '/images/locandina_serie_d_maschile.jpg'
+  const c1: CanaleDiretta = {
+    id: diretta.canale_1?.id || 'maschile',
+    titolo_canale: diretta.canale_1?.titolo_canale || 'Serie D Maschile',
+    attiva: typeof diretta.canale_1?.attiva === 'boolean' 
+      ? diretta.canale_1.attiva 
+      : (diretta.doppia_diretta ? false : Boolean(diretta.attiva && !diretta.canale_extra?.attiva)),
+    stato: diretta.canale_1?.stato || (diretta.doppia_diretta ? 'in_programma' : diretta.stato) || 'in_programma',
+    url_youtube: diretta.canale_1?.url_youtube ?? (diretta.doppia_diretta ? '' : diretta.url_youtube) ?? '',
+    url_video_presentazione: diretta.canale_1?.url_video_presentazione ?? (diretta.doppia_diretta ? '' : diretta.url_video_presentazione) ?? '',
+    titolo: diretta.canale_1?.titolo ?? (diretta.doppia_diretta ? 'Serie D Maschile: Partita Ufficiale' : diretta.titolo) ?? 'Serie D Maschile: Partita Ufficiale',
+    sottotitolo: diretta.canale_1?.sottotitolo ?? (diretta.doppia_diretta ? '' : diretta.sottotitolo) ?? '',
+    data_ora: diretta.canale_1?.data_ora ?? (diretta.doppia_diretta ? '' : diretta.data_ora) ?? '',
+    luogo: diretta.canale_1?.luogo ?? (diretta.doppia_diretta ? '' : diretta.luogo) ?? '',
+    squadra_casa: diretta.canale_1?.squadra_casa ?? (diretta.doppia_diretta ? 'New Volley Academy' : diretta.squadra_casa) ?? 'New Volley Academy',
+    squadra_ospite: diretta.canale_1?.squadra_ospite ?? (diretta.doppia_diretta ? 'Avversario' : diretta.squadra_ospite) ?? 'Avversario',
+    logo_casa: diretta.canale_1?.logo_casa ?? (diretta.doppia_diretta ? OFFICIAL_NVA_LOGO : diretta.logo_casa) ?? OFFICIAL_NVA_LOGO,
+    logo_ospite: diretta.canale_1?.logo_ospite ?? (diretta.doppia_diretta ? '' : diretta.logo_ospite) ?? '',
+    categoria: diretta.canale_1?.categoria ?? (diretta.doppia_diretta ? 'Serie D Maschile' : diretta.categoria) ?? 'Serie D Maschile',
+    mostra_chat: diretta.canale_1?.mostra_chat ?? (diretta.doppia_diretta ? false : diretta.mostra_chat) ?? false,
+    descrizione: diretta.canale_1?.descrizione ?? (diretta.doppia_diretta ? '' : diretta.descrizione) ?? '',
+    locandina_url: diretta.canale_1?.locandina_url || (diretta.doppia_diretta ? '/images/locandina_serie_d_maschile.jpg' : diretta.locandina_url) || '/images/locandina_serie_d_maschile.jpg'
   };
 
   const c2: CanaleDiretta = diretta.canale_2 || {
@@ -190,30 +192,16 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
   };
 
   // Riferimento al canale correntemente visualizzato/modificato
-  const currentCanale: CanaleDiretta = isDoppia ? (activeChannelKey === 'canale_2' ? c2 : c1) : {
-    id: 'singolo',
-    titolo_canale: diretta.categoria || 'Partita Live',
-    attiva: diretta.attiva,
-    stato: diretta.stato,
-    url_youtube: diretta.url_youtube,
-    url_video_presentazione: diretta.url_video_presentazione || '',
-    titolo: diretta.titolo,
-    sottotitolo: diretta.sottotitolo || '',
-    data_ora: diretta.data_ora || '',
-    luogo: diretta.luogo || '',
-    squadra_casa: diretta.squadra_casa || '',
-    squadra_ospite: diretta.squadra_ospite || '',
-    logo_casa: diretta.logo_casa || '',
-    logo_ospite: diretta.logo_ospite || '',
-    categoria: diretta.categoria || '',
-    mostra_chat: diretta.mostra_chat || false,
-    descrizione: diretta.descrizione || '',
-    locandina_url: diretta.locandina_url || (diretta.categoria?.toLowerCase().includes('femm') ? '/images/locandina_serie_d_femminile.jpg' : '/images/locandina_serie_d_maschile.jpg')
-  };
+  const currentCanale: CanaleDiretta = isDoppia ? (activeChannelKey === 'canale_2' ? c2 : c1) : c1;
 
   const updateCurrentCanale = (patch: Partial<CanaleDiretta>) => {
     if (!isDoppia) {
-      setDiretta(prev => ({ ...prev, ...patch }));
+      const updatedC1 = { ...c1, ...patch };
+      setDiretta(prev => ({
+        ...prev,
+        ...patch,
+        canale_1: updatedC1
+      }));
     } else {
       if (activeChannelKey === 'canale_1') {
         const updatedC1 = { ...c1, ...patch };
@@ -421,9 +409,11 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
         }));
       }
     } else {
+      const updatedC1 = { ...c1, ...patch, attiva: true };
       setDiretta(prev => ({
         ...prev,
         ...patch,
+        canale_1: updatedC1,
         attiva: true
       }));
     }
@@ -431,19 +421,17 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
   };
 
   const handleToggleAttiva = async (newAttiva: boolean) => {
-    let updatedC1 = c1;
-    let updatedC2 = c2;
+    let updatedC1 = { ...c1, attiva: newAttiva };
+    let updatedC2 = { ...c2 };
     if (isDoppia) {
       if (activeChannelKey === 'canale_1') {
         updatedC1 = { ...c1, attiva: newAttiva };
       } else {
         updatedC2 = { ...c2, attiva: newAttiva };
       }
-    } else {
-      updatedC1 = { ...c1, attiva: newAttiva };
     }
-    let updatedExtra = cExtra;
-    if (newAttiva && cExtra.stato !== 'live') {
+    let updatedExtra = { ...cExtra };
+    if (newAttiva && cExtra.attiva && cExtra.stato !== 'live') {
       updatedExtra = { ...cExtra, attiva: false };
     }
     const payload = buildPayloadFromState(diretta, updatedExtra, updatedC1, updatedC2);
@@ -527,8 +515,8 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
 
   const handleToggleAttivaExtra = async (newAttiva: boolean) => {
     const updatedExtra: CanaleDiretta = { ...cExtra, attiva: newAttiva };
-    let updatedC1 = c1;
-    let updatedC2 = c2;
+    let updatedC1 = { ...c1 };
+    let updatedC2 = { ...c2 };
     // Se attiviamo Altre Squadre, disattiviamo Serie D se non è in corso live per evitare sovrapposizioni
     if (newAttiva) {
       if (c1?.stato !== 'live') updatedC1 = { ...c1, attiva: false };
@@ -552,8 +540,8 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
 
   const handleSetStatoExtra = async (newStato: 'in_programma' | 'live' | 'terminata') => {
     const updatedExtra: CanaleDiretta = { ...cExtra, stato: newStato, attiva: newStato !== 'terminata' };
-    let updatedC1 = c1;
-    let updatedC2 = c2;
+    let updatedC1 = { ...c1 };
+    let updatedC2 = { ...c2 };
     if (newStato === 'live' || newStato === 'in_programma') {
       if (c1?.stato !== 'live') updatedC1 = { ...c1, attiva: false };
       if (c2?.stato !== 'live') updatedC2 = { ...c2, attiva: false };
@@ -578,18 +566,21 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
     if (e) e.preventDefault();
     setIsSaving(true);
     try {
-      const payload = buildPayloadFromState(diretta, cExtra);
+      const payload = buildPayloadFromState(diretta, cExtra, c1, c2);
       await salvaDirettaStreaming(payload);
       setDiretta(payload);
+      const isSecActive = mainSection === 'seried'
+        ? (c1.attiva || (isDoppia && c2.attiva))
+        : cExtra.attiva;
       showToast(
-        payload.attiva 
-          ? "Configurazione salvata: la diretta è ATTIVA sul sito!" 
-          : "Configurazione salvata: la diretta è DISATTIVA (nessun banner visibile).", 
+        isSecActive
+          ? `Configurazione ${mainSection === 'seried' ? 'Serie D' : 'Altre Squadre'} salvata: diretta ATTIVA sul sito!` 
+          : `Configurazione ${mainSection === 'seried' ? 'Serie D' : 'Altre Squadre'} salvata (canale disattivato).`, 
         "success"
       );
     } catch (err: any) {
       console.error(err);
-      showToast("Errore durante il salvataggio della diretta: " + (err.message || ''), "error");
+      showToast("Errore durante il salvataggio: " + (err.message || ''), "error");
     } finally {
       setIsSaving(false);
     }
@@ -684,9 +675,16 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
             }`}
           >
             <span>🦁</span>
-            <span>Serie D Maschile & Femminile</span>
-            {(c1.attiva || c2.attiva || diretta.attiva) && (
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse ml-0.5" />
+            <span>Serie D (Maschile & Femminile)</span>
+            {(c1.attiva || (isDoppia && c2.attiva)) ? (
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-red-600 text-white font-mono flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                ATTIVA
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-slate-800 text-slate-400 font-mono">
+                SPENTA
+              </span>
             )}
           </button>
 
@@ -701,8 +699,15 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
           >
             <span>🏐</span>
             <span>Altre Squadre & Giovanili (Area Neutra)</span>
-            {cExtra.attiva && (
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse ml-0.5" />
+            {cExtra.attiva ? (
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-600 text-white font-mono flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                ATTIVA
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-slate-800 text-slate-400 font-mono">
+                SPENTA
+              </span>
             )}
           </button>
         </div>
@@ -722,18 +727,18 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-3">
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-lg ${
-              diretta.attiva 
+              (c1.attiva || (isDoppia && c2.attiva)) 
                 ? 'bg-red-500/20 border-red-500/40 text-red-400' 
                 : 'bg-slate-800 border-slate-700 text-slate-400'
             }`}>
-              <Radio className={`w-6 h-6 ${diretta.attiva && diretta.stato === 'live' ? 'animate-pulse text-red-500' : ''}`} />
+              <Radio className={`w-6 h-6 ${(c1.attiva || (isDoppia && c2.attiva)) && (c1.stato === 'live' || (isDoppia && c2.stato === 'live')) ? 'animate-pulse text-red-500' : ''}`} />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider font-sport italic">
-                  Diretta Streaming Match
+                  Diretta Streaming Serie D
                 </h3>
-                {diretta.attiva ? (
+                {(c1.attiva || (isDoppia && c2.attiva)) ? (
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-500/30 font-mono animate-pulse flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
                     ONLINE SUL SITO
@@ -1434,7 +1439,7 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
                 className="bg-slate-950 hover:bg-slate-800 text-amber-400 font-bold py-2.5 px-6 rounded-xl text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-50"
               >
                 {isSaving ? <RefreshCw className="w-4 h-4 animate-spin text-amber-400" /> : <Save className="w-4 h-4 text-amber-400" />}
-                <span>{isSaving ? 'Salvataggio in corso...' : 'Salva Tutte le Configurazioni Diretta'}</span>
+                <span>{isSaving ? 'Salvataggio in corso...' : 'Salva Configurazione Serie D'}</span>
               </button>
             </div>
 
@@ -1986,7 +1991,7 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
                 className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-sport uppercase tracking-wider font-black py-3 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer hover:shadow-lg disabled:opacity-50"
               >
                 {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                <span>{isSaving ? 'Salvataggio in corso...' : 'Salva Modifiche Diretta'}</span>
+                <span>{isSaving ? 'Salvataggio in corso...' : 'Salva Modifiche Altre Squadre'}</span>
               </button>
             </div>
           </div>
@@ -2027,7 +2032,7 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
           className="bg-emerald-600 hover:bg-emerald-500 text-white font-sport uppercase tracking-wider text-sm font-black px-8 py-3.5 rounded-2xl shadow-xl flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02] disabled:opacity-50"
         >
           <Save className="w-5 h-5" />
-          <span>{isSaving ? 'Salvataggio in corso...' : 'Salva Configurazione Diretta'}</span>
+          <span>{isSaving ? 'Salvataggio in corso...' : 'Salva Configurazione Altre Squadre'}</span>
         </button>
       </div>
     </div>

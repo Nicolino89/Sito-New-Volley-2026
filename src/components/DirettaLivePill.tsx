@@ -15,12 +15,17 @@ export const DirettaLivePill: React.FC = () => {
   }, [location.pathname]);
 
   const isDoppia = Boolean(diretta?.doppia_diretta);
-  const isC1Active = isDoppia && Boolean(diretta?.canale_1?.attiva && (diretta?.canale_1?.stato === 'live' || diretta?.canale_1?.stato === 'in_programma'));
+  const isC1Active = Boolean(diretta?.canale_1?.attiva && (diretta?.canale_1?.stato === 'live' || diretta?.canale_1?.stato === 'in_programma'));
   const isC2Active = isDoppia && Boolean(diretta?.canale_2?.attiva && (diretta?.canale_2?.stato === 'live' || diretta?.canale_2?.stato === 'in_programma'));
-  const isSingleActive = !isDoppia && Boolean(diretta?.attiva && (diretta?.stato === 'live' || diretta?.stato === 'in_programma'));
   const isExtraActive = Boolean(diretta?.canale_extra?.attiva && (diretta?.canale_extra?.stato === 'live' || diretta?.canale_extra?.stato === 'in_programma'));
+  const isSingleActive = !isDoppia && (
+    diretta?.canale_1 
+      ? isC1Active 
+      : Boolean(diretta?.attiva && !isExtraActive && (diretta?.stato === 'live' || diretta?.stato === 'in_programma'))
+  );
 
-  const isEffectivelyActive = isC1Active || isC2Active || isSingleActive || isExtraActive;
+  const isSerieDActive = isDoppia ? (isC1Active || isC2Active) : isSingleActive;
+  const isEffectivelyActive = isSerieDActive || isExtraActive;
 
   if (isDirettaPage || !isEffectivelyActive || !diretta) {
     return null;
@@ -28,16 +33,16 @@ export const DirettaLivePill: React.FC = () => {
 
   // Almeno un canale è LIVE adesso
   const isLiveNow = (isDoppia && (diretta.canale_1?.stato === 'live' || diretta.canale_2?.stato === 'live')) ||
-    diretta.stato === 'live' ||
+    (!isDoppia && isSingleActive && (diretta.canale_1?.stato === 'live' || diretta.stato === 'live')) ||
     (isExtraActive && diretta.canale_extra?.stato === 'live');
 
   // Destinazione URL diretta: se solo l'extra è attivo, porta a ?canale=extra
   let targetUrl = '/diretta';
-  if (isExtraActive && !isC1Active && !isC2Active && !isSingleActive) {
+  if (isExtraActive && !isSerieDActive) {
     targetUrl = '/diretta?canale=extra';
-  } else if (isC1Active && !isC2Active) {
+  } else if (isC1Active && !isC2Active && !isExtraActive) {
     targetUrl = '/diretta?canale=maschile';
-  } else if (isC2Active && !isC1Active) {
+  } else if (isC2Active && !isC1Active && !isExtraActive) {
     targetUrl = '/diretta?canale=femminile';
   }
 
@@ -46,7 +51,7 @@ export const DirettaLivePill: React.FC = () => {
   const activeCount = [isC1Active, isC2Active, isSingleActive, isExtraActive].filter(Boolean).length;
   if (activeCount > 1) {
     label = `${activeCount} PARTITE STREAMING`;
-  } else if (isExtraActive && !isC1Active && !isC2Active && !isSingleActive && diretta.canale_extra?.categoria) {
+  } else if (isExtraActive && !isSerieDActive && diretta.canale_extra?.categoria) {
     label = diretta.canale_extra.categoria.toUpperCase();
   } else if (diretta.doppia_diretta) {
     label = '2 PARTITE IN DIRETTA';
