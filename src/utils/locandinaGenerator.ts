@@ -127,6 +127,78 @@ function drawGenericVolleyBadge(
 }
 
 /**
+ * Disegna il nome squadra con supporto multiriga e auto-scaling
+ * Evita troncamenti su nomi lunghi (es. New Volley Academy Derma 2.0...)
+ * Ritorna la coordinata Y finale dopo l'ultima riga di testo
+ */
+function drawTeamName(
+  ctx: CanvasRenderingContext2D,
+  name: string,
+  cx: number,
+  startY: number,
+  isNva: boolean
+): number {
+  const maxW = 460;
+  const upper = (name || '').trim().toUpperCase();
+
+  ctx.save();
+  ctx.fillStyle = isNva ? '#f5d800' : '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.shadowColor = 'rgba(0,0,0,0.9)';
+  ctx.shadowBlur = 12;
+
+  // Tentativo 1: singola riga
+  let fontSize = 36;
+  ctx.font = `900 ${fontSize}px "Arial Black", Impact, sans-serif`;
+  const singleWidth = ctx.measureText(upper).width;
+
+  let lines: string[] = [];
+  if (singleWidth <= maxW) {
+    lines = [upper];
+  } else {
+    // Dividi su 2 righe nel punto ottimale (spazio più vicino a metà stringa)
+    const words = upper.split(/\s+/);
+    if (words.length <= 1) {
+      lines = [upper];
+    } else {
+      const halfLen = upper.length / 2;
+      let curLen = 0;
+      let splitIdx = 1;
+      let bestDiff = 999;
+      for (let i = 0; i < words.length - 1; i++) {
+        curLen += words[i].length + 1;
+        const diff = Math.abs(curLen - halfLen);
+        if (diff < bestDiff) {
+          bestDiff = diff;
+          splitIdx = i + 1;
+        }
+      }
+      lines = [
+        words.slice(0, splitIdx).join(' '),
+        words.slice(splitIdx).join(' ')
+      ];
+    }
+  }
+
+  // Se ancora troppo largo, scala font fino a maxW (min 20px)
+  while (fontSize > 20) {
+    ctx.font = `900 ${fontSize}px "Arial Black", Impact, sans-serif`;
+    const anyTooWide = lines.some(l => ctx.measureText(l).width > maxW);
+    if (!anyTooWide) break;
+    fontSize -= 2;
+  }
+
+  const lineHeight = Math.round(fontSize * 1.18);
+  lines.forEach((line, i) => {
+    ctx.fillText(line, cx, startY + i * lineHeight);
+  });
+  ctx.restore();
+
+  return startY + lines.length * lineHeight;
+}
+
+/**
  * Renderizza la locandina 1920x1080 su un elemento canvas
  */
 export async function renderLocandinaToCanvas(
@@ -155,10 +227,17 @@ export async function renderLocandinaToCanvas(
   // 2. HEADER SUPERIORE: PILL MATCH DAY (AMPIA E SPAZIOSA)
   ctx.save();
   const isSerieD = (data.categoria || '').toLowerCase().includes('serie d');
-  const catClean = (data.categoria || 'CAMPIONATO REGIONALE').toUpperCase();
-  const pillText = isSerieD 
-    ? '★  FIPAV CAMPIONATO REGIONALE • MATCH DAY  ★' 
-    : `★  ${catClean} • MATCH DAY  ★`;
+  const catUpper = (data.categoria || '').toUpperCase();
+  let pillText = '★  FIPAV CAMPIONATO • MATCH DAY  ★';
+  if (isSerieD) {
+    pillText = '★  FIPAV CAMPIONATO REGIONALE • MATCH DAY  ★';
+  } else if (catUpper.includes('CSI')) {
+    pillText = '★  CAMPIONATO CSI • MATCH DAY  ★';
+  } else if (catUpper.includes('DIVISIONE') || catUpper.includes('UNDER')) {
+    pillText = '★  FIPAV CAMPIONATO TERRITORIALE • MATCH DAY  ★';
+  } else {
+    pillText = '★  MATCH DAY • DIRETTA STREAMING  ★';
+  }
 
   ctx.font = '900 19px "Arial Black", Impact, sans-serif';
   ctx.letterSpacing = '1px';
@@ -181,11 +260,20 @@ export async function renderLocandinaToCanvas(
   ctx.fillText(pillText, 960, pillY + pillH / 2);
   ctx.restore();
 
-  // CATEGORIA & GIORNATA
+  // CATEGORIA & GIORNATA (CON DEDUPLICAZIONE RIGOROSA)
   ctx.save();
   const categoriaText = (data.categoria || 'SERIE D MASCHILE').toUpperCase();
   const giornataText = (data.giornata || '').toUpperCase();
-  const subTitle = [categoriaText, giornataText].filter(Boolean).join(' • ');
+
+  // Normalizza togliendo punteggiatura, spazi e accenti per confronto pulito
+  const norm = (s: string) => s.replace(/[^A-Z0-9]/gi, '').toLowerCase();
+  const normCat = norm(categoriaText);
+  const normGio = norm(giornataText);
+
+  let subTitle = categoriaText;
+  if (giornataText && normGio !== normCat && !normCat.includes(normGio) && !normGio.includes(normCat)) {
+    subTitle = `${categoriaText} • ${giornataText}`;
+  }
 
   ctx.fillStyle = '#ffffff';
   ctx.font = '900 48px "Arial Black", Impact, sans-serif';
@@ -230,14 +318,28 @@ export async function renderLocandinaToCanvas(
   ctx.stroke();
   ctx.restore();
 
-  // Caricamento e disegno loghi
+  // Caricamento e sanitizzazione loghi
   const defaultNvaLogo = '/images/logo-nva.png';
-  const logoCasaUrl = data.logoCasa || (isNvaCasa ? defaultNvaLogo : '');
-  const logoOspitiUrl = data.logoOspite || (!isNvaCasa ? defaultNvaLogo : '');
+  let sanitizedLogoCasa = data.logoCasa || '';
+  let sanitizedLogoOspite = data.logoOspite || '';
+
+  if (isNvaCasa) {
+    if (!sanitizedLogoCasa) sanitizedLogoCasa = defaultNvaLogo;
+    // Se la casa è NVA, l'ospite è l'avversario: rimuovi logo NVA se presente per errore
+    if (sanitizedLogoOspite.includes('logo-nva.png')) {
+      sanitizedLogoOspite = '';
+    }
+  } else {
+    // L'ospite è NVA, la casa è l'avversario: rimuovi logo NVA dalla casa se presente per errore
+    if (!sanitizedLogoOspite) sanitizedLogoOspite = defaultNvaLogo;
+    if (sanitizedLogoCasa.includes('logo-nva.png')) {
+      sanitizedLogoCasa = '';
+    }
+  }
 
   const [imgCasa, imgOspiti] = await Promise.all([
-    loadImageSafe(logoCasaUrl),
-    loadImageSafe(logoOspitiUrl)
+    loadImageSafe(sanitizedLogoCasa),
+    loadImageSafe(sanitizedLogoOspite)
   ]);
 
   // Disegno Logo Casa
@@ -304,48 +406,38 @@ export async function renderLocandinaToCanvas(
   ctx.fillText('VS', 960, vsY + vsH / 2 + 2);
   ctx.restore();
 
-  // 8. NOMI DELLE SQUADRE SOTTO AI LOGHI
-  // NOME SQUADRA CASA
-  ctx.save();
-  ctx.fillStyle = isNvaCasa ? '#f5d800' : '#ffffff';
-  ctx.font = '900 38px "Arial Black", Impact, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.shadowColor = 'rgba(0,0,0,0.9)';
-  ctx.shadowBlur = 10;
-  ctx.fillText((data.squadraCasa || 'NEW VOLLEY ACADEMY').toUpperCase(), casaBoxX + boxW / 2, boxY + boxH + 25);
+  // 8. NOMI DELLE SQUADRE SOTTO AI LOGHI CON AUTO-SCALING E MULTIRIGA
+  const startY = boxY + boxH + 22;
+  const bottomYCasa = drawTeamName(ctx, data.squadraCasa || 'NEW VOLLEY ACADEMY', casaBoxX + boxW / 2, startY, isNvaCasa);
+  const bottomYOspiti = drawTeamName(ctx, data.squadraOspite || 'AVVERSARIO', ospitiBoxX + boxW / 2, startY, !isNvaCasa);
 
-  // Badge CASA / OSPITI
+  // Badge CASA / OSPITI allineati orizzontalmente
   const bW = 130;
   const bH = 34;
-  drawRoundedRect(ctx, casaBoxX + (boxW - bW) / 2, boxY + boxH + 80, bW, bH, 17);
+  const badgeY = Math.max(bottomYCasa, bottomYOspiti, boxY + boxH + 75) + 12;
+
+  // Badge CASA
+  ctx.save();
+  drawRoundedRect(ctx, casaBoxX + (boxW - bW) / 2, badgeY, bW, bH, 17);
   ctx.fillStyle = isNvaCasa ? '#f5d800' : '#334155';
   ctx.fill();
   ctx.fillStyle = isNvaCasa ? '#0a0a0a' : '#ffffff';
   ctx.font = '900 16px "Arial Black", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('IN CASA', casaBoxX + boxW / 2, boxY + boxH + 80 + bH / 2);
+  ctx.fillText('IN CASA', casaBoxX + boxW / 2, badgeY + bH / 2);
   ctx.restore();
 
-  // NOME SQUADRA OSPITE
+  // Badge OSPITI
   ctx.save();
-  ctx.fillStyle = !isNvaCasa ? '#f5d800' : '#ffffff';
-  ctx.font = '900 38px "Arial Black", Impact, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.shadowColor = 'rgba(0,0,0,0.9)';
-  ctx.shadowBlur = 10;
-  ctx.fillText((data.squadraOspite || 'AVVERSARIO').toUpperCase(), ospitiBoxX + boxW / 2, boxY + boxH + 25);
-
-  drawRoundedRect(ctx, ospitiBoxX + (boxW - bW) / 2, boxY + boxH + 80, bW, bH, 17);
+  drawRoundedRect(ctx, ospitiBoxX + (boxW - bW) / 2, badgeY, bW, bH, 17);
   ctx.fillStyle = !isNvaCasa ? '#f5d800' : '#334155';
   ctx.fill();
   ctx.fillStyle = !isNvaCasa ? '#0a0a0a' : '#ffffff';
   ctx.font = '900 16px "Arial Black", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('OSPITI', ospitiBoxX + boxW / 2, boxY + boxH + 80 + bH / 2);
+  ctx.fillText('OSPITI', ospitiBoxX + boxW / 2, badgeY + bH / 2);
   ctx.restore();
 
   // 9. RIQUADRO INFORMAZIONI GARA (DATA, ORA & LUOGO)

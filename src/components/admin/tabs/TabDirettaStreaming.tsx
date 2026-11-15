@@ -345,13 +345,21 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
   const handleDownloadLocandinaExtra = async () => {
     setIsGeneratingLocandina(true);
     try {
+      const isCasaNva = isNvaCasaExtra;
+      const logoCasa = isCasaNva 
+        ? (cExtra.logo_casa || OFFICIAL_NVA_LOGO) 
+        : (cExtra.logo_casa || getKnownTeamLogo(cExtra.squadra_casa) || '');
+      const logoOspite = !isCasaNva 
+        ? (cExtra.logo_ospite || OFFICIAL_NVA_LOGO) 
+        : (cExtra.logo_ospite || getKnownTeamLogo(cExtra.squadra_ospite) || '');
+
       const matchData: LocandinaMatchData = {
         categoria: cExtra.categoria || 'Campionato Volley',
         giornata: cExtra.sottotitolo ? cExtra.sottotitolo.split('•')[0].trim() : '',
-        squadraCasa: cExtra.squadra_casa || 'New Volley Academy',
-        squadraOspite: cExtra.squadra_ospite || 'Avversario',
-        logoCasa: cExtra.logo_casa || OFFICIAL_NVA_LOGO,
-        logoOspite: cExtra.logo_ospite || '',
+        squadraCasa: cExtra.squadra_casa || (isCasaNva ? 'New Volley Academy' : 'Avversario'),
+        squadraOspite: cExtra.squadra_ospite || (!isCasaNva ? 'New Volley Academy' : 'Avversario'),
+        logoCasa,
+        logoOspite,
         dataOra: cExtra.data_ora || 'Inizio Gara',
         luogo: '' // Nessuna location come richiesto
       };
@@ -1583,16 +1591,19 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
                     const sq = (squadreAll || []).find(x => x.id === sqId);
                     if (sq) {
                       const isCasa = isNvaCasaExtra;
-                      const ourName = sq.nome_squadra || 'New Volley Academy';
+                      const rawName = (sq.nome_squadra || '').trim();
+                      const ourName = (/new\s*volley/i.test(rawName) || /volley\s*academy/i.test(rawName))
+                        ? rawName
+                        : `New Volley Academy ${rawName || 'Academy'}`;
                       const oppName = isCasa ? (cExtra.squadra_ospite || 'Avversario') : (cExtra.squadra_casa || 'Avversario');
                       updateCanaleExtra({
                         squadra_id: sq.id,
                         categoria: sq.nome_squadra,
                         sottotitolo: sq.campionato || 'Campionato Volley',
-                        squadra_casa: isCasa ? `New Volley Academy ${ourName}` : oppName,
-                        squadra_ospite: !isCasa ? `New Volley Academy ${ourName}` : oppName,
-                        logo_casa: isCasa ? OFFICIAL_NVA_LOGO : cExtra.logo_casa,
-                        logo_ospite: !isCasa ? OFFICIAL_NVA_LOGO : cExtra.logo_ospite,
+                        squadra_casa: isCasa ? ourName : oppName,
+                        squadra_ospite: !isCasa ? ourName : oppName,
+                        logo_casa: isCasa ? OFFICIAL_NVA_LOGO : (cExtra.logo_casa || getKnownTeamLogo(oppName) || ''),
+                        logo_ospite: !isCasa ? OFFICIAL_NVA_LOGO : (cExtra.logo_ospite || getKnownTeamLogo(oppName) || ''),
                         titolo: `${sq.nome_squadra}: ${isCasa ? ourName + ' vs ' + oppName : oppName + ' vs ' + ourName}`
                       });
                     }
@@ -1621,7 +1632,10 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
                   <button
                     type="button"
                     onClick={() => {
-                      const ourName = selectedExtraSquadra?.nome_squadra ? `New Volley Academy ${selectedExtraSquadra.nome_squadra}` : 'New Volley Academy';
+                      const rawName = (selectedExtraSquadra?.nome_squadra || '').trim();
+                      const ourName = (/new\s*volley/i.test(rawName) || /volley\s*academy/i.test(rawName))
+                        ? rawName
+                        : `New Volley Academy ${rawName || 'Academy'}`;
                       const oppName = isNvaCasaExtra ? cExtra.squadra_ospite : cExtra.squadra_casa;
                       updateCanaleExtra({
                         squadra_casa: ourName,
@@ -1642,7 +1656,10 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
                   <button
                     type="button"
                     onClick={() => {
-                      const ourName = selectedExtraSquadra?.nome_squadra ? `New Volley Academy ${selectedExtraSquadra.nome_squadra}` : 'New Volley Academy';
+                      const rawName = (selectedExtraSquadra?.nome_squadra || '').trim();
+                      const ourName = (/new\s*volley/i.test(rawName) || /volley\s*academy/i.test(rawName))
+                        ? rawName
+                        : `New Volley Academy ${rawName || 'Academy'}`;
                       const oppName = isNvaCasaExtra ? cExtra.squadra_ospite : cExtra.squadra_casa;
                       updateCanaleExtra({
                         squadra_casa: oppName || 'Avversario',
