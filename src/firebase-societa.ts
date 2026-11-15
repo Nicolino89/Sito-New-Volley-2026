@@ -4940,7 +4940,7 @@ export async function eliminaRichiestaSponsor(id: string): Promise<void> {
 // ============================================================================
 
 export interface CanaleDiretta {
-  id: 'maschile' | 'femminile' | string;
+  id: 'maschile' | 'femminile' | 'altre_squadre' | string;
   titolo_canale: string; // es. "Serie D Maschile" o "Serie D Femminile"
   attiva: boolean;
   stato: 'live' | 'in_programma' | 'terminata';
@@ -4958,6 +4958,8 @@ export interface CanaleDiretta {
   mostra_chat?: boolean;
   descrizione?: string;
   locandina_url?: string;
+  squadra_id?: string;
+  avversario_tipo?: 'campionato' | 'custom';
 }
 
 export interface DirettaStreaming {
@@ -4983,6 +4985,8 @@ export interface DirettaStreaming {
   doppia_diretta?: boolean;
   canale_1?: CanaleDiretta;
   canale_2?: CanaleDiretta;
+  // CANALE SEPARATO PER ALTRE SQUADRE & GIOVANILI (SEZIONE NEUTRA)
+  canale_extra?: CanaleDiretta;
 }
 
 export const OFFICIAL_NVA_LOGO = 'https://firebasestorage.googleapis.com/v0/b/new-volley-academy.firebasestorage.app/o/settings%2Flogo_1783320543830.webp?alt=media&token=1311d811-745b-44ae-af58-326e4add2e02';
@@ -5162,6 +5166,28 @@ export const DEFAULT_DIRETTA_STREAMING: DirettaStreaming = {
     mostra_chat: false,
     descrizione: 'Guarda la partita di Serie D Femminile in diretta streaming!',
     locandina_url: '/images/locandina_serie_d_femminile.jpg'
+  },
+  canale_extra: {
+    id: 'altre_squadre',
+    titolo_canale: 'Altre Squadre & Giovanili',
+    attiva: false,
+    stato: 'in_programma',
+    url_youtube: '',
+    url_video_presentazione: '',
+    titolo: 'Match Day: New Volley Academy',
+    sottotitolo: 'Campionato Volley',
+    squadra_casa: 'New Volley Academy',
+    squadra_ospite: 'Squadra Avversaria',
+    logo_casa: OFFICIAL_NVA_LOGO,
+    logo_ospite: '',
+    categoria: 'Under 16 Femminile',
+    luogo: 'Palasport Comunale',
+    data_ora: '',
+    mostra_chat: false,
+    descrizione: 'Guarda la partita in diretta streaming!',
+    locandina_url: '/images/locandina-bg-clean.jpg',
+    squadra_id: '',
+    avversario_tipo: 'campionato'
   }
 };
 

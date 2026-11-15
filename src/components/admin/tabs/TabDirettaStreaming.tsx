@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Radio, 
   Play, 
@@ -33,7 +33,8 @@ import {
   ProssimaGara,
   RosaSquadra,
   OFFICIAL_NVA_LOGO,
-  getKnownTeamLogo
+  getKnownTeamLogo,
+  cleanTeamDisplayName
 } from '../../../firebase-societa';
 import { downloadLocandinaMatch, LocandinaMatchData } from '../../../utils/locandinaGenerator';
 
@@ -53,6 +54,12 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
   const [copiedTitle, setCopiedTitle] = useState(false);
   const [copiedDescription, setCopiedDescription] = useState(false);
   const [isGeneratingLocandina, setIsGeneratingLocandina] = useState(false);
+
+  // Sezione principale attiva: 'seried' (Serie D Maschile & Femminile) o 'altre' (Altre Squadre & Giovanili)
+  const [mainSection, setMainSection] = useState<'seried' | 'altre'>('seried');
+  const [copiedTitleExtra, setCopiedTitleExtra] = useState(false);
+  const [copiedDescriptionExtra, setCopiedDescriptionExtra] = useState(false);
+  const [copiedExtraUrl, setCopiedExtraUrl] = useState(false);
 
   // Tab per canale selezionato in modalità doppia diretta ('canale_1' o 'canale_2')
   const [activeChannelKey, setActiveChannelKey] = useState<'canale_1' | 'canale_2'>('canale_1');
@@ -105,6 +112,28 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
           mostra_chat: false,
           descrizione: 'Guarda la partita di Serie D Femminile in diretta streaming!',
           locandina_url: '/images/locandina_serie_d_femminile.jpg'
+        },
+        canale_extra: d.canale_extra || {
+          id: 'altre_squadre',
+          titolo_canale: 'Altre Squadre & Giovanili',
+          attiva: false,
+          stato: 'in_programma',
+          url_youtube: '',
+          url_video_presentazione: '',
+          titolo: 'Match Day: New Volley Academy',
+          sottotitolo: 'Campionato Volley',
+          squadra_casa: 'New Volley Academy',
+          squadra_ospite: 'Squadra Avversaria',
+          logo_casa: OFFICIAL_NVA_LOGO,
+          logo_ospite: '',
+          categoria: 'Under 16 Femminile',
+          luogo: '',
+          data_ora: '',
+          mostra_chat: false,
+          descrizione: 'Guarda la partita in diretta streaming!',
+          locandina_url: '/images/locandina-bg-clean.jpg',
+          squadra_id: '',
+          avversario_tipo: 'campionato'
         }
       };
       setDiretta(initialized);
@@ -209,6 +238,133 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
     }
   };
 
+  const cExtra: CanaleDiretta = diretta.canale_extra || {
+    id: 'altre_squadre',
+    titolo_canale: 'Altre Squadre & Giovanili',
+    attiva: false,
+    stato: 'in_programma',
+    url_youtube: '',
+    url_video_presentazione: '',
+    titolo: 'Match Day: New Volley Academy',
+    sottotitolo: 'Campionato Volley',
+    squadra_casa: 'New Volley Academy',
+    squadra_ospite: 'Squadra Avversaria',
+    logo_casa: OFFICIAL_NVA_LOGO,
+    logo_ospite: '',
+    categoria: 'Under 16 Femminile',
+    luogo: '',
+    data_ora: '',
+    mostra_chat: false,
+    descrizione: '',
+    locandina_url: '/images/locandina-bg-clean.jpg',
+    squadra_id: '',
+    avversario_tipo: 'campionato'
+  };
+
+  const updateCanaleExtra = (patch: Partial<CanaleDiretta>) => {
+    setDiretta(prev => ({
+      ...prev,
+      canale_extra: {
+        ...(prev.canale_extra || cExtra),
+        ...patch
+      }
+    }));
+  };
+
+  // Squadre disponibili per la tendina (giovanili, CSI, 1a divisione, etc.)
+  const altreSquadreList = useMemo(() => {
+    const list = (squadreAll || []).filter(s => {
+      const name = (s.nome_squadra || '').toLowerCase();
+      return !name.includes('serie d');
+    });
+    return list.length > 0 ? list : (squadreAll || []);
+  }, [squadreAll]);
+
+  // Squadra attualmente selezionata nell'area neutra
+  const selectedExtraSquadra = useMemo(() => {
+    if (!cExtra.squadra_id) return altreSquadreList[0] || null;
+    return (squadreAll || []).find(s => s.id === cExtra.squadra_id) || altreSquadreList[0] || null;
+  }, [squadreAll, cExtra.squadra_id, altreSquadreList]);
+
+  // Squadre avversarie ricavate dalla classifica e dalle partite del girone
+  const availableOpponentsExtra = useMemo(() => {
+    if (!selectedExtraSquadra) return [];
+    const fromClass = (selectedExtraSquadra.classifica || [])
+      .map(r => cleanTeamDisplayName(r.squadra))
+      .filter(name => name && !name.toLowerCase().includes('new volley') && !name.toLowerCase().includes('nva') && !name.toLowerCase().includes('salfep'));
+
+    const fromPartite = (selectedExtraSquadra.partite || [])
+      .map(p => cleanTeamDisplayName(p.avversario))
+      .filter(name => name && !name.toLowerCase().includes('new volley') && !name.toLowerCase().includes('nva') && !name.toLowerCase().includes('salfep'));
+
+    return Array.from(new Set([...fromClass, ...fromPartite])).sort();
+  }, [selectedExtraSquadra]);
+
+  const isNvaCasaExtra = useMemo(() => {
+    return (cExtra.squadra_casa || '').toLowerCase().includes('new volley') || (cExtra.squadra_casa || '').toLowerCase().includes('academy');
+  }, [cExtra.squadra_casa]);
+
+  const extraVideoId = extractYouTubeVideoId(cExtra.url_youtube);
+
+  // Titolo e Descrizione YouTube per Altre Squadre (sintetica, senza location)
+  const youtubeTitleExtra = `🔴 LIVE: ${cExtra.categoria || 'Match Day'} | ${cExtra.squadra_casa || 'New Volley Academy'} vs ${cExtra.squadra_ospite || 'Avversario'}`;
+
+  const youtubeDescriptionExtra = `🔴 DIRETTA STREAMING MATCH DAY
+🏐 Campionato: ${cExtra.categoria || 'Volley'}
+⚔️ ${cExtra.squadra_casa || 'New Volley Academy'} vs ${cExtra.squadra_ospite || 'Avversario'}
+${cExtra.data_ora ? `📅 Data & Ora: ${cExtra.data_ora}\n` : ''}
+Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le notifiche 🔔
+
+👉 Portale Ufficiale: https://www.newvolleyacademy.it`;
+
+  const handleCopyTitleExtra = () => {
+    navigator.clipboard.writeText(youtubeTitleExtra).then(() => {
+      setCopiedTitleExtra(true);
+      showToast("Titolo YouTube copiato negli appunti!", "success");
+      setTimeout(() => setCopiedTitleExtra(false), 2000);
+    }).catch(() => {});
+  };
+
+  const handleCopyDescriptionExtra = () => {
+    navigator.clipboard.writeText(youtubeDescriptionExtra).then(() => {
+      setCopiedDescriptionExtra(true);
+      showToast("Descrizione rapida (senza location) copiata negli appunti!", "success");
+      setTimeout(() => setCopiedDescriptionExtra(false), 2000);
+    }).catch(() => {});
+  };
+
+  const handleCopyPublicUrlExtra = () => {
+    const url = `${window.location.origin}/diretta?canale=extra`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedExtraUrl(true);
+      showToast("Link diretta altra squadra copiato negli appunti!", "info");
+      setTimeout(() => setCopiedExtraUrl(false), 2500);
+    }).catch(() => {});
+  };
+
+  const handleDownloadLocandinaExtra = async () => {
+    setIsGeneratingLocandina(true);
+    try {
+      const matchData: LocandinaMatchData = {
+        categoria: cExtra.categoria || 'Campionato Volley',
+        giornata: cExtra.sottotitolo ? cExtra.sottotitolo.split('•')[0].trim() : '',
+        squadraCasa: cExtra.squadra_casa || 'New Volley Academy',
+        squadraOspite: cExtra.squadra_ospite || 'Avversario',
+        logoCasa: cExtra.logo_casa || OFFICIAL_NVA_LOGO,
+        logoOspite: cExtra.logo_ospite || '',
+        dataOra: cExtra.data_ora || 'Inizio Gara',
+        luogo: '' // Nessuna location come richiesto
+      };
+      await downloadLocandinaMatch(matchData);
+      showToast("Locandina Match (16:9 HD) scaricata con successo!", "success");
+    } catch (err: any) {
+      console.error("Errore generazione locandina:", err);
+      showToast("Errore durante la generazione della locandina: " + (err.message || ''), "error");
+    } finally {
+      setIsGeneratingLocandina(false);
+    }
+  };
+
   const videoId = extractYouTubeVideoId(currentCanale.url_youtube);
   const teaserVideoId = extractYouTubeVideoId(currentCanale.url_video_presentazione);
 
@@ -306,14 +462,25 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
     if (e) e.preventDefault();
     setIsSaving(true);
     try {
+      const isSerieDAttiva = isDoppia ? Boolean(c1.attiva || c2.attiva) : Boolean(diretta.attiva);
+      const isExtraAttiva = Boolean(cExtra.attiva);
+      const isAnyAttiva = isSerieDAttiva || isExtraAttiva;
+
       const payload: DirettaStreaming = {
         ...diretta,
         canale_1: c1,
         canale_2: c2,
-        attiva: isDoppia ? Boolean(c1.attiva || c2.attiva) : Boolean(diretta.attiva),
-        stato: isDoppia ? ((c1.stato === 'live' || c2.stato === 'live') ? 'live' : (c1.stato === 'in_programma' || c2.stato === 'in_programma') ? 'in_programma' : 'terminata') : diretta.stato,
-        url_youtube: isDoppia ? (c1.url_youtube || c2.url_youtube || diretta.url_youtube) : diretta.url_youtube,
-        titolo: isDoppia ? (c1.titolo || diretta.titolo) : diretta.titolo
+        canale_extra: cExtra,
+        attiva: isAnyAttiva,
+        stato: (c1.stato === 'live' || c2.stato === 'live' || cExtra.stato === 'live')
+          ? 'live' 
+          : ((c1.stato === 'in_programma' || c2.stato === 'in_programma' || cExtra.stato === 'in_programma') ? 'in_programma' : 'terminata'),
+        url_youtube: isDoppia 
+          ? (c1.url_youtube || c2.url_youtube || diretta.url_youtube) 
+          : (diretta.url_youtube || cExtra.url_youtube),
+        titolo: isDoppia 
+          ? (c1.titolo || diretta.titolo) 
+          : (diretta.titolo || cExtra.titolo)
       };
       await salvaDirettaStreaming(payload);
       showToast(
@@ -405,6 +572,52 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
 
   return (
     <div className="space-y-6 text-xs max-w-5xl mx-auto pb-12 animate-fade-in" id="admin-tab-diretta">
+      
+      {/* 0. SELETTORE AREA: SERIE D vs ALTRE SQUADRE */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-lg">
+        <div className="flex items-center gap-2 p-1 bg-slate-950/80 border border-slate-800/80 rounded-xl w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setMainSection('seried')}
+            className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-lg font-sport font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              mainSection === 'seried'
+                ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-400/40'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <span>🦁</span>
+            <span>Serie D Maschile & Femminile</span>
+            {(c1.attiva || c2.attiva || diretta.attiva) && (
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse ml-0.5" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMainSection('altre')}
+            className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-lg font-sport font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              mainSection === 'altre'
+                ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-400/40'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <span>🏐</span>
+            <span>Altre Squadre & Giovanili (Area Neutra)</span>
+            {cExtra.attiva && (
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse ml-0.5" />
+            )}
+          </button>
+        </div>
+
+        <div className="text-[11px] text-slate-400 font-inter px-3 hidden lg:block">
+          {mainSection === 'seried'
+            ? 'Gestione canali principali Serie D'
+            : 'Sezione neutra per Under, CSI, 1ª Divisione'}
+        </div>
+      </div>
+
+      {mainSection === 'seried' && (
+        <div className="space-y-6">
       
       {/* 1. HEADER CARD */}
       <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-3xl text-white shadow-xl space-y-4">
@@ -1224,6 +1437,481 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
         </div>
 
       </form>
+    </div>
+  )}
+
+  {/* SEZIONE ALTRE SQUADRE & GIOVANILI (AREA NEUTRA) */}
+  {mainSection === 'altre' && (
+    <div className="space-y-6">
+      {/* 1. HEADER CARD ALTRE SQUADRE */}
+      <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-3xl text-white shadow-xl space-y-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-lg ${
+              cExtra.attiva 
+                ? 'bg-amber-500/20 border-amber-500/40 text-amber-400' 
+                : 'bg-slate-800 border-slate-700 text-slate-400'
+            }`}>
+              <Tv className={`w-6 h-6 ${cExtra.attiva && cExtra.stato === 'live' ? 'animate-pulse text-red-500' : ''}`} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider font-sport italic">
+                  Diretta Altre Squadre & Giovanili
+                </h3>
+                {cExtra.attiva ? (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono animate-pulse flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    ONLINE SUL SITO
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 font-mono border border-slate-700">
+                    DISATTIVA
+                  </span>
+                )}
+              </div>
+              <p className="font-inter text-xs text-slate-400 mt-0.5">
+                Area neutra e indipendente: trasmetti live le partite di Under, CSI e campionati giovanili senza interferire con la Serie D.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCopyPublicUrlExtra}
+              className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-700"
+            >
+              {copiedExtraUrl ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-slate-400" />}
+              <span>{copiedExtraUrl ? 'Copiato!' : 'Copia Link Canale'}</span>
+            </button>
+            <a
+              href="/diretta?canale=extra"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-sport italic skew-x-[-6deg] uppercase tracking-wider px-4 py-2.5 rounded-xl text-xs font-black transition-all shadow-md cursor-pointer flex items-center gap-1.5 shrink-0"
+            >
+              <span>Vedi Pagina Live</span>
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+
+        {/* BARRA STATO & ATTIVAZIONE */}
+        <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          {/* TOGGLE ATTIVA */}
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={Boolean(cExtra.attiva)}
+              onChange={(e) => updateCanaleExtra({ attiva: e.target.checked })}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500 relative shadow-inner"></div>
+            <div className="flex flex-col">
+              <span className="font-bold text-xs text-white uppercase font-sport tracking-wider">
+                {cExtra.attiva ? '⚡ Diretta Attiva sul Portale' : 'Diretta Spenta'}
+              </span>
+              <span className="text-[10px] text-slate-400 font-inter">
+                {cExtra.attiva ? 'Visibile sulla pagina /diretta' : 'Nessun flusso in onda per questo canale'}
+              </span>
+            </div>
+          </label>
+
+          {/* STATO GARA (IN PROGRAMMA, LIVE, TERMINATA) */}
+          <div className="flex items-center gap-1.5 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
+            <button
+              type="button"
+              onClick={() => updateCanaleExtra({ stato: 'in_programma' })}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold font-sport uppercase tracking-wider transition-all cursor-pointer ${
+                cExtra.stato === 'in_programma'
+                  ? 'bg-amber-400 text-slate-950 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              ⏳ In Programma
+            </button>
+            <button
+              type="button"
+              onClick={() => updateCanaleExtra({ stato: 'live' })}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold font-sport uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
+                cExtra.stato === 'live'
+                  ? 'bg-red-500 text-white shadow-sm animate-pulse'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-white" />
+              🔴 In Diretta Ora
+            </button>
+            <button
+              type="button"
+              onClick={() => updateCanaleExtra({ stato: 'terminata' })}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold font-sport uppercase tracking-wider transition-all cursor-pointer ${
+                cExtra.stato === 'terminata'
+                  ? 'bg-slate-700 text-slate-200 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              🏁 Terminata
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. CARD SELEZIONE SQUADRA E AVVERSARIO */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
+            <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+              <Shield className="w-4 h-4 text-amber-500" />
+              <h4 className="font-sport font-black uppercase text-sm tracking-wider text-slate-900">
+                Configura Squadre del Match
+              </h4>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* TENDINA LA NOSTRA SQUADRA */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 font-sport uppercase tracking-wide flex items-center gap-1">
+                  <span>🦁 La Nostra Squadra</span>
+                  <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={cExtra.squadra_id || (selectedExtraSquadra ? selectedExtraSquadra.id : '')}
+                  onChange={(e) => {
+                    const sqId = e.target.value;
+                    const sq = (squadreAll || []).find(x => x.id === sqId);
+                    if (sq) {
+                      const isCasa = isNvaCasaExtra;
+                      const ourName = sq.nome_squadra || 'New Volley Academy';
+                      const oppName = isCasa ? (cExtra.squadra_ospite || 'Avversario') : (cExtra.squadra_casa || 'Avversario');
+                      updateCanaleExtra({
+                        squadra_id: sq.id,
+                        categoria: sq.nome_squadra,
+                        sottotitolo: sq.campionato || 'Campionato Volley',
+                        squadra_casa: isCasa ? `New Volley Academy ${ourName}` : oppName,
+                        squadra_ospite: !isCasa ? `New Volley Academy ${ourName}` : oppName,
+                        logo_casa: isCasa ? OFFICIAL_NVA_LOGO : cExtra.logo_casa,
+                        logo_ospite: !isCasa ? OFFICIAL_NVA_LOGO : cExtra.logo_ospite,
+                        titolo: `${sq.nome_squadra}: ${isCasa ? ourName + ' vs ' + oppName : oppName + ' vs ' + ourName}`
+                      });
+                    }
+                  }}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-bold focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+                >
+                  {altreSquadreList.map(sq => (
+                    <option key={sq.id} value={sq.id}>
+                      {sq.nome_squadra} {sq.campionato ? `(${sq.campionato})` : ''}
+                    </option>
+                  ))}
+                </select>
+                {selectedExtraSquadra && selectedExtraSquadra.campionato && (
+                  <p className="text-[10px] text-slate-500 font-mono">
+                    Campionato: {selectedExtraSquadra.campionato}
+                  </p>
+                )}
+              </div>
+
+              {/* CASA O TRASFERTA */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 font-sport uppercase tracking-wide">
+                  Luogo Partita (Casa / Trasferta)
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const ourName = selectedExtraSquadra?.nome_squadra ? `New Volley Academy ${selectedExtraSquadra.nome_squadra}` : 'New Volley Academy';
+                      const oppName = isNvaCasaExtra ? cExtra.squadra_ospite : cExtra.squadra_casa;
+                      updateCanaleExtra({
+                        squadra_casa: ourName,
+                        logo_casa: OFFICIAL_NVA_LOGO,
+                        squadra_ospite: oppName || 'Avversario',
+                        logo_ospite: getKnownTeamLogo(oppName) || ''
+                      });
+                    }}
+                    className={`px-3 py-2.5 rounded-xl text-xs font-bold font-sport uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer transition-all border ${
+                      isNvaCasaExtra
+                        ? 'bg-amber-400 text-slate-950 border-amber-500 shadow-sm ring-2 ring-amber-400/30'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>🏠 In Casa (NVA)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const ourName = selectedExtraSquadra?.nome_squadra ? `New Volley Academy ${selectedExtraSquadra.nome_squadra}` : 'New Volley Academy';
+                      const oppName = isNvaCasaExtra ? cExtra.squadra_ospite : cExtra.squadra_casa;
+                      updateCanaleExtra({
+                        squadra_casa: oppName || 'Avversario',
+                        logo_casa: getKnownTeamLogo(oppName) || '',
+                        squadra_ospite: ourName,
+                        logo_ospite: OFFICIAL_NVA_LOGO
+                      });
+                    }}
+                    className={`px-3 py-2.5 rounded-xl text-xs font-bold font-sport uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer transition-all border ${
+                      !isNvaCasaExtra
+                        ? 'bg-amber-400 text-slate-950 border-amber-500 shadow-sm ring-2 ring-amber-400/30'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>🚗 In Trasferta</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* SQUADRA AVVERSARIA */}
+            <div className="space-y-3 pt-2 border-t border-slate-100">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 font-sport uppercase tracking-wide flex items-center gap-1">
+                    <span>🏐 Squadra Avversaria</span>
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-inter">
+                    {availableOpponentsExtra.length > 0 
+                      ? `${availableOpponentsExtra.length} avversari nel girone`
+                      : 'Inserimento libero al momento'}
+                  </span>
+                </div>
+
+                <select
+                  value={cExtra.avversario_tipo === 'custom' ? '__CUSTOM__' : (isNvaCasaExtra ? cExtra.squadra_ospite : cExtra.squadra_casa)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '__CUSTOM__') {
+                      updateCanaleExtra({ avversario_tipo: 'custom' });
+                    } else {
+                      const oppLogo = getKnownTeamLogo(val) || '';
+                      if (isNvaCasaExtra) {
+                        updateCanaleExtra({
+                          squadra_ospite: val,
+                          logo_ospite: oppLogo,
+                          avversario_tipo: 'campionato'
+                        });
+                      } else {
+                        updateCanaleExtra({
+                          squadra_casa: val,
+                          logo_casa: oppLogo,
+                          avversario_tipo: 'campionato'
+                        });
+                      }
+                    }
+                  }}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-bold focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+                >
+                  <option value="__CUSTOM__">✏️ Inserisci Altra Squadra (Al momento / Personalizzata)...</option>
+                  {availableOpponentsExtra.length > 0 && (
+                    <optgroup label="Squadre dal Campionato / Classifica">
+                      {availableOpponentsExtra.map(opp => (
+                        <option key={opp} value={opp}>{opp}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+
+              {/* CAMPO TESTO DIGITABILE SE PERSONALIZZATA */}
+              {(cExtra.avversario_tipo === 'custom' || !availableOpponentsExtra.includes(isNvaCasaExtra ? (cExtra.squadra_ospite || '') : (cExtra.squadra_casa || ''))) && (
+                <div className="p-3.5 bg-amber-500/10 border border-amber-300 rounded-2xl space-y-2">
+                  <label className="text-[11px] font-bold text-amber-950 font-sport uppercase tracking-wider block">
+                    Digita Nome Squadra Avversaria al Momento:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Es. Libertas Volley Forlì / Pallavolo Ravenna..."
+                    value={isNvaCasaExtra ? (cExtra.squadra_ospite || '') : (cExtra.squadra_casa || '')}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const oppLogo = getKnownTeamLogo(val) || '';
+                      if (isNvaCasaExtra) {
+                        updateCanaleExtra({ squadra_ospite: val, logo_ospite: oppLogo });
+                      } else {
+                        updateCanaleExtra({ squadra_casa: val, logo_casa: oppLogo });
+                      }
+                    }}
+                    className="w-full bg-white border border-amber-400 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-bold focus:ring-2 focus:ring-amber-500"
+                  />
+                  <p className="text-[10px] text-amber-800 flex items-center gap-1.5 font-inter">
+                    <span>✨</span>
+                    <span>Se non ha logo caricato, verrà applicato automaticamente lo scudetto volley con monogramma societario.</span>
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* DATA E ORA */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 font-sport uppercase tracking-wide">
+                  Data & Ora Inizio (Opzionale)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Es. 18/11/26 20:30 o Stasera ore 20:30"
+                  value={cExtra.data_ora || ''}
+                  onChange={(e) => updateCanaleExtra({ data_ora: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:ring-2 focus:ring-amber-400"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 font-sport uppercase tracking-wide">
+                  Categoria / Campionato Mostrato
+                </label>
+                <input
+                  type="text"
+                  placeholder="Es. Under 16 Femminile / CSI Misto"
+                  value={cExtra.categoria || ''}
+                  onChange={(e) => updateCanaleExtra({ categoria: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-bold focus:ring-2 focus:ring-amber-400"
+                />
+              </div>
+            </div>
+
+            {/* LINK YOUTUBE */}
+            <div className="space-y-1.5 pt-2 border-t border-slate-100">
+              <label className="text-xs font-bold text-slate-700 font-sport uppercase tracking-wide flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <span>🔴 Link Diretta YouTube</span>
+                  <span className="text-red-500">*</span>
+                </span>
+                {extraVideoId && (
+                  <span className="text-[10px] text-emerald-600 font-mono font-bold flex items-center gap-1">
+                    <Check className="w-3 h-3" /> Video ID: {extraVideoId}
+                  </span>
+                )}
+              </label>
+              <input
+                type="text"
+                placeholder="https://www.youtube.com/watch?v=... o https://youtu.be/..."
+                value={cExtra.url_youtube || ''}
+                onChange={(e) => updateCanaleExtra({ url_youtube: e.target.value })}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-mono focus:ring-2 focus:ring-amber-400"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* COLONNA DESTRA: KIT RAPIDO YOUTUBE STUDIO E LOCANDINA */}
+        <div className="space-y-5">
+          {/* KIT RAPIDO YOUTUBE */}
+          <div className="bg-gradient-to-br from-amber-400/10 via-amber-300/5 to-slate-900/5 border border-amber-300 rounded-3xl p-5 shadow-sm space-y-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+              <div>
+                <h4 className="font-sport font-black uppercase text-sm tracking-wider text-slate-900">
+                  Kit Rapido YouTube Studio
+                </h4>
+                <p className="text-[10px] text-slate-500 font-inter">
+                  Copia e incolla in 1 clic per avviare la live su YouTube
+                </p>
+              </div>
+            </div>
+
+            {/* TITOLO YOUTUBE RAPIDO */}
+            <div className="p-3 bg-white rounded-2xl border border-amber-200/80 shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold font-sport uppercase tracking-wider text-slate-500">
+                  Titolo Stream
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyTitleExtra}
+                  className="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-[10px] font-sport uppercase tracking-wider flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+                >
+                  {copiedTitleExtra ? <Check className="w-3 h-3 text-emerald-800" /> : <Copy className="w-3 h-3" />}
+                  <span>{copiedTitleExtra ? 'Copiato!' : 'Copia'}</span>
+                </button>
+              </div>
+              <div className="text-xs font-bold text-slate-800 font-mono line-clamp-2 select-all bg-slate-50 p-2 rounded-xl border border-slate-200">
+                {youtubeTitleExtra}
+              </div>
+            </div>
+
+            {/* DESCRIZIONE BREVE (SENZA LOCATION) */}
+            <div className="p-3 bg-white rounded-2xl border border-amber-200/80 shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold font-sport uppercase tracking-wider text-slate-500">
+                  Descrizione Breve (No Location)
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyDescriptionExtra}
+                  className="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-[10px] font-sport uppercase tracking-wider flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+                >
+                  {copiedDescriptionExtra ? <Check className="w-3 h-3 text-emerald-800" /> : <Copy className="w-3 h-3" />}
+                  <span>{copiedDescriptionExtra ? 'Copiato!' : 'Copia'}</span>
+                </button>
+              </div>
+              <pre className="text-[10px] font-mono text-slate-700 whitespace-pre-wrap bg-slate-50 p-2 rounded-xl border border-slate-200 max-h-32 overflow-y-auto">
+                {youtubeDescriptionExtra}
+              </pre>
+            </div>
+
+            {/* LOCANDINA GENERATOR BUTTON */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleDownloadLocandinaExtra}
+                disabled={isGeneratingLocandina}
+                className="w-full bg-slate-950 hover:bg-black text-amber-400 border border-amber-400/50 hover:border-amber-400 font-sport uppercase tracking-wider font-black py-3 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer hover:shadow-lg disabled:opacity-50"
+              >
+                <Download className={`w-4 h-4 ${isGeneratingLocandina ? 'animate-bounce text-amber-400' : 'text-amber-400'}`} />
+                <span>
+                  {isGeneratingLocandina ? 'Generazione Locandina in corso...' : 'Scarica Locandina Match (16:9 HD)'}
+                </span>
+              </button>
+              <p className="text-[10px] text-slate-500 text-center mt-1.5 italic">
+                Genera la grafica 1920×1080 con pantera stealth, scudetti e categoria
+              </p>
+            </div>
+          </div>
+
+          {/* ANTEPRIMA VIDEO PLAYER YOUTUBE */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-3">
+            <span className="text-xs font-bold font-sport uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+              <Video className="w-4 h-4 text-red-500" />
+              Anteprima Flusso YouTube
+            </span>
+            <div className="aspect-video bg-slate-950 rounded-2xl overflow-hidden flex items-center justify-center border border-slate-800 shadow-inner">
+              {extraVideoId ? (
+                <iframe
+                  src={`https://www.youtube-nocookie.com/embed/${extraVideoId}?modestbranding=1`}
+                  title="Anteprima Live Altra Squadra"
+                  className="w-full h-full border-0"
+                  allowFullScreen
+                />
+              ) : (
+                <div className="text-center p-4 space-y-1.5">
+                  <Tv className="w-8 h-8 text-slate-600 mx-auto opacity-50" />
+                  <p className="text-[11px] text-slate-400">
+                    Incolla il link YouTube per vedere il player qui in tempo reale.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* PULSANTE SALVA IN BASSO */}
+      <div className="sticky bottom-4 z-20 flex justify-end">
+        <button
+          type="button"
+          onClick={() => handleSave()}
+          disabled={isSaving}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white font-sport uppercase tracking-wider text-sm font-black px-8 py-3.5 rounded-2xl shadow-xl flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02] disabled:opacity-50"
+        >
+          <Save className="w-5 h-5" />
+          <span>{isSaving ? 'Salvataggio in corso...' : 'Salva Configurazione Diretta'}</span>
+        </button>
+      </div>
+    </div>
+  )}
     </div>
   );
 }

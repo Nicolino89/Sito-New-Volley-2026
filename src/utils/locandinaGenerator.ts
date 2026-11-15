@@ -56,6 +56,77 @@ function drawRoundedRect(
 }
 
 /**
+ * Disegna uno scudetto/badge generico con tema volley e monogramma
+ * per squadre create al momento o senza logo ufficiale
+ */
+function drawGenericVolleyBadge(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  teamName: string,
+  isNva: boolean
+) {
+  ctx.save();
+  const r = 95;
+
+  // Cerchio badge
+  const grad = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+  if (isNva) {
+    grad.addColorStop(0, '#f5d800');
+    grad.addColorStop(1, '#eab308');
+  } else {
+    grad.addColorStop(0, '#1e293b');
+    grad.addColorStop(1, '#0f172a');
+  }
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Bordo
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = isNva ? '#ffffff' : '#475569';
+  ctx.stroke();
+
+  // Curve stilizzate del pallone da volley
+  ctx.strokeStyle = isNva ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r - 10, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(cx - 35, cy, 55, -0.7, 0.7);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx + 35, cy, 55, Math.PI - 0.7, Math.PI + 0.7);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, cy - 35, 55, 0.8, 2.3);
+  ctx.stroke();
+
+  // Calcolo monogramma iniziale
+  const clean = (teamName || '').replace(/^[\s\-=\.\d]+/, '').trim();
+  const words = clean.split(/\s+/).filter(w => w.length > 1 && !['DI', 'DEL', 'DELLA', 'ASD', 'SSD', 'VOLLEY'].includes(w.toUpperCase()));
+  let initials = 'VB';
+  if (words.length >= 2) {
+    initials = (words[0][0] + words[1][0]).toUpperCase();
+  } else if (clean.length >= 2) {
+    initials = clean.slice(0, 3).toUpperCase();
+  }
+
+  ctx.fillStyle = isNva ? '#0a0a0a' : '#f8fafc';
+  ctx.font = '900 48px "Arial Black", Impact, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(0,0,0,0.6)';
+  ctx.shadowBlur = 10;
+  ctx.fillText(initials, cx, cy);
+
+  ctx.restore();
+}
+
+/**
  * Renderizza la locandina 1920x1080 su un elemento canvas
  */
 export async function renderLocandinaToCanvas(
@@ -83,10 +154,20 @@ export async function renderLocandinaToCanvas(
 
   // 2. HEADER SUPERIORE: PILL MATCH DAY (AMPIA E SPAZIOSA)
   ctx.save();
-  const pillW = 840;
+  const isSerieD = (data.categoria || '').toLowerCase().includes('serie d');
+  const catClean = (data.categoria || 'CAMPIONATO REGIONALE').toUpperCase();
+  const pillText = isSerieD 
+    ? '★  FIPAV CAMPIONATO REGIONALE • MATCH DAY  ★' 
+    : `★  ${catClean} • MATCH DAY  ★`;
+
+  ctx.font = '900 19px "Arial Black", Impact, sans-serif';
+  ctx.letterSpacing = '1px';
+  const textMetrics = ctx.measureText(pillText);
+  const pillW = Math.max(840, Math.min(1300, textMetrics.width + 120));
   const pillH = 50;
   const pillX = (1920 - pillW) / 2;
   const pillY = 50;
+
   drawRoundedRect(ctx, pillX, pillY, pillW, pillH, 25);
   ctx.fillStyle = '#f5d800';
   ctx.fill();
@@ -95,11 +176,9 @@ export async function renderLocandinaToCanvas(
   ctx.stroke();
 
   ctx.fillStyle = '#0a0a0a';
-  ctx.font = '900 19px "Arial Black", Impact, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.letterSpacing = '1px';
-  ctx.fillText('★  FIPAV CAMPIONATO REGIONALE • MATCH DAY  ★', 960, pillY + pillH / 2);
+  ctx.fillText(pillText, 960, pillY + pillH / 2);
   ctx.restore();
 
   // CATEGORIA & GIORNATA
@@ -114,13 +193,13 @@ export async function renderLocandinaToCanvas(
   ctx.textBaseline = 'middle';
   ctx.shadowColor = 'rgba(0,0,0,0.9)';
   ctx.shadowBlur = 15;
-  ctx.fillText(subTitle, 960, 160);
+  ctx.fillText(subTitle, 960, 155);
   ctx.restore();
 
   // 6. BLOCCHI SQUADRE (SINISTRA: CASA, DESTRA: OSPITI)
   const isNvaCasa = (data.squadraCasa || '').toLowerCase().includes('new volley') || (data.squadraCasa || '').toLowerCase().includes('academy');
   
-  // LOGO CASA (X: 380, Y: 430)
+  // LOGO CASA (X: 260, Y: 270)
   const boxW = 280;
   const boxH = 280;
   const casaBoxX = 260;
@@ -138,7 +217,7 @@ export async function renderLocandinaToCanvas(
   ctx.stroke();
   ctx.restore();
 
-  // LOGO OSPITI (X: 1380, Y: 430)
+  // LOGO OSPITI (X: 1380, Y: 270)
   const ospitiBoxX = 1380;
   ctx.save();
   drawRoundedRect(ctx, ospitiBoxX, boxY, boxW, boxH, 36);
@@ -175,14 +254,8 @@ export async function renderLocandinaToCanvas(
     ctx.drawImage(imgCasa, drawX, drawY, drawW, drawH);
     ctx.restore();
   } else {
-    // Fallback monogram
-    ctx.save();
-    ctx.fillStyle = '#0f172a';
-    ctx.font = '900 64px "Arial Black", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText((data.squadraCasa || 'CASA').slice(0, 3).toUpperCase(), casaBoxX + boxW / 2, boxY + boxH / 2);
-    ctx.restore();
+    // Fallback badge generico volley con monogramma
+    drawGenericVolleyBadge(ctx, casaBoxX + boxW / 2, boxY + boxH / 2, data.squadraCasa || 'CASA', isNvaCasa);
   }
 
   // Disegno Logo Ospiti
@@ -199,13 +272,8 @@ export async function renderLocandinaToCanvas(
     ctx.drawImage(imgOspiti, drawX, drawY, drawW, drawH);
     ctx.restore();
   } else {
-    ctx.save();
-    ctx.fillStyle = '#0f172a';
-    ctx.font = '900 64px "Arial Black", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText((data.squadraOspite || 'OSPITI').slice(0, 3).toUpperCase(), ospitiBoxX + boxW / 2, boxY + boxH / 2);
-    ctx.restore();
+    // Fallback badge generico volley con monogramma
+    drawGenericVolleyBadge(ctx, ospitiBoxX + boxW / 2, boxY + boxH / 2, data.squadraOspite || 'OSPITI', !isNvaCasa);
   }
 
   // 7. CENTRALE: BADGE OVALE DORATO "VS" (POSIZIONATO SOTTO IL MUSO DELLA PANTERA)
@@ -240,7 +308,7 @@ export async function renderLocandinaToCanvas(
   // NOME SQUADRA CASA
   ctx.save();
   ctx.fillStyle = isNvaCasa ? '#f5d800' : '#ffffff';
-  ctx.font = '900 40px "Arial Black", Impact, sans-serif';
+  ctx.font = '900 38px "Arial Black", Impact, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.shadowColor = 'rgba(0,0,0,0.9)';
@@ -263,7 +331,7 @@ export async function renderLocandinaToCanvas(
   // NOME SQUADRA OSPITE
   ctx.save();
   ctx.fillStyle = !isNvaCasa ? '#f5d800' : '#ffffff';
-  ctx.font = '900 40px "Arial Black", Impact, sans-serif';
+  ctx.font = '900 38px "Arial Black", Impact, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.shadowColor = 'rgba(0,0,0,0.9)';
@@ -283,9 +351,10 @@ export async function renderLocandinaToCanvas(
   // 9. RIQUADRO INFORMAZIONI GARA (DATA, ORA & LUOGO)
   ctx.save();
   const infoW = 1040;
-  const infoH = 110;
+  const hasLuogo = Boolean(data.luogo && data.luogo.trim().length > 0);
+  const infoH = hasLuogo ? 110 : 80;
   const infoX = (1920 - infoW) / 2;
-  const infoY = 820;
+  const infoY = hasLuogo ? 820 : 835;
 
   drawRoundedRect(ctx, infoX, infoY, infoW, infoH, 28);
   ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
@@ -299,12 +368,15 @@ export async function renderLocandinaToCanvas(
   ctx.font = '900 28px "Arial Black", Impact, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(`📅  ${(data.dataOra || 'Inizio ore 21:15').toUpperCase()}`, 960, infoY + 38);
+  const dateY = hasLuogo ? infoY + 38 : infoY + infoH / 2;
+  ctx.fillText(`📅  ${(data.dataOra || 'Inizio Match Live').toUpperCase()}`, 960, dateY);
 
-  // PALASPORT / LUOGO
-  ctx.fillStyle = '#cbd5e1';
-  ctx.font = '700 20px "Arial", sans-serif';
-  ctx.fillText(`📍  ${(data.luogo || 'Palasport Comunale').toUpperCase()}`, 960, infoY + 76);
+  // PALASPORT / LUOGO (se disponibile)
+  if (hasLuogo && data.luogo) {
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '700 20px "Arial", sans-serif';
+    ctx.fillText(`📍  ${data.luogo.toUpperCase()}`, 960, infoY + 76);
+  }
   ctx.restore();
 
   // 10. FOOTER BANNER NVA IN BASSO

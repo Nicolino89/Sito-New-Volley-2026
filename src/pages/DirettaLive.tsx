@@ -73,38 +73,51 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
   const isDoppia = Boolean(diretta.doppia_diretta);
   const c1 = diretta.canale_1;
   const c2 = diretta.canale_2;
+  const cExtra = diretta.canale_extra;
 
-  const activeChannelId: 'maschile' | 'femminile' = useMemo(() => {
+  const hasExtra = Boolean(cExtra?.attiva);
+  const showMultiChannels = isDoppia || (hasExtra && (Boolean(c1?.attiva) || Boolean(c2?.attiva)));
+
+  type ChannelKey = 'maschile' | 'femminile' | 'extra';
+
+  const activeChannelId: ChannelKey = useMemo(() => {
+    if (urlCanale === 'extra' || urlCanale === 'altre') return 'extra';
     if (urlCanale === 'femminile') return 'femminile';
     if (urlCanale === 'maschile') return 'maschile';
+    // Se c'è solo extra attivo e le serie D sono spente
+    if (cExtra?.attiva && !c1?.attiva && !c2?.attiva && !diretta.attiva) return 'extra';
+    if (cExtra?.stato === 'live' && c1?.stato !== 'live' && c2?.stato !== 'live') return 'extra';
     if (c2?.stato === 'live' && c1?.stato !== 'live') return 'femminile';
     if (c2?.attiva && !c1?.attiva) return 'femminile';
     return 'maschile';
-  }, [urlCanale, c1, c2]);
+  }, [urlCanale, c1, c2, cExtra, diretta.attiva]);
 
   const effectiveCanale = useMemo(() => {
+    if (activeChannelId === 'extra' && cExtra) {
+      return cExtra;
+    }
     if (!isDoppia) {
       return {
-        titolo: diretta.titolo,
-        sottotitolo: diretta.sottotitolo,
-        attiva: diretta.attiva,
-        stato: diretta.stato,
-        url_youtube: diretta.url_youtube,
-        url_video_presentazione: diretta.url_video_presentazione,
-        data_ora: diretta.data_ora,
-        luogo: diretta.luogo,
-        squadra_casa: diretta.squadra_casa,
-        squadra_ospite: diretta.squadra_ospite,
-        logo_casa: diretta.logo_casa,
-        logo_ospite: diretta.logo_ospite,
-        categoria: diretta.categoria,
-        mostra_chat: diretta.mostra_chat,
-        descrizione: diretta.descrizione,
-        locandina_url: diretta.locandina_url
+        titolo: c1?.titolo || diretta.titolo,
+        sottotitolo: c1?.sottotitolo || diretta.sottotitolo,
+        attiva: c1?.attiva ?? diretta.attiva,
+        stato: c1?.stato || diretta.stato,
+        url_youtube: c1?.url_youtube || diretta.url_youtube,
+        url_video_presentazione: c1?.url_video_presentazione || diretta.url_video_presentazione,
+        data_ora: c1?.data_ora || diretta.data_ora,
+        luogo: c1?.luogo || diretta.luogo,
+        squadra_casa: c1?.squadra_casa || diretta.squadra_casa,
+        squadra_ospite: c1?.squadra_ospite || diretta.squadra_ospite,
+        logo_casa: c1?.logo_casa || diretta.logo_casa,
+        logo_ospite: c1?.logo_ospite || diretta.logo_ospite,
+        categoria: c1?.categoria || diretta.categoria,
+        mostra_chat: c1?.mostra_chat ?? diretta.mostra_chat,
+        descrizione: c1?.descrizione || diretta.descrizione,
+        locandina_url: c1?.locandina_url || diretta.locandina_url
       };
     }
-    const chosen = activeChannelId === 'femminile' ? c2 : c1;
-    return chosen || {
+    const chosen = activeChannelId === 'femminile' ? c2 : (activeChannelId === 'extra' ? cExtra : c1);
+    return chosen || c1 || {
       titolo: diretta.titolo,
       sottotitolo: diretta.sottotitolo,
       attiva: diretta.attiva,
@@ -122,7 +135,7 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
       descrizione: diretta.descrizione,
       locandina_url: diretta.locandina_url
     };
-  }, [isDoppia, activeChannelId, c1, c2, diretta]);
+  }, [isDoppia, activeChannelId, c1, c2, cExtra, diretta]);
 
 
   // Caricamento configurazione diretta streaming
@@ -412,50 +425,71 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
         </div>
       </div>
 
-      {/* 1.5 DOPPIA DIRETTA SWITCHER BAR (SE ATTIVA LA MODALITÀ MULTI-MATCH) */}
-      {isDoppia && (
+      {/* 1.5 MULTI-DIRETTA SWITCHER BAR (SE ATTIVE PIÙ PARTITE SIMULTANEE) */}
+      {showMultiChannels && (
         <div className="bg-slate-900 border-b border-slate-800 py-3 px-4 sm:px-6 relative z-10 shadow-lg">
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
               <span className="font-sport font-black uppercase tracking-wider text-xs text-slate-200">
-                ⚡ Doppia Diretta NVA Simultanea:
+                ⚡ Dirette NVA Disponibili:
               </span>
               <span className="text-[11px] text-slate-400 font-inter hidden sm:inline">
                 Scegli quale partita seguire
               </span>
             </div>
             
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={() => setSearchParams({ canale: 'maschile' })}
-                className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl font-sport uppercase tracking-wider text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                  activeChannelId === 'maschile'
-                    ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-400/50'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                <span>🏐 Serie D Maschile</span>
-                {c1?.stato === 'live' && (
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                )}
-              </button>
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              {(isDoppia || c1?.attiva || (!c2?.attiva && !cExtra?.attiva)) && (
+                <button
+                  type="button"
+                  onClick={() => setSearchParams({ canale: 'maschile' })}
+                  className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl font-sport uppercase tracking-wider text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    activeChannelId === 'maschile'
+                      ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-400/50'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  <span>🏐 Serie D Maschile</span>
+                  {c1?.stato === 'live' && (
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                  )}
+                </button>
+              )}
 
-              <button
-                type="button"
-                onClick={() => setSearchParams({ canale: 'femminile' })}
-                className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl font-sport uppercase tracking-wider text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                  activeChannelId === 'femminile'
-                    ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-400/50'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                <span>🏐 Serie D Femminile</span>
-                {c2?.stato === 'live' && (
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                )}
-              </button>
+              {(isDoppia || c2?.attiva) && (
+                <button
+                  type="button"
+                  onClick={() => setSearchParams({ canale: 'femminile' })}
+                  className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl font-sport uppercase tracking-wider text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    activeChannelId === 'femminile'
+                      ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-400/50'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  <span>🏐 Serie D Femminile</span>
+                  {c2?.stato === 'live' && (
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                  )}
+                </button>
+              )}
+
+              {cExtra?.attiva && (
+                <button
+                  type="button"
+                  onClick={() => setSearchParams({ canale: 'extra' })}
+                  className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl font-sport uppercase tracking-wider text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    activeChannelId === 'extra'
+                      ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-400/50'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  <span>🏐 {cExtra.categoria || 'Altra Squadra'}</span>
+                  {cExtra?.stato === 'live' && (
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
