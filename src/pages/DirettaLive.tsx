@@ -75,80 +75,58 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
   const c2 = diretta.canale_2;
   const cExtra = diretta.canale_extra;
 
-  const hasExtra = Boolean(cExtra?.attiva);
-  const showMultiChannels = isDoppia || (hasExtra && (Boolean(c1?.attiva) || Boolean(c2?.attiva)));
+  const isC1Available = Boolean(c1?.attiva && c1?.stato !== 'terminata');
+  const isC2Available = Boolean(c2?.attiva && c2?.stato !== 'terminata');
+  const isExtraAvailable = Boolean(cExtra?.attiva && cExtra?.stato !== 'terminata');
+
+  // Mostra lo switcher dei canali SOLO se ci sono almeno 2 partite effettivamente attive/in programma
+  const availableChannelsCount = [isC1Available, isC2Available, isExtraAvailable].filter(Boolean).length;
+  const showMultiChannels = availableChannelsCount > 1;
 
   type ChannelKey = 'maschile' | 'femminile' | 'extra';
 
   const activeChannelId: ChannelKey = useMemo(() => {
-    if (urlCanale === 'extra' || urlCanale === 'altre') return 'extra';
-    if (urlCanale === 'femminile') return 'femminile';
-    if (urlCanale === 'maschile') return 'maschile';
+    // 0. Se c'è un parametro URL esplicito valido, rispettalo
+    if ((urlCanale === 'extra' || urlCanale === 'altre') && isExtraAvailable) return 'extra';
+    if (urlCanale === 'femminile' && isC2Available) return 'femminile';
+    if (urlCanale === 'maschile' && isC1Available) return 'maschile';
     
-    // 1. Se un canale è LIVE ORA, vince
-    if (cExtra?.attiva && cExtra?.stato === 'live' && c1?.stato !== 'live' && c2?.stato !== 'live') return 'extra';
-    if (c2?.attiva && c2?.stato === 'live' && c1?.stato !== 'live') return 'femminile';
-    if (c1?.attiva && c1?.stato === 'live') return 'maschile';
+    // 1. Canale attualmente LIVE ORA
+    if (isExtraAvailable && cExtra?.stato === 'live') return 'extra';
+    if (isC2Available && c2?.stato === 'live') return 'femminile';
+    if (isC1Available && c1?.stato === 'live') return 'maschile';
 
-    // 2. Se un canale è IN PROGRAMMA attivo:
-    const isC1Prog = Boolean(c1?.attiva && c1?.stato === 'in_programma');
-    const isC2Prog = Boolean(c2?.attiva && c2?.stato === 'in_programma');
-    const isExtraProg = Boolean(cExtra?.attiva && cExtra?.stato === 'in_programma');
+    // 2. Canale IN PROGRAMMA attivo
+    if (isExtraAvailable && cExtra?.stato === 'in_programma') return 'extra';
+    if (isC1Available && c1?.stato === 'in_programma') return 'maschile';
+    if (isC2Available && c2?.stato === 'in_programma') return 'femminile';
 
-    if (isExtraProg && !isC1Prog && !isC2Prog) return 'extra';
-    if (isC2Prog && !isC1Prog) return 'femminile';
-    if (isC1Prog) return 'maschile';
+    // 3. Fallback sui canali comunque disponibili
+    if (isExtraAvailable) return 'extra';
+    if (isC1Available) return 'maschile';
+    if (isC2Available) return 'femminile';
 
-    // 3. Fallback per attivazione generica
-    if (cExtra?.attiva && !c1?.attiva && !c2?.attiva) return 'extra';
-    if (c2?.attiva && !c1?.attiva) return 'femminile';
+    // 4. Default generale
+    if (urlCanale === 'extra') return 'extra';
+    if (urlCanale === 'femminile') return 'femminile';
     return 'maschile';
-  }, [urlCanale, c1, c2, cExtra]);
+  }, [urlCanale, isC1Available, isC2Available, isExtraAvailable, c1, c2, cExtra]);
 
   const effectiveCanale = useMemo(() => {
     if (activeChannelId === 'extra' && cExtra) {
       return cExtra;
     }
-    if (!isDoppia) {
-      return {
-        titolo: c1?.titolo || diretta.titolo,
-        sottotitolo: c1?.sottotitolo || diretta.sottotitolo,
-        attiva: c1?.attiva ?? diretta.attiva,
-        stato: c1?.stato || diretta.stato,
-        url_youtube: c1?.url_youtube || diretta.url_youtube,
-        url_video_presentazione: c1?.url_video_presentazione || diretta.url_video_presentazione,
-        data_ora: c1?.data_ora || diretta.data_ora,
-        luogo: c1?.luogo || diretta.luogo,
-        squadra_casa: c1?.squadra_casa || diretta.squadra_casa,
-        squadra_ospite: c1?.squadra_ospite || diretta.squadra_ospite,
-        logo_casa: c1?.logo_casa || diretta.logo_casa,
-        logo_ospite: c1?.logo_ospite || diretta.logo_ospite,
-        categoria: c1?.categoria || diretta.categoria,
-        mostra_chat: c1?.mostra_chat ?? diretta.mostra_chat,
-        descrizione: c1?.descrizione || diretta.descrizione,
-        locandina_url: c1?.locandina_url || diretta.locandina_url
-      };
+    if (activeChannelId === 'femminile' && c2) {
+      return c2;
     }
-    const chosen = activeChannelId === 'femminile' ? c2 : (activeChannelId === 'extra' ? cExtra : c1);
-    return chosen || c1 || {
-      titolo: diretta.titolo,
-      sottotitolo: diretta.sottotitolo,
-      attiva: diretta.attiva,
-      stato: diretta.stato,
-      url_youtube: diretta.url_youtube,
-      url_video_presentazione: diretta.url_video_presentazione,
-      data_ora: diretta.data_ora,
-      luogo: diretta.luogo,
-      squadra_casa: diretta.squadra_casa,
-      squadra_ospite: diretta.squadra_ospite,
-      logo_casa: diretta.logo_casa,
-      logo_ospite: diretta.logo_ospite,
-      categoria: diretta.categoria,
-      mostra_chat: diretta.mostra_chat,
-      descrizione: diretta.descrizione,
-      locandina_url: diretta.locandina_url
-    };
-  }, [isDoppia, activeChannelId, c1, c2, cExtra, diretta]);
+    if (activeChannelId === 'maschile' && c1) {
+      return c1;
+    }
+    if (isExtraAvailable && cExtra) return cExtra;
+    if (isC2Available && c2) return c2;
+    if (isC1Available && c1) return c1;
+    return cExtra || c1 || c2 || diretta;
+  }, [activeChannelId, cExtra, c1, c2, isExtraAvailable, isC1Available, isC2Available, diretta]);
 
 
   // Caricamento configurazione diretta streaming
@@ -453,7 +431,7 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
             </div>
             
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-              {(isDoppia || c1?.attiva || (!c2?.attiva && !cExtra?.attiva)) && (
+              {isC1Available && (
                 <button
                   type="button"
                   onClick={() => setSearchParams({ canale: 'maschile' })}
@@ -470,7 +448,7 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                 </button>
               )}
 
-              {(isDoppia || c2?.attiva) && (
+              {isC2Available && (
                 <button
                   type="button"
                   onClick={() => setSearchParams({ canale: 'femminile' })}
@@ -487,7 +465,7 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                 </button>
               )}
 
-              {cExtra?.attiva && (
+              {isExtraAvailable && (
                 <button
                   type="button"
                   onClick={() => setSearchParams({ canale: 'extra' })}
@@ -497,7 +475,7 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
                       : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                   }`}
                 >
-                  <span>🏐 {cExtra.categoria || 'Altra Squadra'}</span>
+                  <span>🏐 {cExtra?.categoria || 'Altra Squadra'}</span>
                   {cExtra?.stato === 'live' && (
                     <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
                   )}

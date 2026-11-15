@@ -147,14 +147,14 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
   const isDoppia = Boolean(diretta.doppia_diretta);
 
   // Canali correnti con fallback sicuri
-  const c1: CanaleDiretta = diretta.canale_1 || {
+  const c1: CanaleDiretta = diretta.canale_1 ? { ...diretta.canale_1 } : {
     id: 'maschile',
     titolo_canale: 'Serie D Maschile',
-    attiva: diretta.attiva,
-    stato: diretta.stato,
-    url_youtube: diretta.url_youtube,
+    attiva: Boolean(diretta.canale_1?.attiva),
+    stato: diretta.canale_1?.stato || 'in_programma',
+    url_youtube: diretta.url_youtube || '',
     url_video_presentazione: diretta.url_video_presentazione || '',
-    titolo: diretta.titolo,
+    titolo: diretta.titolo || 'Serie D Maschile: Partita Ufficiale',
     sottotitolo: diretta.sottotitolo || '',
     data_ora: diretta.data_ora || '',
     luogo: diretta.luogo || '',
@@ -162,7 +162,7 @@ export default function TabDirettaStreaming({ squadreAll = [], showToast }: TabD
     squadra_ospite: diretta.squadra_ospite || '',
     logo_casa: diretta.logo_casa || '',
     logo_ospite: diretta.logo_ospite || '',
-    categoria: diretta.categoria || 'Serie D Maschile',
+    categoria: 'Serie D Maschile',
     mostra_chat: diretta.mostra_chat || false,
     descrizione: diretta.descrizione || '',
     locandina_url: '/images/locandina_serie_d_maschile.jpg'
@@ -431,33 +431,29 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
   };
 
   const handleToggleAttiva = async (newAttiva: boolean) => {
-    let updated: DirettaStreaming;
+    let updatedC1 = c1;
+    let updatedC2 = c2;
     if (isDoppia) {
       if (activeChannelKey === 'canale_1') {
-        const updatedC1 = { ...c1, attiva: newAttiva };
-        updated = {
-          ...diretta,
-          canale_1: updatedC1,
-          attiva: Boolean(newAttiva || c2.attiva)
-        };
+        updatedC1 = { ...c1, attiva: newAttiva };
       } else {
-        const updatedC2 = { ...c2, attiva: newAttiva };
-        updated = {
-          ...diretta,
-          canale_2: updatedC2,
-          attiva: Boolean(c1.attiva || newAttiva)
-        };
+        updatedC2 = { ...c2, attiva: newAttiva };
       }
     } else {
-      updated = { ...diretta, attiva: newAttiva };
+      updatedC1 = { ...c1, attiva: newAttiva };
     }
-    setDiretta(updated);
+    let updatedExtra = cExtra;
+    if (newAttiva && cExtra.stato !== 'live') {
+      updatedExtra = { ...cExtra, attiva: false };
+    }
+    const payload = buildPayloadFromState(diretta, updatedExtra, updatedC1, updatedC2);
+    setDiretta(payload);
     try {
-      await salvaDirettaStreaming(updated);
+      await salvaDirettaStreaming(payload);
       showToast(
         newAttiva 
-          ? "✅ Canale streaming ATTIVATO sul sito!" 
-          : "⏸️ Canale streaming DISATTIVATO.",
+          ? "✅ Canale Serie D ATTIVATO sul sito!" 
+          : "⏸️ Canale Serie D DISATTIVATO.",
         "success"
       );
     } catch (err: any) {
@@ -468,71 +464,83 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
 
   const buildPayloadFromState = (
     baseDiretta: DirettaStreaming,
-    customExtra?: CanaleDiretta
+    customExtra?: CanaleDiretta,
+    customC1?: CanaleDiretta,
+    customC2?: CanaleDiretta
   ): DirettaStreaming => {
     const extra = customExtra || cExtra;
-    const isC1Active = Boolean(c1?.attiva && (c1?.stato === 'live' || c1?.stato === 'in_programma'));
-    const isC2Active = Boolean(c2?.attiva && (c2?.stato === 'live' || c2?.stato === 'in_programma'));
-    const isSerieDAttiva = isDoppia ? (isC1Active || isC2Active) : Boolean(baseDiretta.attiva && (baseDiretta.stato === 'live' || baseDiretta.stato === 'in_programma'));
+    const activeC1 = customC1 || c1;
+    const activeC2 = customC2 || c2;
+
+    const isC1Active = Boolean(activeC1?.attiva && (activeC1?.stato === 'live' || activeC1?.stato === 'in_programma'));
+    const isC2Active = Boolean(activeC2?.attiva && (activeC2?.stato === 'live' || activeC2?.stato === 'in_programma'));
+    const isSerieDAttiva = isDoppia ? (isC1Active || isC2Active) : isC1Active;
     const isExtraAttiva = Boolean(extra?.attiva && (extra?.stato === 'live' || extra?.stato === 'in_programma'));
     const isAnyAttiva = isSerieDAttiva || isExtraAttiva;
 
-    const isAnyLive = (isDoppia ? (c1?.stato === 'live' || c2?.stato === 'live') : baseDiretta.stato === 'live') || (isExtraAttiva && extra?.stato === 'live');
-    const isAnyInProg = (isDoppia ? (c1?.stato === 'in_programma' || c2?.stato === 'in_programma') : baseDiretta.stato === 'in_programma') || (isExtraAttiva && extra?.stato === 'in_programma');
+    const isAnyLive = (isDoppia ? (activeC1?.stato === 'live' || activeC2?.stato === 'live') : (isC1Active && activeC1?.stato === 'live')) || (isExtraAttiva && extra?.stato === 'live');
+    const isAnyInProg = (isDoppia ? (activeC1?.stato === 'in_programma' || activeC2?.stato === 'in_programma') : (isC1Active && activeC1?.stato === 'in_programma')) || (isExtraAttiva && extra?.stato === 'in_programma');
     const overallStato: 'live' | 'in_programma' | 'terminata' = isAnyLive ? 'live' : (isAnyInProg ? 'in_programma' : 'terminata');
 
     const useExtraAsRoot = !isSerieDAttiva && isExtraAttiva;
 
     return {
       ...baseDiretta,
-      canale_1: c1,
-      canale_2: c2,
+      canale_1: activeC1,
+      canale_2: activeC2,
       canale_extra: extra,
       attiva: isAnyAttiva,
       stato: overallStato,
       url_youtube: useExtraAsRoot 
         ? (extra.url_youtube || baseDiretta.url_youtube)
-        : (isDoppia ? (c1.url_youtube || c2.url_youtube || baseDiretta.url_youtube) : (baseDiretta.url_youtube || extra.url_youtube)),
+        : (isDoppia ? (activeC1.url_youtube || activeC2.url_youtube || baseDiretta.url_youtube) : (activeC1.url_youtube || extra.url_youtube)),
       titolo: useExtraAsRoot
         ? (extra.titolo || baseDiretta.titolo)
-        : (isDoppia ? (c1.titolo || baseDiretta.titolo) : (baseDiretta.titolo || extra.titolo)),
+        : (isDoppia ? (activeC1.titolo || baseDiretta.titolo) : (activeC1.titolo || extra.titolo)),
       categoria: useExtraAsRoot
         ? (extra.categoria || baseDiretta.categoria)
-        : baseDiretta.categoria,
+        : (activeC1.categoria || baseDiretta.categoria),
       sottotitolo: useExtraAsRoot
         ? (extra.sottotitolo || baseDiretta.sottotitolo)
-        : baseDiretta.sottotitolo,
+        : (activeC1.sottotitolo || baseDiretta.sottotitolo),
       squadra_casa: useExtraAsRoot
         ? (extra.squadra_casa || baseDiretta.squadra_casa)
-        : baseDiretta.squadra_casa,
+        : (activeC1.squadra_casa || baseDiretta.squadra_casa),
       squadra_ospite: useExtraAsRoot
         ? (extra.squadra_ospite || baseDiretta.squadra_ospite)
-        : baseDiretta.squadra_ospite,
+        : (activeC1.squadra_ospite || baseDiretta.squadra_ospite),
       logo_casa: useExtraAsRoot
         ? (extra.logo_casa || baseDiretta.logo_casa)
-        : baseDiretta.logo_casa,
+        : (activeC1.logo_casa || baseDiretta.logo_casa),
       logo_ospite: useExtraAsRoot
         ? (extra.logo_ospite || baseDiretta.logo_ospite)
-        : baseDiretta.logo_ospite,
+        : (activeC1.logo_ospite || baseDiretta.logo_ospite),
       data_ora: useExtraAsRoot
         ? (extra.data_ora || baseDiretta.data_ora)
-        : baseDiretta.data_ora,
+        : (activeC1.data_ora || baseDiretta.data_ora),
       luogo: useExtraAsRoot
         ? (extra.luogo || '')
-        : baseDiretta.luogo,
+        : (activeC1.luogo || baseDiretta.luogo),
       aggiornato_il: new Date().toISOString()
     };
   };
 
   const handleToggleAttivaExtra = async (newAttiva: boolean) => {
     const updatedExtra: CanaleDiretta = { ...cExtra, attiva: newAttiva };
-    const payload = buildPayloadFromState(diretta, updatedExtra);
+    let updatedC1 = c1;
+    let updatedC2 = c2;
+    // Se attiviamo Altre Squadre, disattiviamo Serie D se non è in corso live per evitare sovrapposizioni
+    if (newAttiva) {
+      if (c1?.stato !== 'live') updatedC1 = { ...c1, attiva: false };
+      if (c2?.stato !== 'live') updatedC2 = { ...c2, attiva: false };
+    }
+    const payload = buildPayloadFromState(diretta, updatedExtra, updatedC1, updatedC2);
     setDiretta(payload);
     try {
       await salvaDirettaStreaming(payload);
       showToast(
         newAttiva 
-          ? "✅ Canale Altre Squadre ATTIVATO sul portale! Banner visibile sul sito." 
+          ? "✅ Canale Altre Squadre ATTIVATO (Serie D spenta per evitare sovrapposizioni)!" 
           : "⏸️ Canale Altre Squadre DISATTIVATO.",
         "success"
       );
@@ -543,8 +551,14 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
   };
 
   const handleSetStatoExtra = async (newStato: 'in_programma' | 'live' | 'terminata') => {
-    const updatedExtra: CanaleDiretta = { ...cExtra, stato: newStato };
-    const payload = buildPayloadFromState(diretta, updatedExtra);
+    const updatedExtra: CanaleDiretta = { ...cExtra, stato: newStato, attiva: newStato !== 'terminata' };
+    let updatedC1 = c1;
+    let updatedC2 = c2;
+    if (newStato === 'live' || newStato === 'in_programma') {
+      if (c1?.stato !== 'live') updatedC1 = { ...c1, attiva: false };
+      if (c2?.stato !== 'live') updatedC2 = { ...c2, attiva: false };
+    }
+    const payload = buildPayloadFromState(diretta, updatedExtra, updatedC1, updatedC2);
     setDiretta(payload);
     try {
       await salvaDirettaStreaming(payload);
