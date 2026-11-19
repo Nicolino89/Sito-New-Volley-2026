@@ -75,8 +75,10 @@ export default function DirettaLive({ sponsorsAll = [], societaInfo }: DirettaLi
   const c2 = diretta.canale_2;
   const cExtra = diretta.canale_extra;
 
-  const isC1Available = Boolean(c1?.attiva && c1?.stato !== 'terminata');
-  const isC2Available = Boolean(c2?.attiva && c2?.stato !== 'terminata');
+  const isC1Available = isDoppia 
+    ? Boolean(c1?.attiva && c1?.stato !== 'terminata')
+    : Boolean((c1?.attiva || diretta.attiva) && (c1?.stato || diretta.stato) !== 'terminata');
+  const isC2Available = isDoppia && Boolean(c2?.attiva && c2?.stato !== 'terminata');
   const isExtraAvailable = Boolean(cExtra?.attiva && cExtra?.stato !== 'terminata');
 
   // Mostra lo switcher dei canali SOLO se ci sono almeno 2 partite effettivamente attive/in programma

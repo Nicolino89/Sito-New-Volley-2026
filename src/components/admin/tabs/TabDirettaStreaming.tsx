@@ -414,6 +414,7 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
         ...prev,
         ...patch,
         canale_1: updatedC1,
+        canale_2: prev.canale_2 ? { ...prev.canale_2, attiva: false, stato: 'terminata' } : undefined,
         attiva: true
       }));
     }
@@ -461,7 +462,7 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
     const activeC2 = customC2 || c2;
 
     const isC1Active = Boolean(activeC1?.attiva && (activeC1?.stato === 'live' || activeC1?.stato === 'in_programma'));
-    const isC2Active = Boolean(activeC2?.attiva && (activeC2?.stato === 'live' || activeC2?.stato === 'in_programma'));
+    const isC2Active = isDoppia && Boolean(activeC2?.attiva && (activeC2?.stato === 'live' || activeC2?.stato === 'in_programma'));
     const isSerieDAttiva = isDoppia ? (isC1Active || isC2Active) : isC1Active;
     const isExtraAttiva = Boolean(extra?.attiva && (extra?.stato === 'live' || extra?.stato === 'in_programma'));
     const isAnyAttiva = isSerieDAttiva || isExtraAttiva;
@@ -472,10 +473,16 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
 
     const useExtraAsRoot = !isSerieDAttiva && isExtraAttiva;
 
+    // Se siamo in modalità Singola Diretta, canale_2 (Femminile) deve essere spento nel payload salvato
+    const finalC2: CanaleDiretta = isDoppia 
+      ? activeC2 
+      : { ...activeC2, attiva: false, stato: 'terminata' };
+
     return {
       ...baseDiretta,
+      doppia_diretta: isDoppia,
       canale_1: activeC1,
-      canale_2: activeC2,
+      canale_2: finalC2,
       canale_extra: extra,
       attiva: isAnyAttiva,
       stato: overallStato,
@@ -863,7 +870,11 @@ Sostieni le nostre pantere in campo! Iscriviti al canale YouTube e attiva le not
         <div className="flex items-center bg-slate-950 p-1 rounded-2xl border border-slate-800 shrink-0">
           <button
             type="button"
-            onClick={() => setDiretta(prev => ({ ...prev, doppia_diretta: false }))}
+            onClick={() => setDiretta(prev => ({
+              ...prev,
+              doppia_diretta: false,
+              canale_2: prev.canale_2 ? { ...prev.canale_2, attiva: false, stato: 'terminata' } : undefined
+            }))}
             className={`px-4 py-2 rounded-xl text-xs font-bold font-sport uppercase tracking-wider transition-all cursor-pointer ${
               !isDoppia 
                 ? 'bg-amber-400 text-slate-950 shadow-md ring-1 ring-amber-400' 

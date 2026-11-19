@@ -46,15 +46,22 @@ export const DirettaLivePill: React.FC = () => {
     targetUrl = '/diretta?canale=femminile';
   }
 
+  // Conteggio effettivo canali distinti
+  const distinctStreams = isDoppia
+    ? [isC1Active, isC2Active, isExtraActive]
+    : [isSingleActive, isExtraActive];
+  const activeCount = distinctStreams.filter(Boolean).length;
+
   // Label descrittiva
   let label = 'GUARDA LA PARTITA';
-  const activeCount = [isC1Active, isC2Active, isSingleActive, isExtraActive].filter(Boolean).length;
   if (activeCount > 1) {
     label = `${activeCount} PARTITE STREAMING`;
   } else if (isExtraActive && !isSerieDActive && diretta.canale_extra?.categoria) {
     label = diretta.canale_extra.categoria.toUpperCase();
-  } else if (diretta.doppia_diretta) {
-    label = '2 PARTITE IN DIRETTA';
+  } else if (isC2Active && !isC1Active) {
+    label = (diretta.canale_2?.categoria || 'SERIE D FEMMINILE').toUpperCase();
+  } else {
+    label = (diretta.canale_1?.categoria || diretta.categoria || 'SERIE D MASCHILE').toUpperCase();
   }
 
   return (
@@ -85,7 +92,7 @@ export const DirettaLivePill: React.FC = () => {
               IN DIRETTA ORA
             </>
           ) : (
-            'STREAMING MATCH'
+            'IN PROGRAMMA'
           )}
         </span>
         <span 
